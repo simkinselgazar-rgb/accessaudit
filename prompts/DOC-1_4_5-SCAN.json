@@ -1,0 +1,50 @@
+{
+  "criterion_id": "DOC-1.4.5-SCAN",
+  "criterion_name": "Scanned PDF Detection",
+  "visual_checks": [
+    "CRITICAL — TEXT LAYER VERIFICATION: Attempt to select text in the PDF. If no text can be selected on any page — or if selecting text grabs the entire page as a single image — the PDF is a scanned image without a text layer.",
+    "Look for telltale signs of scanned documents: slightly skewed text, speckled backgrounds, uneven lighting, visible scanner edges, or paper texture in the background.",
+    "Check whether the PDF has any searchable text by attempting a text search (Ctrl+F). If searching for a word visible on the page returns no results, the page is an image.",
+    "Examine the tag tree: if the entire document consists of one <Figure> tag per page with no <P>, <H1>, or other text tags, it is likely a scanned image PDF.",
+    "Look for mixed content: some pages may be native text (from digital creation) while other pages are scanned images (appended from a scanner). Check every page, not just the first.",
+    "If OCR has been applied, check the quality: does the recognized text match what is visually displayed? Poor OCR produces garbled text that is worse than no text at all.",
+    "Check document properties for signs of scanning: creator applications like scanner software, page sizes matching standard scanner output, or uniform image-based pages."
+  ],
+  "pass_conditions": [
+    "All text in the PDF is real, selectable, searchable text — not images of text",
+    "The document was created digitally (from Word, InDesign, web-to-PDF, etc.) and contains native text throughout",
+    "If the document was originally scanned, high-quality OCR has been applied and the recognized text accurately matches the visual content",
+    "Text search successfully finds words that are visible on every page of the document",
+    "The tag tree contains text-based tags (<P>, <H1>-<H6>, <Span>, etc.) corresponding to all visible text content"
+  ],
+  "fail_conditions": [
+    "The entire PDF consists of scanned page images with no text layer — text cannot be selected or searched",
+    "One or more pages are scanned images while others contain real text, and the scanned pages have no OCR applied",
+    "OCR has been applied but is of such poor quality that the recognized text does not match the visible content (garbled characters, missing words, incorrect readings)",
+    "The PDF contains images of text where the text could have been rendered as real text (e.g., a flyer created as a JPEG and inserted into a PDF instead of being exported as a text-based PDF)",
+    "The tag tree shows only <Figure> tags for pages that contain substantial text content, indicating the text is embedded in images",
+    "No text can be found via search despite pages full of visible text content"
+  ],
+  "na_conditions": [
+    "Document is not a PDF (DOCX, PPTX, and XLSX files inherently contain real text)",
+    "PDF contains only images, diagrams, or photos with no text content expected (e.g., a photo gallery PDF)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "PDF could not be opened or its text layer could not be inspected",
+    "The document is encrypted or restricted and text selection/search cannot be tested"
+  ],
+  "common_mistakes": [
+    "Scanning a signed paper document to PDF and posting it without running OCR — the resulting PDF is a flat image with no accessible text",
+    "Running OCR on a low-quality scan, producing inaccurate text recognition that gives screen readers garbled content (worse than no OCR in some cases)",
+    "Assuming a PDF has real text because it 'looks' like a normal document — scanned PDFs can look identical to native PDFs visually",
+    "Appending scanned pages (e.g., a signed signature page) to an otherwise text-based PDF without applying OCR to the scanned pages",
+    "Creating a document as an image (designing a flyer in Photoshop, saving as JPEG, inserting into PDF) instead of authoring it with real text in a word processor or design tool",
+    "Relying solely on automated OCR without reviewing the result — OCR engines make errors, especially with handwriting, low-resolution scans, or complex layouts"
+  ],
+  "examples": {
+    "pass": "A PDF annual report was exported from InDesign. All 48 pages contain native, selectable, searchable text. The tag tree has full text-based tags. A screen reader can read every word on every page.",
+    "fail": "A 12-page PDF policy document was created by scanning printed pages on an office multifunction printer. The entire document consists of 12 full-page images. No text can be selected, no text search works, and a screen reader announces only 'graphic' on each page. The document is completely inaccessible.",
+    "partial": "A 20-page PDF contract has 18 pages of native text from the Word export, but pages 19 and 20 are scanned images of the signed signature pages with no OCR. A screen reader reads pages 1-18 normally but encounters only images on the last two pages."
+  }
+}

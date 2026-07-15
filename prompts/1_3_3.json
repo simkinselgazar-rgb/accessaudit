@@ -1,0 +1,76 @@
+{
+  "criterion_id": "1.3.3",
+  "criterion_name": "Sensory Characteristics",
+  "visual_checks": [
+    "Look for INSTRUCTIONS or GUIDANCE TEXT on the page that tells users to interact with something by referencing ONLY its shape, color, size, visual location, or sound",
+    "Examples of what to look for: 'click the round button', 'select the green option', 'use the menu on the left', 'errors are shown in red'",
+    "Check form instructions, help text, error messages, tutorials, and onboarding text for sensory-only references",
+    "This criterion is ONLY about instructions and guidance — NOT about the existence of icons or visual elements themselves"
+  ],
+  "pass_conditions": [
+    "Instructions that reference shape, size, visual location, or sound ALSO include non-sensory cues (text labels, element names, programmatic identification)",
+    "References to UI elements include their text label or function, not just their appearance",
+    "Directional instructions supplement location with element identification",
+    "Audio cues are accompanied by visual indicators",
+    "No instructions on the page reference sensory characteristics at all (most pages pass because they have no such instructions)"
+  ],
+  "fail_conditions": [
+    "IMPORTANT: This criterion ONLY applies to INSTRUCTIONS and GUIDANCE TEXT that the page provides to the user. It does NOT apply to the mere existence of icon buttons, arrow shapes, or visual elements.",
+    "Instructions identify content only by shape ('click the triangle icon to play') without naming the element",
+    "Instructions identify content only by visual location ('the options in the right column') without additional identifying information",
+    "Instructions rely solely on color to convey meaning ('required fields are red') without text labels",
+    "Instructions reference only sound ('after the chime, enter your password') with no visual equivalent",
+    "Error messages like 'correct the fields highlighted above' without identifying which fields",
+    "DO NOT FLAG: An arrow-shaped button without a text label is a 4.1.2 issue (Name, Role, Value), NOT a 1.3.3 issue. A magnifying glass icon without a label is 4.1.2, NOT 1.3.3. Only flag 1.3.3 if there are INSTRUCTIONS that say 'click the arrow' or 'use the magnifying glass icon' without additional identification."
+  ],
+  "na_conditions": [
+    "Page contains no instructions or guidance that reference the sensory characteristics of elements",
+    "Page is purely informational with no interactive instructions",
+    "Most pages will be N/A for this criterion because they contain no sensory-only instructions"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot fully evaluate audio-based instructions from screenshots alone"
+  ],
+  "common_mistakes": [
+    "OVER-FLAGGING: The most common mistake is confusing 1.3.3 with 4.1.2. An icon button without an accessible name is a 4.1.2 failure, NOT 1.3.3. Only flag 1.3.3 when the PAGE ITSELF has instructions telling users to interact with elements by sensory characteristics only.",
+    "Help text saying 'click the icon on the right' without naming the icon or its function — this IS 1.3.3",
+    "Form instructions like 'fields marked with * are required' where the asterisk uses color only — this IS 1.3.3",
+    "Error summaries saying 'see the errors highlighted below' without listing which fields — this IS 1.3.3",
+    "A carousel with arrow buttons but no text labels — this is NOT 1.3.3 (it's 4.1.2)"
+  ],
+  "examples": {
+    "pass": "'Click the Submit button at the bottom of the form to complete your registration' — references the element by its text label 'Submit' plus location. Or: page has no instructions referencing sensory characteristics at all.",
+    "fail": "Help text says 'click the round button on the right side of the page to continue' — references only shape and position with no text label or programmatic identification",
+    "partial": "Most instructions reference elements by name, but one help tooltip says 'use the icons below' without specifying which icons or what they do"
+  },
+  "plain_meaning": "Instructions for understanding or operating content must not rely solely on sensory characteristics like shape, size, position (left/right/above/below), orientation, color, or sound. Phrases like 'click the round button on the right' or 'press the green button' fail if those are the only cues. The intent is that users who cannot perceive the sensory characteristic (blind, low-vision, color-blind) can still follow the instruction because a non-sensory cue (a name, a label) is ALSO provided.",
+  "scope_applies_to": [
+    "Instructional text referring to UI components by shape, color, size, or location",
+    "Form help text directing users to specific controls",
+    "Tutorial or walkthrough content",
+    "Error messages that point users to specific controls",
+    "Audio cues used to convey status or instruction"
+  ],
+  "scope_does_not_apply_to": [
+    "Color used as the only means of distinguishing information (not instructions) -- that belongs to SC 1.4.1",
+    "Color contrast failures -- that belongs to SC 1.4.3",
+    "Structural markup of headings/lists/etc -- that belongs to SC 1.3.1",
+    "Reading order -- that belongs to SC 1.3.2",
+    "Focus indicators -- that belongs to SC 2.4.7",
+    "Decorative language with no operational intent ('our colorful community')",
+    "Instructions that include BOTH a sensory cue AND a non-sensory cue (name, label) -- those pass"
+  ],
+  "borderline_calibration": [
+    "'Click Submit' passes. 'Click the button on the right' fails. 'Click the Submit button on the right' passes because a non-sensory cue is included.",
+    "References to colored status (e.g., 'fields marked in red are required') fail unless a non-color cue is also present (asterisk, 'required' text).",
+    "Minor flavor text that happens to mention visual layout without operational intent is not a failure; flag at info only if ambiguous.",
+    "Sensory-only instruction in a required flow is a hard failure at medium+."
+  ],
+  "auditor_anti_patterns": [
+    "SC 1.3.3 applies ONLY to instructional or guidance TEXT. If the page contains no instruction that references a sensory characteristic, this criterion is Supports — do NOT generate findings about the mere existence of icons, color-coded categories, calendar color legends, navigation dots, carousel arrows, tab active-state styling, or any visual UI element. The existence of visual UI is never a 1.3.3 finding.",
+    "Color used to distinguish information (not instructions) is SC 1.4.1, never 1.3.3.",
+    "An icon or control without a text label is SC 4.1.2 (Name, Role, Value), never 1.3.3.",
+    "If you catch yourself writing a 1.3.3 finding that does not quote a specific instruction sentence from the page, stop — it is misapplied and must be rejected."
+  ]
+}

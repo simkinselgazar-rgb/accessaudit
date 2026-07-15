@@ -1,0 +1,68 @@
+{
+  "criterion_id": "1.3.4",
+  "criterion_name": "Orientation",
+  "visual_checks": [
+    "Check if the page content adapts to both portrait and landscape orientations",
+    "Look for any content that is cut off or inaccessible in one orientation",
+    "Check for CSS or JavaScript that locks the page to a specific orientation",
+    "Look for meta viewport tags or CSS media queries that restrict orientation",
+    "Verify the layout reflows appropriately when orientation changes"
+  ],
+  "pass_conditions": [
+    "Content is viewable and operable in both portrait and landscape orientations",
+    "No content is restricted to a single display orientation unless a specific orientation is essential",
+    "The page does not use CSS or JavaScript to force a single orientation",
+    "Layout adapts appropriately when the device is rotated"
+  ],
+  "fail_conditions": [
+    "Page content is locked to portrait-only or landscape-only orientation via CSS (transform: rotate) or JavaScript (screen.orientation.lock)",
+    "Content is only usable in one orientation — rotating causes content to be hidden, overlapped, or inaccessible",
+    "A message tells users to rotate their device without providing the content in the current orientation",
+    "CSS media query orientation locks hide content in one orientation"
+  ],
+  "na_conditions": [
+    "Content has an essential orientation requirement (e.g., a piano keyboard app, a check deposit requiring landscape for the check image, a VR application)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots were only captured in one orientation and the other cannot be verified",
+    "The application is desktop-only and orientation testing is not applicable"
+  ],
+  "common_mistakes": [
+    "Using screen.orientation.lock('portrait') in JavaScript without an essential reason",
+    "CSS that uses transform: rotate(90deg) to force landscape content back to portrait",
+    "Displaying a 'Please rotate your device' overlay that blocks all content in one orientation",
+    "Mobile apps wrapped in a WebView that lock orientation at the native container level"
+  ],
+  "examples": {
+    "pass": "A banking app shows account information that reflows properly from a single column in portrait to a wider layout in landscape, with all content accessible in both",
+    "fail": "A game website forces landscape orientation using JavaScript — when a user in a wheelchair mount has their tablet fixed in portrait, they see a 'Rotate device' message and cannot access any content",
+    "partial": "The page works in both orientations but a data table in landscape orientation has columns cut off that are visible in portrait, making some data inaccessible"
+  },
+  "plain_meaning": "Content must work in both portrait and landscape orientation -- it must not be locked to one just because the developer assumed a particular device posture. The intent is to support users whose device is physically mounted in a fixed orientation (wheelchair-attached tablets, for example). The exception is when a specific orientation is genuinely essential to the content (e.g., a piano keyboard app, a check-deposit camera view).",
+  "scope_applies_to": [
+    "Responsive web pages intended for mobile/tablet viewing",
+    "Pages or apps that currently lock orientation via CSS, JavaScript, or viewport meta",
+    "Pages that display a 'please rotate your device' blocker",
+    "Web apps that use screen.orientation.lock or similar APIs"
+  ],
+  "scope_does_not_apply_to": [
+    "Desktop-only pages with no meaningful mobile layout",
+    "Content where a specific orientation is essential (piano apps, bank check imaging, some AR experiences)",
+    "Reflow / zoom issues -- that belongs to SC 1.4.10",
+    "Text resize -- that belongs to SC 1.4.4",
+    "Pages that simply render differently in portrait vs landscape without locking -- that's responsive design, not a failure",
+    "Color or contrast issues -- SC 1.4.1 / 1.4.3",
+    "Focus visibility -- SC 2.4.7"
+  ],
+  "borderline_calibration": [
+    "A page that renders but is awkward in one orientation is not a failure -- only LOCKING the orientation fails.",
+    "A 'rotate your device' blocker on a non-essential page is a hard failure at medium+.",
+    "If you cannot test orientation in the harness, flag as needs-manual-verification rather than failing.",
+    "Essential-orientation claims require justification; do not accept them by default.",
+    "An orientation media query that only adjusts layout (font-size, width, padding) is NOT an orientation restriction. Only transform:rotate(90deg) or similar rotation forcing, or content that becomes unusable in one orientation, constitutes a 1.3.4 failure."
+  ],
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: claiming CSS transform:rotate exists in an orientation media query without quoting the exact CSS rule from the programmatic data. Many orientation media queries only set font-size, display, or width — do NOT assume transform:rotate is present. Only flag orientation-locking if you can cite the EXACT CSS rule from the code data."
+  ]
+}

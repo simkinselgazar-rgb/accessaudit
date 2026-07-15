@@ -1,0 +1,67 @@
+{
+  "criterion_id": "3.3.6",
+  "criterion_name": "Error Prevention (All)",
+  "visual_checks": [
+    "Look for any form submission and check if the data can be reviewed before final submission",
+    "Check if a confirmation step or review page is presented before committing changes",
+    "Look for an undo, cancel, or edit mechanism after form submissions",
+    "Check if form data is preserved and editable if the user needs to go back and make changes",
+    "Look for confirmation dialogs before destructive or irreversible actions",
+    "Verify that submitted data can be reversed, checked for errors, or confirmed across all forms"
+  ],
+  "pass_conditions": [
+    "All form submissions provide a review or confirmation step before final submission",
+    "Submitted data can be reversed or undone within a reasonable time period",
+    "Data entered by the user is checked for input errors and the user can correct them before submission",
+    "A confirmation dialog or summary page allows users to verify their input before committing",
+    "Users can edit or cancel submissions before they are finalized"
+  ],
+  "fail_conditions": [
+    "Form data is submitted immediately with no review, confirmation, or undo mechanism",
+    "Irreversible actions occur without a confirmation step",
+    "Users cannot go back to review or edit data once they proceed past a form step",
+    "No undo or reversal mechanism is available after submission",
+    "Data is submitted on a single button click with no way to check entries or confirm intent"
+  ],
+  "na_conditions": [
+    "Page contains no forms, data submission mechanisms, or user-modifiable content"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Form submission flow could not be tested end-to-end"
+  ],
+  "common_mistakes": [
+    "Single-step checkout forms that submit payment immediately without a review step",
+    "Account deletion or data removal without a confirmation dialog",
+    "Multi-step forms that do not allow users to go back and edit previous steps",
+    "Profile or settings updates that save immediately without a confirm or undo option",
+    "Contact forms that submit on button click with no summary preview of the message"
+  ],
+  "examples": {
+    "pass": "A contact form displays a summary page showing all entered information with 'Edit' and 'Confirm & Send' buttons — the user can review their name, email, and message before final submission, and a confirmation email includes an option to retract the submission within 24 hours",
+    "fail": "A feedback form submits the response immediately when the user clicks 'Send' with no preview, no confirmation dialog, and no way to edit or undo the submission afterward",
+    "partial": "The checkout process includes a review step before payment, but the account settings page saves changes immediately on each field blur with no confirmation dialog or undo mechanism"
+  },
+  "plain_meaning": "For pages that require the user to submit any information at all (not just legal/financial), at least one of reversible, checked, or confirmed must be available. This is the Level AAA superset of SC 3.3.4 and applies to a much broader set of forms.",
+  "scope_applies_to": [
+    "Any form that submits user information",
+    "Profile edits and preference saves",
+    "Comment and post submissions",
+    "Search history, saved items, and bookmark actions",
+    "Any submit action where data is stored or acted upon"
+  ],
+  "scope_does_not_apply_to": [
+    "Pages with no forms and no submission",
+    "Purely read-only content",
+    "Legal/financial flows already covered at AA by SC 3.3.4 (those still pass this one if any mechanism exists)",
+    "Client-side-only interactions that do not transmit data",
+    "Navigation links that do not submit data"
+  ],
+  "borderline_calibration": [
+    "This is Level AAA and is typically Not Applicable outside AAA reviews.",
+    "Any ONE of reversible, checked, or confirmed across the flow satisfies.",
+    "Checked (inline validation) is often the easiest satisfier and very common.",
+    "Prefer Not Applicable when the review is not targeting AAA."
+  ]
+}

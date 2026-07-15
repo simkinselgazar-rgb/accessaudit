@@ -1,0 +1,78 @@
+{
+  "criterion_id": "1.4.2",
+  "criterion_name": "Audio Control",
+  "visual_checks": [
+    "Check if any audio plays automatically when the page loads",
+    "Look for auto-playing video elements with sound enabled",
+    "Check for background music or ambient audio that starts on page load",
+    "Look for a visible mechanism to pause, stop, or mute the audio within the first few elements of the page",
+    "Check if auto-playing audio has a volume control available",
+    "Look for audio advertisements or promotional content that auto-plays"
+  ],
+  "pass_conditions": [
+    "No audio plays automatically on page load",
+    "OR audio that auto-plays lasts less than 3 seconds",
+    "OR a mechanism to pause or stop the audio or control its volume independently from the system volume is provided at the top of the page",
+    "The audio control mechanism is easy to find and is keyboard-accessible",
+    "Mute/pause control is encountered before or near the beginning of the page content"
+  ],
+  "fail_conditions": [
+    "Audio plays automatically for more than 3 seconds with no mechanism to stop, pause, or mute it",
+    "Auto-playing audio has a pause control but it is buried deep in the page, not near the top",
+    "The audio control requires mouse interaction and is not keyboard-accessible",
+    "Background audio loops continuously with no way to stop it",
+    "Audio auto-plays and the only way to stop it is to mute the entire system volume"
+  ],
+  "na_conditions": [
+    "No audio content auto-plays on the page",
+    "All audio requires user-initiated play action (click/tap to play)",
+    "Page contains no audio or video elements",
+    "Every <video autoplay> element on the page has the muted attribute (muted autoplay plays no audio and does NOT trigger this criterion)",
+    "The [AUTOPLAY MEDIA PROBE -- DETERMINISTIC] block in the user prompt reports has_autoplay_audio=false"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot verify auto-play behavior from static screenshots alone",
+    "Page behavior differs between initial load and subsequent visits"
+  ],
+  "common_mistakes": [
+    "Background music that auto-plays on a homepage for 'ambiance' with a tiny mute button in the corner",
+    "Video hero banners that auto-play with sound on page load",
+    "Chat widgets that play notification sounds automatically",
+    "Carousel or slider with auto-playing video advertisements",
+    "Audio control that is only visible after scrolling past the auto-playing content"
+  ],
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging '<video autoplay muted>' (any <video> with the muted attribute set, whether autoplay is also set or not) as a WCAG 1.4.2 violation. WCAG 1.4.2 applies ONLY to content that plays AUDIO automatically. A muted video plays no audio and is compliant by definition. ALWAYS check for the muted attribute before reporting any video-autoplay finding.",
+    "GROUND TRUTH RULE: the user prompt may contain an [AUTOPLAY MEDIA PROBE -- DETERMINISTIC] block listing every <audio>, <video>, and embedded player on the page with their runtime state (autoplay, muted, duration, paused, controls). TREAT IT AS AUTHORITATIVE. If the probe reports has_autoplay_audio=false, the correct verdict is Not Applicable or Supports unless you have OTHER evidence of audio playing. Do NOT second-guess the probe by reading the HTML attributes yourself."
+  ],
+  "examples": {
+    "pass": "A news site has a video on the homepage that auto-plays but is muted by default — users must click the unmute button to hear audio",
+    "fail": "A restaurant website auto-plays background music on load that loops indefinitely, with the mute button only visible after scrolling to the footer",
+    "partial": "A promotional video auto-plays with sound but has a visible mute button near the video — however, the mute button is not keyboard-accessible"
+  },
+  "plain_meaning": "If audio starts playing automatically when a page loads and continues for more than three seconds, the user must be able to pause it, stop it, or control its volume independently of the system volume. Auto-playing audio interferes with screen readers because both speak at once. The user must not be forced to turn down the whole machine to silence the page.",
+  "scope_applies_to": [
+    "Background music or ambient audio that starts on page load",
+    "Auto-playing video with an audible track longer than 3 seconds",
+    "Audio advertisements that begin without user initiation",
+    "Embedded media players that begin playback without user action",
+    "Audio from animations, hero videos, or splash content that runs automatically",
+    "Podcast or audio widgets configured to autoplay"
+  ],
+  "scope_does_not_apply_to": [
+    "Audio or video that only plays after explicit user activation (click, tap, key press)",
+    "Audio lasting 3 seconds or less total",
+    "Media controls that are present and reachable (pause/stop/volume provided in the player)",
+    "Content muted by default even if playback starts automatically (no audio output until user unmutes)",
+    "Captions display, transcripts, or audio description features (those belong to SC 1.2.x)",
+    "General media accessibility like sign language or extended descriptions (SC 1.2.x)"
+  ],
+  "borderline_calibration": [
+    "Muted autoplay video is NOT a failure of 1.4.2 because no audio plays.",
+    "If a visible, operable pause/stop control is present at the moment audio begins, the criterion is MET regardless of duration.",
+    "Audio under 3 seconds is exempt even with no control.",
+    "A control that requires scrolling or opening a menu to reach still counts as available if it is operable by keyboard and assistive tech.",
+    "When in doubt, prefer not flagging if the audio is clearly user-initiated (click-to-play)."
+  ]
+}

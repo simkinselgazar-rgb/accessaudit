@@ -1,0 +1,69 @@
+{
+  "criterion_id": "2.1.4",
+  "criterion_name": "Character Key Shortcuts",
+  "visual_checks": [
+    "Look for application-style interfaces (web apps, email clients, document editors, dashboards) that commonly implement single-character keyboard shortcuts",
+    "Check for visible keyboard shortcut hints, tooltips, or help overlays that list single-key bindings (e.g., 'Press S to save', 'Press ? for help')",
+    "Look for settings or preferences panels that might include options to remap or disable keyboard shortcuts",
+    "Identify rich web applications (Slack-like chat, Trello-like boards, Gmail-like interfaces) that typically use single-character shortcuts",
+    "Look for documentation or help sections mentioning keyboard shortcuts",
+    "Check for gaming or interactive content that may bind letter/number keys to actions",
+    "Look for any visible evidence that pressing a single character key (without modifiers like Ctrl, Alt, Shift) triggers an action"
+  ],
+  "pass_conditions": [
+    "No single-character keyboard shortcuts exist on the page — all shortcuts require a modifier key (Ctrl, Alt, Cmd, Shift)",
+    "Single-character shortcuts that exist can be turned off through a documented setting or preference",
+    "Single-character shortcuts that exist can be remapped by the user to include a modifier key",
+    "Single-character shortcuts only activate when the relevant UI component has focus (e.g., arrow keys in a listbox, letter keys in a search field with focus)",
+    "The page provides a mechanism to disable or reconfigure any character key shortcuts that are present"
+  ],
+  "fail_conditions": [
+    "Single-character keyboard shortcuts (letter, number, punctuation, or symbol keys) trigger actions regardless of focus position and cannot be turned off or remapped",
+    "Pressing a letter key outside of a text input triggers navigation, deletion, or other actions with no way to disable this behavior",
+    "The application uses single-key shortcuts globally (e.g., 'j' for next item, 'k' for previous) with no option to turn them off or remap them",
+    "Speech recognition users or users with motor impairments experience unintended actions from accidental single-key presses because shortcuts cannot be disabled"
+  ],
+  "na_conditions": [
+    "Page is a standard content page with no application-like keyboard shortcuts — only standard browser and native HTML element shortcuts apply",
+    "Page contains only standard forms, links, and content with no custom JavaScript keyboard shortcut bindings"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot determine whether single-character shortcuts exist from screenshots and tab walk data alone — JavaScript event listeners are not visible in the captured data",
+    "Page functionality could not be fully exercised to test for character key shortcuts"
+  ],
+  "common_mistakes": [
+    "Web applications copying desktop app conventions (e.g., 'j/k' for navigation in email clients) without providing a way to disable them",
+    "Single-character shortcuts that work globally even when the user is typing in a text field, causing unintended actions",
+    "Keyboard shortcut implementations that offer no settings panel or toggle to disable them",
+    "Custom media players using Space, K, M, F as global shortcuts without requiring the player to have focus first",
+    "Shortcut help dialogs that reveal single-key shortcuts exist but no option to remap or disable them",
+    "Game-like interfaces binding letter keys to actions without a modifier key requirement"
+  ],
+  "examples": {
+    "pass": "A web email client uses 'J' and 'K' to navigate messages but provides a Settings > Keyboard Shortcuts page where users can disable all shortcuts or remap them to require Ctrl as a modifier.",
+    "fail": "A project management board uses single keys — 'N' for new card, 'D' for delete, 'E' for edit — globally on the page. There is no way to turn these off. A speech recognition user accidentally deletes items when voice input is misrecognized as keystrokes.",
+    "partial": "The application provides single-character shortcuts and has a help dialog listing them, but the option to disable shortcuts is buried in an inaccessible settings page that itself requires mouse interaction to reach."
+  },
+  "plain_meaning": "If the page implements keyboard shortcuts using only letter, number, punctuation, or symbol characters (no modifier keys), the user must be able to turn the shortcut off, remap it, or have it active only when the target control has focus. The intent is to prevent accidental activation by speech-input users and others whose typing may unexpectedly fire shortcuts.",
+  "scope_applies_to": [
+    "Single-character shortcuts bound to page actions (pressing a letter to go to next item)",
+    "Single-character shortcuts bound to navigation, search, or command palettes",
+    "Punctuation or symbol shortcuts (a slash to focus search) active globally on the page",
+    "Number-key shortcuts bound to global actions"
+  ],
+  "scope_does_not_apply_to": [
+    "Shortcuts that require a modifier key (Ctrl, Alt, Shift, Meta/Cmd) in combination",
+    "Shortcuts that are active only while a specific control has focus (e.g. arrow keys in a listbox)",
+    "Native form-control behavior (typing in a text field, arrow keys inside a select)",
+    "Browser or operating system shortcuts",
+    "Access keys that require a modifier per browser convention",
+    "Pages that implement no custom keyboard shortcuts at all"
+  ],
+  "borderline_calibration": [
+    "If no single-character shortcut exists on the page, this SC is N/A.",
+    "A shortcut scoped to a focused widget (not the whole page) automatically satisfies the active-only-on-focus condition.",
+    "Presence of Ctrl/Alt/Shift/Meta in the key combination means out of scope -- do not flag.",
+    "The page need only offer ONE of turn-off/remap/focus-scope, not all three."
+  ]
+}

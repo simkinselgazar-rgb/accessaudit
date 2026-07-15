@@ -1,0 +1,33 @@
+{
+  "_readme": "Copy this file to settings.json and fill in your own API key(s). settings.json is gitignored — never commit it. Every value can also be set via environment variables (see config.py for the WCAG_* names). You can also configure everything from the in-app Settings page.",
+
+  "_option_1_single_cloud_provider": "Simplest setup: one provider for everything. Set ai_backend to gemini | openai | anthropic | openrouter, add your key, done. Vision, judge, and video roles default to the same endpoint.",
+  "ai_backend": "openrouter",
+  "api_key": "YOUR_API_KEY_HERE",
+  "api_base_url": "https://openrouter.ai/api/v1",
+  "ai_model": "google/gemini-2.5-flash",
+
+  "_option_2_mixed_providers": "Optionally split roles across providers — e.g. a cheap text model plus a multimodal model for screenshots/video. Uncomment and fill these in:",
+  "_ai_vision_model": "gemini-2.5-flash",
+  "_ai_vision_api_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+  "_ai_vision_api_key": "YOUR_GEMINI_KEY_HERE",
+  "_ai_judge_model": "",
+  "_ai_judge_api_url": "",
+  "_ai_reviewer_model": "",
+
+  "_option_3_fully_local": "Run everything on your own hardware: set ai_backend to vllm and point the URLs at your local OpenAI-compatible servers (vLLM, llama.cpp, LM Studio, Ollama...). No API key needed.",
+  "_api_base_url_local_example": "http://localhost:8000/v1",
+
+  "_embeddings": "Used for cross-page dedup and consistency checks. Default expects a local Ollama at localhost:11434 with bge-m3; or point at any OpenAI-compatible /embeddings endpoint with embeddings_format = openai.",
+  "_embeddings_api_url": "http://localhost:11434/api/embeddings",
+  "_embeddings_format": "ollama",
+  "_embeddings_model": "bge-m3",
+
+  "_whisper": "Audio transcription for caption verification. Formats: local (faster-whisper server), openai (/audio/transcriptions), or gemini (native multimodal).",
+  "_whisper_api_url": "",
+  "_whisper_format": "auto",
+
+  "ai_timeout": "1200",
+  "ai_max_retries": "3",
+  "ai_max_concurrent": "1"
+}

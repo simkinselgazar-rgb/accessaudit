@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WCAG Trusted Tester</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+</head>
+<body>
+
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;">Skip to main content</a>
+  <header class="app-header">
+    <div class="container">
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="/" class="header-brand">
+          <img src="/static/icon.svg" alt="WCAG Trusted Tester" width="36" height="36" style="border-radius:4px;">
+          <div class="brand-text">
+            <h1>WCAG Trusted Tester</h1>
+            <span class="brand-tool">WCAG Testing Tool</span>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="header-link" aria-current="page">Dashboard</a>
+          <a href="#form-heading" class="header-link">New Review</a>
+          <a href="/settings" class="header-link">Settings</a>
+        </div>
+      </nav>
+      <p class="subtitle">Section 508 &amp; WCAG Conformance Testing</p>
+    </div>
+  </header>
+
+  <main class="container" id="main-content">
+
+    <!-- Review Form -->
+    <section class="review-form card" aria-labelledby="form-heading">
+      <h2 class="card-title" id="form-heading">New Review</h2>
+
+      <form id="review-form" enctype="multipart/form-data" novalidate>
+
+        <!-- Step 1: Review Type (choose first — determines which inputs appear) -->
+        <div class="form-group">
+          <label>Review Type</label>
+          <div class="radio-group" role="radiogroup" aria-label="Review type">
+            <label>
+              <input type="radio" name="review_type" value="single" checked>
+              Single Page
+            </label>
+            <label>
+              <input type="radio" name="review_type" value="multi">
+              Multi-Page (specific URLs)
+            </label>
+            <label>
+              <input type="radio" name="review_type" value="site">
+              Full Site Crawl
+            </label>
+          </div>
+        </div>
+
+        <!-- Step 2: Target input (changes based on review type) -->
+
+        <!-- URL Input (single page + site crawl) -->
+        <div class="form-group" id="url-input-group">
+          <label for="url-input">Page URL <span class="required-marker" aria-hidden="true">*</span></label>
+          <input type="url" id="url-input" name="url" placeholder="https://example.com"
+                 autocomplete="url" aria-describedby="url-help" aria-required="true">
+          <small id="url-help" class="text-muted">Enter a web page URL to test</small>
+        </div>
+
+        <div class="form-divider" id="url-or-divider" aria-hidden="true">or</div>
+
+        <!-- File Upload (single page only) -->
+        <div class="form-group" id="file-input-group">
+          <label for="file-input">Upload Document</label>
+          <input type="file" id="file-input" name="pdf_file"
+                 accept=".pdf,.docx,.xlsx,.pptx" multiple
+                 aria-describedby="file-help">
+          <small id="file-help" class="text-muted">Accepted: PDF, DOCX, XLSX, PPTX</small>
+        </div>
+
+        <!-- Multi-Page URLs (visible only for multi-page) -->
+        <div class="multi-pages-group" id="multi-pages-group" style="display:none;">
+          <div class="form-group">
+            <label for="multi-urls">Page URLs (one per line) <span class="required-marker" aria-hidden="true">*</span></label>
+            <textarea id="multi-urls" name="multi_urls" rows="6"
+                      placeholder="https://example.com/&#10;https://example.com/about&#10;https://example.com/contact&#10;https://example.com/products"
+                      aria-describedby="multi-urls-help" aria-required="true"></textarea>
+            <small id="multi-urls-help" class="text-muted">Enter each URL on a separate line. All pages will be tested and results aggregated into one ACR.</small>
+          </div>
+        </div>
+
+        <!-- Site-crawl page selection is AI-driven: the selector decides
+             how many pages are needed for a credible ACR based on site
+             size, template diversity, and critical workflows. No operator
+             cap — a proper Section 508 ACR shouldn't be artificially
+             limited. -->
+        <div class="max-pages-group" id="max-pages-group" style="display:none;">
+          <div class="form-group">
+            <p class="text-muted" style="font-size:.85rem;margin:.5rem 0;">
+              The AI selector will choose the pages needed for a credible ACR
+              from all discovered pages. Small marketing sites typically need
+              3–5 pages, larger university/government sites 10–25+.
+              Off-domain redirects (third-party systems) are excluded automatically.
+            </p>
+          </div>
+        </div>
+
+        <!-- Page Rationale (visible for multi and site reviews) -->
+        <div class="page-rationale-group" id="page-rationale-group" style="display:none;">
+          <div class="form-group">
+            <label for="page-rationale">Page Selection Rationale <span class="optional">(optional)</span></label>
+            <textarea id="page-rationale" name="page_rationale" rows="3"
+                      placeholder="Explain why these pages were selected for testing (e.g., 'Representative sample covering homepage, key user workflows, forms, and error states'). For site crawl, this will be generated automatically if left blank."
+                      aria-describedby="page-rationale-help"></textarea>
+            <small id="page-rationale-help" class="text-muted">Appears in the ACR report. Can be edited after the review completes.</small>
+          </div>
+        </div>
+
+        <!-- Step 3: Test configuration -->
+        <div class="options-row">
+          <div class="form-group">
+            <label for="wcag-version">WCAG Version</label>
+            <select id="wcag-version" name="wcag_version">
+              <option value="2.2" selected>WCAG 2.2</option>
+              <option value="2.1">WCAG 2.1</option>
+              <option value="2.0">WCAG 2.0</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="report-format">Report Format</label>
+            <select id="report-format" name="report_format">
+              <option value="508" selected>Section 508</option>
+              <option value="INT">International</option>
+              <option value="WCAG">WCAG Only</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="coverage-level">Coverage Level</label>
+            <select id="coverage-level" name="coverage_level">
+              <option value="A">Level A</option>
+              <option value="AA" selected>Level AA</option>
+              <option value="AAA">Level AAA</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Client / Product Information (collapsible) -->
+        <div class="collapsible-section">
+          <button type="button" class="collapsible-toggle" aria-expanded="false"
+                  aria-controls="client-content"
+                  onclick="toggleCollapsible(this)">
+            <span class="arrow" aria-hidden="true">&#9654;</span>
+            Client / Product Information
+          </button>
+          <div class="collapsible-content" id="client-content">
+            <p class="form-section-hint">Information about the product or website being evaluated. This appears in the VPAT report header.</p>
+            <div class="form-group">
+              <label for="product-name">Product / Site Name</label>
+              <input type="text" id="product-name" name="product_name" placeholder="Client's product or website name">
+            </div>
+            <div class="form-group">
+              <label for="product-description">Product Description</label>
+              <textarea id="product-description" name="product_description"
+                        placeholder="Brief description of the client's product or website being evaluated"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="vpat-notes">Evaluation Notes</label>
+              <textarea id="vpat-notes" name="notes"
+                        placeholder="Scope, limitations, test environment, or other notes for the VPAT report"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reviewer Information (collapsible) -->
+        <div class="collapsible-section">
+          <button type="button" class="collapsible-toggle" aria-expanded="false"
+                  aria-controls="reviewer-content"
+                  onclick="toggleCollapsible(this)">
+            <span class="arrow" aria-hidden="true">&#9654;</span>
+            Reviewer Information
+          </button>
+          <div class="collapsible-content" id="reviewer-content">
+            <p class="form-section-hint">Your information as the accessibility evaluator. This identifies who conducted the review.</p>
+            <div class="form-group">
+              <label for="company-name">Evaluation Company</label>
+              <input type="text" id="company-name" name="company_name" placeholder="Your organization name">
+            </div>
+            <div class="options-row">
+              <div class="form-group">
+                <label for="contact-name">Reviewer Name</label>
+                <input type="text" id="contact-name" name="contact_name" placeholder="Your name">
+              </div>
+              <div class="form-group">
+                <label for="contact-email">Reviewer Email</label>
+                <input type="email" id="contact-email" name="contact_email" placeholder="you@example.com">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="company-logo">Override Company Logo <small class="text-muted">(optional &mdash; default S|E logo is used automatically)</small></label>
+              <input type="file" id="company-logo" name="company_logo" accept="image/*">
+            </div>
+          </div>
+        </div>
+
+        <!-- Context (collapsible) -->
+        <div class="collapsible-section">
+          <button type="button" class="collapsible-toggle" aria-expanded="false"
+                  aria-controls="context-content"
+                  onclick="toggleCollapsible(this)">
+            <span class="arrow" aria-hidden="true">&#9654;</span>
+            Additional Context for AI
+          </button>
+          <div class="collapsible-content" id="context-content">
+            <p class="form-section-hint">Optional context to help the AI produce more accurate results. This is not included in the VPAT report.</p>
+            <div class="form-group">
+              <label for="ctx-purpose">Page Purpose</label>
+              <textarea id="ctx-purpose" name="ctx_page_purpose"
+                        placeholder="Describe the purpose of this page or application"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="ctx-time-limits">Time Limits</label>
+              <input type="text" id="ctx-time-limits" name="ctx_time_limits"
+                     placeholder="e.g., Session timeout after 20 minutes">
+            </div>
+            <div class="form-group">
+              <label for="ctx-alt-url">Conforming Alternate Version URL</label>
+              <input type="url" id="ctx-alt-url" name="ctx_alt_version_url"
+                     placeholder="https://example.com/accessible-version">
+            </div>
+            <div class="form-group">
+              <label for="ctx-behaviors">Expected Behaviors</label>
+              <textarea id="ctx-behaviors" name="ctx_expected_behaviors"
+                        placeholder="Describe expected interactive behaviors, dynamic content, etc."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="ctx-notes">Additional Notes</label>
+              <textarea id="ctx-notes" name="ctx_additional_notes"
+                        placeholder="Any other context relevant to testing"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="form-group mt-2">
+          <button type="submit" class="btn-submit" id="submit-btn">
+            Start Accessibility Review
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- Previous Reviews -->
+    {% if reviews and reviews|length > 0 %}
+    <section aria-labelledby="reviews-heading" class="mt-3">
+      <div class="reviews-header">
+        <h2 id="reviews-heading">Previous Reviews</h2>
+        <button class="btn-delete-all" onclick="deleteAllReviews()" aria-label="Delete all reviews">
+          Delete All
+        </button>
+      </div>
+
+      <div class="review-cards" id="review-cards">
+        {% for review in reviews %}
+        <div class="review-card" id="review-{{ review.review_id }}" data-status="{{ review.status }}"
+             data-url="{{ review.source_url | default('', true) }}"
+             data-wcag-version="{{ review.wcag_version | default('2.2', true) }}"
+             data-report-format="{{ review.report_format | default('508', true) }}"
+             data-coverage-level="{{ review.coverage_level | default('AA', true) }}"
+             data-product-name="{{ review.product_name | default('', true) }}"
+             data-product-description="{{ review.product_description | default('', true) }}"
+             data-contact-name="{{ review.contact_name | default('', true) }}"
+             data-contact-email="{{ review.contact_email | default('', true) }}"
+             data-notes="{{ review.notes | default('', true) }}"
+             data-review-type="{{ review.review_type | default('single', true) }}">
+          <div class="source">
+            {% if review.product_name %}
+              <strong>{{ review.product_name }}</strong> &mdash;
+            {% endif %}
+            {% if review.source_url %}
+              {{ review.source_url }}
+            {% elif review.source_file %}
+              {{ review.source_file }}
+            {% else %}
+              Unknown source
+            {% endif %}
+          </div>
+          <div class="meta">
+            <span class="badge badge-{{ review.status }}">{{ review.status }}</span>
+            <span>{{ review.created_at }}</span>
+            {% if review.review_type == 'site' %}
+              <span>Site Crawl</span>
+            {% endif %}
+            <span>WCAG {{ review.wcag_version | default('2.2') }} Level {{ review.coverage_level | default('AA') }}</span>
+          </div>
+          {% if review.status == 'complete' and review.total_criteria %}
+          <div class="review-summary" style="display:flex;gap:.6rem;flex-wrap:wrap;font-size:.8rem;margin:.3rem 0;">
+            <span style="color:#2e7d32;" title="Supports">S: {{ review.supports | default(0) }}</span>
+            <span style="color:#f57f17;" title="Partially Supports">PS: {{ review.partially_supports | default(0) }}</span>
+            <span style="color:#c62828;" title="Does Not Support">DNS: {{ review.does_not_support | default(0) }}</span>
+            <span style="color:#546e7a;" title="Not Applicable">N/A: {{ review.not_applicable | default(0) }}</span>
+            <span style="color:#78909c;" title="Total Criteria">of {{ review.total_criteria }} criteria</span>
+          </div>
+          {% endif %}
+          {% if review.status == 'error' and review.error %}
+          <div class="review-error" role="alert" style="font-size:.8rem;color:#c62828;margin:.3rem 0;padding:.3rem .5rem;background:#ffebee;border-radius:4px;">
+            {{ review.error[:120] }}{% if review.error|length > 120 %}...{% endif %}
+          </div>
+          {% endif %}
+          <div class="actions">
+            {% if review.status == 'complete' %}
+              <a href="/review/{{ review.review_id }}/report">View Report</a>
+            {% elif review.status == 'error' %}
+              <a href="/review/{{ review.review_id }}/progress">View Details</a>
+            {% elif review.status in ['queued', 'capturing', 'testing', 'crawling', 'selecting', 'authenticating', 'testing_documents', 'aggregating', 'generating_report'] %}
+              <a href="/review/{{ review.review_id }}/progress">View Progress</a>
+            {% else %}
+              <a href="/review/{{ review.review_id }}/progress">View Progress</a>
+            {% endif %}
+            {% if review.status in ['queued', 'capturing', 'testing', 'crawling', 'selecting'] %}
+            <button class="btn-cancel" onclick="fetch('/api/review/{{ review.review_id }}/cancel',{method:'POST'}).then(()=>location.reload())"
+                    aria-label="Cancel review" style="background:#c62828;color:#fff;border:none;padding:.3rem .6rem;border-radius:4px;cursor:pointer;font-size:.8rem;">Cancel</button>
+            {% endif %}
+            {% if review.status in ['interrupted', 'error', 'cancelled'] %}
+            <button class="btn-resume" onclick="fetch('/api/review/{{ review.review_id }}/resume',{method:'POST'}).then(()=>location.reload())"
+                    aria-label="Resume review from where it left off" style="background:#1565c0;color:#fff;border:none;padding:.3rem .6rem;border-radius:4px;cursor:pointer;font-size:.8rem;">Resume</button>
+            {% endif %}
+            <button class="btn-rerun" onclick="rerunReview(this.closest('.review-card'))"
+                    aria-label="Rerun review with same settings">Rerun</button>
+            <button class="btn-delete" onclick="deleteReview('{{ review.review_id }}')"
+                    aria-label="Delete review {{ review.review_id }}">Delete</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="container" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <img src="/static/icon.svg" alt="" width="20" height="20" style="height:20px;width:20px;border-radius:3px;">
+      <span>WCAG Trusted Tester v2.0.0</span>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+  <script>
+    // Auto-fill from ?rerun= query parameter
+    (function() {
+      {% if rerun and rerun.source_url %}
+      var r = {{ rerun | tojson }};
+      var fields = {
+        'url-input': r.source_url || '',
+        'product-name': r.product_name || '',
+        'product-description': r.product_description || '',
+        'contact-name': r.contact_name || '',
+        'contact-email': r.contact_email || '',
+        'vpat-notes': r.notes || '',
+      };
+      for (var id in fields) {
+        var el = document.getElementById(id);
+        if (el && fields[id]) el.value = fields[id];
+      }
+      var selects = {
+        'wcag-version': r.wcag_version || '2.2',
+        'report-format': r.report_format || '508',
+        'coverage-level': r.coverage_level || 'AA',
+      };
+      for (var id in selects) {
+        var el = document.getElementById(id);
+        if (el) el.value = selects[id];
+      }
+      var reviewType = r.review_type || 'single';
+      var radio = document.querySelector('input[name="review_type"][value="' + reviewType + '"]');
+      if (radio) radio.checked = true;
+
+      // Open sections that have data
+      if (r.product_name || r.product_description || r.notes) {
+        var t = document.querySelector('[aria-controls="client-content"]');
+        if (t && t.getAttribute('aria-expanded') === 'false') t.click();
+      }
+      if (r.contact_name || r.contact_email) {
+        var t = document.querySelector('[aria-controls="reviewer-content"]');
+        if (t && t.getAttribute('aria-expanded') === 'false') t.click();
+      }
+      // Scroll to form
+      document.getElementById('review-form').scrollIntoView({ behavior: 'smooth' });
+      {% endif %}
+    })();
+
+    function rerunReview(card) {
+      if (!card) return;
+      var d = card.dataset;
+
+      // Fill URL
+      var urlInput = document.getElementById('url-input');
+      if (urlInput && d.url) urlInput.value = d.url;
+
+      // Set dropdowns
+      var selects = {
+        'wcag-version': d.wcagVersion,
+        'report-format': d.reportFormat,
+        'coverage-level': d.coverageLevel,
+      };
+      for (var id in selects) {
+        var el = document.getElementById(id);
+        if (el && selects[id]) el.value = selects[id];
+      }
+
+      // Set review type radio
+      var reviewType = d.reviewType || 'single';
+      var radio = document.querySelector('input[name="review_type"][value="' + reviewType + '"]');
+      if (radio) radio.checked = true;
+
+      // Fill text fields (open the collapsible sections first)
+      var fields = {
+        'product-name': d.productName,
+        'product-description': d.productDescription,
+        'contact-name': d.contactName,
+        'contact-email': d.contactEmail,
+        'vpat-notes': d.notes,
+      };
+      for (var id in fields) {
+        var el = document.getElementById(id);
+        if (el && fields[id]) el.value = fields[id];
+      }
+
+      // Open the collapsible sections that have data
+      if (d.productName || d.productDescription || d.notes) {
+        var clientToggle = document.querySelector('[aria-controls="client-content"]');
+        if (clientToggle && clientToggle.getAttribute('aria-expanded') === 'false') {
+          clientToggle.click();
+        }
+      }
+      if (d.contactName || d.contactEmail) {
+        var reviewerToggle = document.querySelector('[aria-controls="reviewer-content"]');
+        if (reviewerToggle && reviewerToggle.getAttribute('aria-expanded') === 'false') {
+          reviewerToggle.click();
+        }
+      }
+
+      // Scroll to form
+      var form = document.getElementById('review-form');
+      if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Flash the submit button to draw attention
+      var btn = document.getElementById('submit-btn');
+      if (btn) {
+        btn.style.transition = 'background 0.3s';
+        btn.style.background = '#C5922E';
+        setTimeout(function() { btn.style.background = ''; }, 1500);
+      }
+    }
+  </script>
+</body>
+</html>

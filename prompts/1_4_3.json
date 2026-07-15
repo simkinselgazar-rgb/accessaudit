@@ -1,0 +1,84 @@
+{
+  "criterion_id": "1.4.3",
+  "criterion_name": "Contrast (Minimum)",
+  "visual_checks": [
+    "Examine body text against its background — does the contrast look sufficient (at least 4.5:1)?",
+    "Check large text (18pt or 14pt bold and above) — does it meet the 3:1 minimum ratio?",
+    "Look for light gray text on white backgrounds, a common low-contrast pattern",
+    "Check text overlaying images or gradients — is contrast maintained across the entire text area?",
+    "Examine placeholder text in form fields — is it legible with sufficient contrast?",
+    "Check link text contrast against its background",
+    "Look for text on colored banner sections or hero images"
+  ],
+  "pass_conditions": [
+    "Normal text (below 18pt or below 14pt bold) has at least 4.5:1 contrast ratio against its background",
+    "Large text (18pt+ or 14pt+ bold) has at least 3:1 contrast ratio against its background",
+    "Text over images or gradients maintains minimum contrast across the entire text area",
+    "Placeholder text meets contrast requirements",
+    "All states of interactive text elements (default, hover, focus) meet contrast requirements"
+  ],
+  "fail_conditions": [
+    "Normal text has less than 4.5:1 contrast ratio against its background",
+    "Large text has less than 3:1 contrast ratio against its background",
+    "Light gray placeholder text on white input backgrounds with contrast below 4.5:1",
+    "Text on images where parts of the image reduce contrast below minimum",
+    "Disabled-looking text that is actually active/readable content with poor contrast"
+  ],
+  "na_conditions": [
+    "Page contains only non-text content (images, video) with no readable text",
+    "Text is part of a logo or brand name (logotypes are exempt)",
+    "Text is purely decorative and conveys no information",
+    "Text is in an inactive/disabled UI component"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot measure exact contrast ratios from screenshots alone — programmatic check required",
+    "Background colors are dynamically generated and not captured in the DOM data"
+  ],
+  "common_mistakes": [
+    "Gray body text (#777 or #999) on white (#fff) background failing 4.5:1",
+    "White text on light-colored photographs without a text shadow or overlay",
+    "Placeholder text with very low contrast that users cannot read easily",
+    "Footer text in light gray on a slightly darker gray background",
+    "Links that meet contrast against background but not against surrounding text (also see 1.4.1)",
+    "Text on gradient backgrounds where contrast passes at one end but fails at the other"
+  ],
+  "examples": {
+    "pass": "Body text is #333333 on a #ffffff background, yielding a contrast ratio of 12.63:1, well above the 4.5:1 minimum",
+    "fail": "Subheading text is #999999 on a #ffffff background, yielding a contrast ratio of only 2.85:1, failing the 4.5:1 minimum for normal-sized text",
+    "partial": "Main body text passes contrast requirements but the footer links are #888888 on #cccccc background with only 2.16:1 contrast ratio"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE (CRITICAL — invented contrast value): estimating a contrast ratio from a screenshot when the captured `pixel_contrast` and `computed_styles` arrays already contain DETERMINISTIC measured ratios for that element. The captured ratio is the ground truth from rasterized pixels. If pixel_contrast shows ratio 21:1 for span.dsc-util_text-outline, your finding MUST cite 21:1 (and conclude the element passes), not 1.00:1. Quoting the wrong number is worse than not reporting at all because it misleads developers about what to fix. ALWAYS look up the selector in pixel_contrast / computed_styles before claiming a numerical ratio.",
+    "FALSE POSITIVE: visually flagging text that uses a transparent fill with an outline (text-stroke / -webkit-text-stroke). The captured pixel_contrast measures the rasterized output, which includes the stroke. Trust the measured value — outlined text often passes contrast because the visible glyph is the stroke, not the transparent fill.",
+    "FALSE POSITIVE: flagging contrast/color of elements that are not visible to sighted users. Bootstrap '.visually-hidden' / '.sr-only' (and the older '.screen-reader-text', '.visuallyhidden') are CSS utility classes that clip the element to a 1px box and remove it from the visual layout while leaving it in the accessibility tree. The element is intentionally only readable by screen readers -- it is not rendered to the screen at all -- so visual rules like color contrast, font size, and luminance ratios DO NOT APPLY. Before flagging text or a control for contrast, check whether the element (or any ancestor) carries one of these utility classes or an equivalent clip:rect(0,0,0,0)/position:absolute/width:1px/height:1px pattern. If it does, do NOT report a contrast finding -- there is no rendered pixel to measure."
+  ],
+  "plain_meaning": "Visible text and images of text must have enough luminance contrast against their background for users with moderately low vision to read them without assistive technology. The normative threshold is 4.5:1 for normal text and 3:1 for large text (at least 18pt, or 14pt bold). Incidental text, logotypes, and disabled controls are exempt. The rule targets rendered visual presentation, not semantic markup.",
+  "scope_applies_to": [
+    "Body text, headings, labels, and paragraph copy in their default rendered state",
+    "Button text and link text against their rendered button/link background",
+    "Placeholder text when it conveys information",
+    "Text overlaid on images or gradients (measured against the actual pixels behind the glyphs)",
+    "Images of text that are part of the informational content",
+    "Menu items, breadcrumbs, tab labels, and other navigational text"
+  ],
+  "scope_does_not_apply_to": [
+    "Elements removed from the accessibility tree (aria-hidden, display:none, visibility:hidden, hidden attribute)",
+    "Visually-hidden / sr-only text clipped to a 1px box (no rendered glyphs exist to measure foreground color against any background)",
+    "Disabled / inactive form controls and buttons (explicitly exempt in the SC)",
+    "Pure decoration that conveys no information and is not required to understand the page",
+    "Logotypes: text that is part of a logo or brand name",
+    "Incidental text in photographs, screenshots of third-party content, or background imagery",
+    "Non-text UI component boundaries and icons (that is SC 1.4.11)",
+    "Focus indicator contrast (that is SC 2.4.7 / 1.4.11)",
+    "Hover-revealed text before it is shown (evaluate in its revealed state only)"
+  ],
+  "borderline_calibration": [
+    "Measured ratios of 4.5:1 or higher for normal text PASS. Do not flag 4.5 as borderline.",
+    "Large text threshold is 3:1 and applies at 18pt/24px or 14pt/18.66px bold. Treat these thresholds as hard lines.",
+    "Text rendered over a photo or gradient must be measured against the darkest/lightest region actually under the glyphs, not an average.",
+    "Do NOT flag sr-only / visually-hidden text as contrast failures. It has no rendered box and is out of scope.",
+    "Do NOT flag disabled controls; they are explicitly exempt.",
+    "When the measured ratio is within 0.1 of the threshold, report as borderline with severity medium, not critical."
+  ]
+}

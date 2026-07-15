@@ -1,0 +1,82 @@
+{
+  "criterion_id": "1.4.13",
+  "criterion_name": "Content on Hover or Focus",
+  "visual_checks": [
+    "Hover over elements with tooltips or popovers — does additional content appear?",
+    "Check if the additional content (tooltip, submenu, popup) can be dismissed without moving the pointer (e.g., pressing Escape)",
+    "Can the pointer be moved over the newly appeared content without it disappearing?",
+    "Does the additional content remain visible until the user dismisses it, moves the pointer away, or the information is no longer valid?",
+    "Check for custom tooltips, dropdown menus, mega-menus, and hover cards",
+    "Look for content that appears on keyboard focus — does it follow the same rules?"
+  ],
+  "pass_conditions": [
+    "Dismissible: Hovering/focus content can be dismissed without moving the pointer or focus (e.g., Escape key) unless it is an error message or does not obscure other content",
+    "Hoverable: The pointer can be moved over the additional content without it disappearing",
+    "Persistent: The additional content remains visible until the user dismisses it, moves pointer/focus away, or the information is no longer relevant",
+    "All three conditions are met for all hover/focus-triggered content"
+  ],
+  "fail_conditions": [
+    "Tooltip appears on hover but disappears when the pointer moves toward it (not hoverable)",
+    "Additional content cannot be dismissed without moving the pointer away (not dismissible) and it obscures other content",
+    "Content appears on hover but disappears on a timer before the user can finish reading it (not persistent)",
+    "Custom tooltip or popover covers important content and there is no way to dismiss it while keeping focus/hover on the trigger",
+    "Submenu disappears when the pointer moves between the trigger and the submenu (gap in hit area)"
+  ],
+  "na_conditions": [
+    "No additional content appears on hover or focus",
+    "The additional content is controlled by the user agent (native browser tooltips from title attribute are exempt)",
+    "Page has no interactive elements that trigger hover or focus content"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot test hover/focus behavior from static screenshots",
+    "Interactive behavior could not be triggered during testing"
+  ],
+  "common_mistakes": [
+    "Custom tooltips that disappear immediately when the pointer moves away from the trigger, even slightly",
+    "Mega-menus that close when the pointer travels diagonally to a submenu item",
+    "Hover cards (like profile previews) that cannot be dismissed with Escape",
+    "Tooltips that appear over form fields, blocking the field content, with no dismiss option",
+    "Content that appears on focus but disappears after a fixed timeout regardless of user interaction",
+    "Tooltips implemented with title attribute CSS replacements that are not hoverable"
+  ],
+  "auditor_anti_patterns": [
+    "DROP findings phrased as 'menu cannot be closed' or 'menu broken' or 'keyboard users are stuck' when the only evidence is a Phase 2 hover->Escape screenshot sequence. Phase 2 simulates mouse hover, not keyboard activation. The keyboard activation path (Enter/Space to open, Escape to close, Tab to traverse) is a separate code path that the Phase 2 sequence does NOT test.",
+    "DROP findings that imply standard navigation menus opened by Enter/Space and dismissable by Escape are 1.4.13 failures just because their CSS :hover state can't be cleared by Escape. The hover-state-can't-be-Escape-dismissed pattern IS a real low-severity 1.4.13 finding (affecting magnifier and motor users), but it is NOT a global navigation accessibility failure.",
+    "DROP keyboard-trap findings (SC 2.1.2) that are based on a hover-opened state. If keyboard activation reliably opens AND Escape reliably closes when activated by keyboard, there is no keyboard trap.",
+    "SCALE severity to actual impact. Hover-state-not-Escape-dismissable on a standard nav dropdown is LOW severity (narrow user impact, well-understood pattern). Keyboard-activation-traps-user-with-no-exit is HIGH severity. Use these distinctions instead of treating all dismissibility issues as equivalent."
+  ],
+  "examples": {
+    "pass": "A help icon shows a tooltip on hover — the tooltip stays visible when the pointer moves over it, can be dismissed by pressing Escape, and remains shown until the user moves the pointer away from both the icon and tooltip",
+    "fail": "A navigation dropdown menu appears on hover over the menu item, but when the user moves the pointer downward at a slight diagonal to reach submenu items, the menu closes because the pointer briefly leaves the trigger area",
+    "partial": "Tooltips are hoverable and persistent but cannot be dismissed with Escape — they obscure adjacent content and the only way to close them is to move the pointer away"
+  },
+  "plain_meaning": "When hovering with a pointer or moving keyboard focus reveals additional content (tooltips, submenus, popovers), that content must be dismissible without moving pointer or focus, must remain visible if the user moves the pointer onto it, and must stay visible until the user dismisses it, the trigger is removed, or the information is no longer valid. The goal is to prevent popovers from disappearing or obscuring content in ways that trap or frustrate users with low vision or motor impairments.",
+  "scope_applies_to": [
+    "Author-programmed tooltips shown on hover or focus",
+    "Custom popovers, menus, and flyouts revealed on hover or focus",
+    "Disclosure content that appears when focus enters a control",
+    "Submenus in navigation revealed on hover",
+    "Icon tooltips and help bubbles built with scripting or CSS"
+  ],
+  "scope_does_not_apply_to": [
+    "Native browser tooltips generated from the HTML title attribute (user-agent controlled)",
+    "Content not triggered by hover or focus (clicked menus, always-visible content)",
+    "Error messages shown on form validation after submission",
+    "Elements removed from the accessibility tree (aria-hidden, display:none)",
+    "Visually-hidden / sr-only content that never becomes visible to sighted users",
+    "Modal dialogs that take focus and block interaction (those are not hover/focus additional content)",
+    "Content that is part of the user's own action (clicking a disclosure button)"
+  ],
+  "borderline_calibration": [
+    "If the additional content disappears as soon as the pointer leaves the trigger (before reaching the popover), it fails the hoverable requirement.",
+    "If there is no way to dismiss the content without moving pointer/focus (e.g., no Esc key handling), it fails dismissible.",
+    "If the content vanishes after a short timeout while still relevant, it fails persistent.",
+    "Native title attribute tooltips are out of scope; do not flag them here.",
+    "Always-visible content is not additional content on hover or focus; do not flag.",
+    "DISTINGUISH KEYBOARD PATH FROM HOVER PATH. Many sub-menus open on BOTH mouse hover (via CSS :hover) AND keyboard activation (Enter/Space firing JS). These two paths often have DIFFERENT dismissibility behavior. If keyboard activation (Enter/Space) opens the menu, Escape closes it, and Tab traverses its items, the keyboard path PASSES even when the hover path does not. Do NOT write a finding that implies keyboard users are blocked when only the hover-state path fails Escape-dismissibility. The Phase 2 explorer simulates a hover->click->escape sequence; if its Escape failed, that proves the HOVER path can't be Escape-dismissed -- it does NOT prove the keyboard path is broken.",
+    "When ONLY the hover path lacks Escape dismissibility (the menu is held open by CSS :hover and Escape can't clear a hover state): grade as a LOW-severity 1.4.13 finding affecting screen-magnifier users and users with motor impairments who hover-trigger menus accidentally. Use language like 'mouse-hover users on screen magnifiers cannot dismiss without moving the pointer off the trigger' -- NOT 'menu cannot be closed' or 'keyboard users are stuck'. Cite F95 (the named WCAG failure for non-dismissable hover content) but be explicit that the keyboard activation path works.",
+    "When the keyboard activation path itself fails (Enter/Space opens but Escape doesn't close AND Tab can't exit): grade as MEDIUM/HIGH 1.4.13 finding because it affects all keyboard users, not just hover users.",
+    "If the test data only contains hover-state evidence (Phase 2 explorer screenshots showing menu still visible after Escape) and no recorded Enter+Escape walkthrough on the same widget, mark the dismissibility verdict as needs_review with the limitation noted -- do not claim the keyboard path is broken without evidence."
+  ]
+}

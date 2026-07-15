@@ -1,0 +1,62 @@
+{
+  "criterion_id": "2.3.2",
+  "criterion_name": "Three Flashes",
+  "visual_checks": [
+    "Look for any content that flashes, blinks, or rapidly alternates in brightness or color",
+    "Check for animated elements, GIFs, videos, or canvas animations that may contain flashing",
+    "Verify that no content flashes more than three times per second regardless of size or area",
+    "Look for strobe effects, rapid transitions, or pulsing animations",
+    "Check video content for scenes with rapid light changes (explosions, lightning, camera flashes)",
+    "Look for blinking text, flashing cursors, or rapidly toggling UI indicators"
+  ],
+  "pass_conditions": [
+    "No content on the page flashes more than three times in any one-second period",
+    "All animations, videos, and dynamic content remain below the three-flash threshold with no exceptions",
+    "Flashing content, if any, is limited to fewer than three flashes per second regardless of the size of the flashing area",
+    "No strobe effects, rapid brightness changes, or rapid color alternations exceed three flashes per second"
+  ],
+  "fail_conditions": [
+    "Any content flashes more than three times in any one-second period, regardless of size or brightness",
+    "Animated GIFs, videos, or canvas elements contain sequences exceeding three flashes per second",
+    "Strobe or pulsing effects in any element flash more than three times per second",
+    "Rapid alternation between contrasting colors or brightness levels exceeds three times per second",
+    "Video content includes scenes with flashing that exceeds three per second (even briefly)"
+  ],
+  "na_conditions": [
+    "Page contains no flashing, blinking, or rapidly changing content",
+    "All content is static with no animations, videos, or dynamic visual changes"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Animated or video content could not be loaded to evaluate flash rates"
+  ],
+  "common_mistakes": [
+    "Assuming the general flash threshold from SC 2.3.1 (small area or below thresholds) applies — this AAA criterion has no size or threshold exception",
+    "Animated GIFs with rapid frame changes that produce flashing above three per second",
+    "Video content with brief strobe-like scenes (e.g., concert footage, action sequences) that exceed the limit",
+    "CSS animations with rapid opacity or color transitions that create flash effects",
+    "Loading spinners or progress indicators that flash or pulse more than three times per second",
+    "Ignoring user-generated content (embedded videos, uploaded GIFs) that may contain excessive flashing"
+  ],
+  "examples": {
+    "pass": "All animations on the page use smooth transitions and no element changes brightness or color more than three times in any one-second period; video content has been reviewed and contains no flashing sequences",
+    "fail": "A promotional banner uses a strobe animation effect that alternates between bright white and dark blue five times per second to draw attention to a sale",
+    "partial": "Most page content is flash-free, but an embedded video contains a brief 2-second scene with camera flashes exceeding three per second"
+  },
+  "plain_meaning": "AAA version of 2.3.1: NOTHING may flash more than three times per second, regardless of area or luminance thresholds. The intent is absolute safety for photosensitive users.",
+  "scope_applies_to": [
+    "Any flashing content exceeding 3 flashes per second, at any size",
+    "Video, GIFs, CSS/JS animations, embedded media"
+  ],
+  "scope_does_not_apply_to": [
+    "Non-flashing animation (SC 2.2.2 or 2.3.3)",
+    "Flashes strictly under 3 per second",
+    "Pages with no flashing"
+  ],
+  "borderline_calibration": [
+    "Any flash rate above 3/second fails, regardless of flash area.",
+    "If 2.3.1 passes because flashes are below area threshold but the rate is above 3/second, this SC (AAA) still fails.",
+    "If no flashing exists, N/A."
+  ]
+}

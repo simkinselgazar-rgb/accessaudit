@@ -1,0 +1,75 @@
+{
+  "criterion_id": "3.3.3",
+  "criterion_name": "Error Suggestion",
+  "visual_checks": [
+    "Trigger form validation errors by entering invalid data — does the error message suggest how to fix the problem?",
+    "Check if error messages provide specific correction guidance (e.g., 'Enter a date in MM/DD/YYYY format' rather than just 'Invalid date')",
+    "Look for fields with constrained input (email, phone, date, URL) — do error messages suggest the correct format?",
+    "Check if required field errors suggest what needs to be entered, not just that the field is required",
+    "Look for password creation fields — do errors explain which password requirements are not met?",
+    "Check if errors for selection fields (dropdowns, radio groups) suggest valid options"
+  ],
+  "pass_conditions": [
+    "When an input error is detected and suggestions for correction are known, the suggestions are provided to the user",
+    "Error messages for format-specific fields include the expected format (e.g., 'Please enter your phone number as (555) 123-4567')",
+    "Required field errors indicate what type of information is needed (e.g., 'Please enter your email address' not just 'This field is required')",
+    "Password errors specify which requirements are not met (e.g., 'Password must contain at least one uppercase letter')",
+    "Error messages for constrained fields (date ranges, numeric ranges) specify the valid range (e.g., 'Enter a date between 01/01/2020 and 12/31/2025')",
+    "Suggestions are provided in text that is programmatically associated with the field"
+  ],
+  "fail_conditions": [
+    "Error messages identify the error but provide no suggestion for correction (e.g., 'Invalid email' with no explanation of what a valid email looks like)",
+    "Format-specific fields show only 'Invalid format' without specifying the expected format",
+    "Password fields show 'Password does not meet requirements' without listing which requirements failed",
+    "Date or numeric range errors do not indicate what the valid range is",
+    "Error messages are vague (e.g., 'Error', 'Invalid', 'Try again') with no corrective guidance",
+    "Suggestions for correction are known by the system but not communicated to the user"
+  ],
+  "na_conditions": [
+    "Page contains no forms or input fields",
+    "Form validation does not detect specific errors (all inputs are accepted without validation)",
+    "Providing error suggestions would compromise security (e.g., not revealing whether a username exists in a login form)",
+    "No input constraints exist that would allow the system to suggest corrections"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Could not trigger form validation to observe error suggestions",
+    "Error messages are generated server-side and were not captured during testing",
+    "Forms require valid authentication or prior steps to reach the validation state",
+    "No form errors were triggered during testing — if the page has forms but no error states were captured, the SC cannot be fully evaluated. Report Supports if no forms exist, or Not Evaluated if forms exist but errors could not be triggered."
+  ],
+  "common_mistakes": [
+    "Generic error messages like 'Invalid input' or 'Error in this field' that do not help the user understand what to fix",
+    "Email field errors that say 'Invalid email' instead of 'Email address must be in the format name@domain.com'",
+    "Date field errors that say 'Invalid date' without specifying the expected date format (MM/DD/YYYY vs DD/MM/YYYY)",
+    "Numeric input errors that say 'Invalid number' without specifying the valid range",
+    "Password errors that list all requirements instead of only the ones that are not met",
+    "Error suggestions that appear only in a tooltip on hover, not as persistent text"
+  ],
+  "examples": {
+    "pass": "A date of birth field shows the error: 'Please enter your date of birth in MM/DD/YYYY format. The date must be before today's date.' A password field error reads: 'Your password needs at least one uppercase letter and one number — you have met the length and special character requirements.'",
+    "fail": "An email field shows 'Invalid input' after the user enters 'john@' — the system knows the domain is missing but does not suggest adding a domain (e.g., 'john@example.com'). A phone number field shows 'Error' with no indication of the expected format.",
+    "partial": "Some error messages provide suggestions (e.g., email field says 'Please include an @ and domain name') but the date field only says 'Invalid date' without specifying the expected format, and the ZIP code field says 'Invalid' without mentioning the 5-digit or 5+4 format."
+  },
+  "plain_meaning": "When the system detects an input error and the correct value or a likely fix is known, the system must suggest the correction to the user. Exception: suggestions can be withheld when disclosing them would harm security or the purpose of the content (for example, password reset hints).",
+  "scope_applies_to": [
+    "Forms that validate input and know the valid range or format",
+    "Spell-checking or format-correction hints in form fields",
+    "Date fields where the accepted format or nearest valid date is known",
+    "Numeric fields with known min/max values",
+    "Address or postal-code fields where a correction is known"
+  ],
+  "scope_does_not_apply_to": [
+    "Security-sensitive inputs where suggestions would leak information (passwords, security questions)",
+    "Fields where no suggestion can reasonably be determined",
+    "Error identification itself (that is SC 3.3.1)",
+    "Forms that do not perform automatic validation",
+    "Pages with no forms"
+  ],
+  "borderline_calibration": [
+    "Only flag when the system clearly KNOWS a correction (for example format requirement) and still fails to offer it.",
+    "Do not demand suggestions for open-ended text where no suggestion can be computed.",
+    "Security-sensitive fields are exempt, PASS when suggestions are withheld for that reason.",
+    "Prefer Not Enough Evidence when no error flow was captured."
+  ]
+}

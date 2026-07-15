@@ -1,0 +1,82 @@
+{
+  "criterion_id": "1.4.11",
+  "criterion_name": "Non-text Contrast",
+  "visual_checks": [
+    "Check UI component boundaries: do form field borders have at least 3:1 contrast against their background?",
+    "Check button borders or backgrounds against the surrounding page background — at least 3:1?",
+    "Look at icons that convey information (checkmarks, warning icons, navigation arrows) — 3:1 against background?",
+    "Check focus indicators: do they have at least 3:1 contrast against adjacent colors?",
+    "Look at chart elements: do bars, lines, and segments have 3:1 contrast against adjacent colors?",
+    "Check toggle switches, checkboxes, and radio buttons for sufficient contrast",
+    "Examine custom-styled form controls (dropdowns, sliders, range inputs)"
+  ],
+  "pass_conditions": [
+    "UI components (buttons, form fields, toggles) have visual boundaries with at least 3:1 contrast ratio against adjacent colors",
+    "Graphical objects required to understand content (icons, chart elements) have at least 3:1 contrast ratio",
+    "Custom focus indicators have at least 3:1 contrast against adjacent colors",
+    "State changes in UI components (checked/unchecked, selected/unselected) have at least 3:1 contrast",
+    "Required parts of charts and graphs (bars, lines, pie slices) have at least 3:1 contrast against adjacent colors"
+  ],
+  "fail_conditions": [
+    "Form field borders with less than 3:1 contrast against the page background (e.g., light gray border on white)",
+    "Buttons with borders or backgrounds that do not contrast sufficiently with the page background",
+    "Icons conveying meaning (error, success, navigation) with less than 3:1 contrast",
+    "Chart bars or line graph lines with less than 3:1 contrast against their background",
+    "Custom checkboxes or radio buttons where the visual indicator has insufficient contrast",
+    "Focus indicators with less than 3:1 contrast against the background"
+  ],
+  "na_conditions": [
+    "Native HTML form controls styled with the browser default appearance (user agent styles are exempt)",
+    "UI components whose appearance is entirely controlled by the user agent and not modified by the author",
+    "Graphical objects that are purely decorative and not needed to understand the content",
+    "Inactive/disabled UI components"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot measure exact contrast ratios for non-text elements from screenshots alone",
+    "Custom component styles are dynamically applied and not captured in the data"
+  ],
+  "common_mistakes": [
+    "Light gray (#ccc) input field borders on white (#fff) backgrounds — only 1.6:1 contrast",
+    "Flat-design buttons that blend into the background with no visible boundary",
+    "Chart segments in similar light pastel colors that do not contrast with each other",
+    "Custom toggle switches where the 'off' state has very low contrast",
+    "Icon buttons (hamburger menu, search icon) in light gray on white",
+    "Focus outlines in light blue on white backgrounds"
+  ],
+  "examples": {
+    "pass": "Form input fields have a #767676 border on a #ffffff background (4.48:1 contrast), buttons have a solid #333 background, and all chart bars have at least 3:1 contrast against the white chart background",
+    "fail": "Text input fields have a #dddddd border on a #ffffff background (1.46:1 contrast) — the field boundaries are nearly invisible, especially for users with low vision",
+    "partial": "Buttons and primary form fields meet 3:1 contrast but secondary inputs (search bars, filter dropdowns) have very light borders that fail the 3:1 minimum"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE (CRITICAL — invented contrast value): estimating a non-text contrast ratio from a screenshot when the captured `focus_contrast`, `pixel_contrast`, or `computed_styles` arrays already contain DETERMINISTIC measured ratios for that element. Use the captured value verbatim. If focus_contrast measured the focus indicator at 1.1 against the background, write 1.1:1 (and report failure). If it measured 4.0, write 4.0:1 (and report pass). Do not invent or estimate.",
+    "FALSE POSITIVE: flagging contrast/color of elements that are not visible to sighted users. Bootstrap '.visually-hidden' / '.sr-only' (and the older '.screen-reader-text', '.visuallyhidden') are CSS utility classes that clip the element to a 1px box and remove it from the visual layout while leaving it in the accessibility tree. The element is intentionally only readable by screen readers -- it is not rendered to the screen at all -- so visual rules like color contrast, font size, and luminance ratios DO NOT APPLY. Before flagging text or a control for contrast, check whether the element (or any ancestor) carries one of these utility classes or an equivalent clip:rect(0,0,0,0)/position:absolute/width:1px/height:1px pattern. If it does, do NOT report a contrast finding -- there is no rendered pixel to measure."
+  ],
+  "plain_meaning": "The visual parts that let a user identify a UI component (boundaries, states) and the meaningful parts of informational graphics must have a contrast ratio of at least 3:1 against adjacent colors. This covers non-text visuals the same way 1.4.3 covers text. Inactive components, pure decoration, and logotypes are exempt.",
+  "scope_applies_to": [
+    "Visible boundaries of form inputs, buttons, and other controls when the boundary is the primary identification",
+    "Icons that are the sole means of identifying a control",
+    "Selected, checked, expanded, or active state indicators on controls",
+    "Meaningful parts of charts, graphs, and infographics required to understand the data",
+    "Custom focus, hover, or selection styles when they are the only identification of the state"
+  ],
+  "scope_does_not_apply_to": [
+    "Inactive / disabled UI components (explicitly exempt)",
+    "Elements removed from the accessibility tree (aria-hidden, display:none)",
+    "Visually-hidden / sr-only content (no rendered pixels to measure)",
+    "Logotypes and brand marks",
+    "Purely decorative graphics that carry no information",
+    "Text and images of text (those are SC 1.4.3 / 1.4.6)",
+    "Controls identified by visible text label (the text identifies it; the border contrast is not required)",
+    "Focus indicator visibility as a standalone concern (that is SC 2.4.7; contrast of the indicator falls under 1.4.11 only when the indicator is the sole identifier of focused state)"
+  ],
+  "borderline_calibration": [
+    "Measured ratios of 3:1 or higher PASS.",
+    "A button with a visible text label and no visible border is NOT a failure; the label identifies the control.",
+    "Do NOT flag sr-only / visually-hidden elements.",
+    "Do NOT flag disabled controls.",
+    "Chart series distinguished only by low-contrast hues can fail both 1.4.1 (color alone) and 1.4.11 (non-text contrast). Choose the closer fit.",
+    "Borderline measurements within 0.1 of 3:1 should be reported with reduced severity."
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "criterion_id": "1.4.10",
+  "criterion_name": "Reflow",
+  "visual_checks": [
+    "At 320 CSS pixels width (equivalent to 400% zoom on a 1280px wide desktop), check if content reflows into a single column without horizontal scrolling",
+    "Look for content that is cut off or hidden at narrow widths",
+    "Check for horizontal scrollbars appearing when zoomed to 400% at 1280px viewport",
+    "Look for overlapping text or UI elements at narrow widths",
+    "Verify navigation menus adapt (hamburger menu or vertical stacking) rather than getting cut off",
+    "Check data tables, images, and embedded content for horizontal overflow"
+  ],
+  "pass_conditions": [
+    "Content can be presented at 320 CSS pixels wide without requiring horizontal scrolling for vertically-scrolling content",
+    "Content can be presented at 256 CSS pixels high without requiring vertical scrolling for horizontally-scrolling content",
+    "All content and functionality is available without two-dimensional scrolling (except content that requires 2D layout: data tables, images, maps, diagrams, video, toolbars)",
+    "Text reflows into a single column at narrow widths",
+    "Navigation adapts to narrow widths (e.g., collapsing to a hamburger menu)"
+  ],
+  "fail_conditions": [
+    "Horizontal scrollbar appears at 320px width for content that should reflow",
+    "Text or content is clipped/hidden at 320px width with no way to access it",
+    "Content overlaps making it unreadable at 320px width",
+    "Fixed-width layouts that do not adapt to narrow viewports",
+    "Two-column layouts that do not collapse to single column, requiring horizontal scrolling to read",
+    "Sticky headers or footers that take up too much vertical space at narrow widths, leaving little room for content"
+  ],
+  "na_conditions": [
+    "Content inherently requires two-dimensional scrolling for understanding: data tables, maps, diagrams, video players, toolbars, drawing canvases"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Page was only tested at one viewport width and 320px was not evaluated",
+    "Cannot verify reflow behavior from a single screenshot without resizing"
+  ],
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE (CRITICAL — invented CSS value): inventing CSS class names, custom-property values, style attributes, or pixel widths. Every value you cite (e.g. `--grid-column-count:2`, `width:373px`, `is-nowrap`) MUST appear verbatim in the dom.html in the user prompt. If dom.html shows `style=\"--grid-column-count:1\"`, do NOT write `--grid-column-count:2` in your finding. Quote the actual value or do not report the finding. A finding citing the wrong CSS value misleads developers and erodes trust in the entire ACR.",
+    "FALSE POSITIVE: claiming reflow failure based purely on the desktop screenshot. The mobile/narrow rendering is captured separately (viewport_320px.png if present). If you do not have evidence at 320px width, mark Not Evaluated and explain — do not extrapolate from desktop.",
+    "FALSE POSITIVE: flagging content that is exempt because it inherently requires 2D layout (data tables, maps, complex diagrams, video players). Confirm the content type before reporting reflow failure."
+  ],
+  "common_mistakes": [
+    "Using fixed-width containers (width: 960px) instead of max-width or percentage-based widths",
+    "Absolutely positioned elements that overflow their containers at narrow widths",
+    "Images without max-width: 100% that extend beyond the viewport",
+    "CSS that hides content at narrow widths using display:none in media queries (content is lost, not reflowed)",
+    "Horizontal navigation bars that do not collapse into a mobile menu",
+    "Form layouts that stay side-by-side instead of stacking vertically"
+  ],
+  "examples": {
+    "pass": "At 400% zoom (320 CSS px width), the page content reflows into a single readable column, the navigation collapses to a hamburger menu, images scale down, and no horizontal scrollbar appears",
+    "fail": "At 400% zoom, the page maintains its 960px fixed layout, requiring extensive horizontal scrolling to read each line of text — users must scroll right and left for every line",
+    "partial": "Most content reflows correctly at 320px but a sidebar widget maintains its fixed width and creates a horizontal scrollbar, and one form has side-by-side fields that overlap"
+  },
+  "plain_meaning": "Content must reflow so users do not have to scroll in two directions at once. At a viewport of 320 CSS pixels wide, there should be no horizontal scrolling for vertically-scrolling content (and vice versa for horizontally-scrolling content at 256 CSS pixels tall). Exceptions exist for content that genuinely requires a two-dimensional layout such as maps, complex data tables, diagrams, and some code blocks.",
+  "scope_applies_to": [
+    "Page layouts at 320 CSS px width (equivalent to 400% zoom on a 1280px viewport)",
+    "Navigation, content, forms, and interactive regions",
+    "Text columns and grids that should stack at narrow widths",
+    "Sticky headers and fixed regions that may overflow at narrow widths",
+    "Modal dialogs and popovers shown at narrow viewports"
+  ],
+  "scope_does_not_apply_to": [
+    "Visually-hidden / sr-only text (has no rendered box that could cause horizontal scroll)",
+    "Elements removed from the accessibility tree (aria-hidden, display:none)",
+    "Content that requires two-dimensional layout to be usable: maps, complex data tables, diagrams, video players with overlay controls, sheet-music, large images meant to be panned",
+    "Code samples and preformatted blocks where line wrapping would destroy meaning",
+    "Focus indicators (that is SC 2.4.7)",
+    "Font size readability (that is SC 1.4.4 / 1.4.12)"
+  ],
+  "borderline_calibration": [
+    "Minor horizontal overflow of a few pixels caused by padding or scrollbars is not a clear failure; verify it affects perceivable content.",
+    "Two-dimensional-essential content is exempt; do not flag a map widget or data table for requiring horizontal scroll.",
+    "Sticky headers that cause content to be obscured but not cause 2-D scroll are not a 1.4.10 failure (they may touch 1.4.12 or 2.4.11).",
+    "Do NOT flag sr-only / visually-hidden text as reflow failures.",
+    "When in doubt, evaluate at exactly 320 px width and look for an actual horizontal scrollbar on main content."
+  ]
+}

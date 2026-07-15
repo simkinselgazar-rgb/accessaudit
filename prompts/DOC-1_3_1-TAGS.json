@@ -1,0 +1,51 @@
+{
+  "criterion_id": "DOC-1.3.1-TAGS",
+  "criterion_name": "Tagged PDF",
+  "visual_checks": [
+    "CRITICAL — STRUCTURE VERIFICATION: Determine whether the PDF has a tag tree that represents the logical structure of the document, not merely visual layout.",
+    "Open the PDF's tag panel or inspect its properties: does it report as a 'Tagged PDF'? A tagged PDF will have a Tags tree in the navigation pane.",
+    "Check whether the tag tree includes standard PDF tags such as <Document>, <P>, <H1>-<H6>, <Table>, <Figure>, <L> (list), <LI> (list item), and <Link>.",
+    "Verify that every visible content element (text paragraphs, headings, images, tables, lists, links) has a corresponding tag in the tag tree.",
+    "Look for content that appears visually but is not represented in the tag structure — this content would be invisible to screen readers.",
+    "Check whether the document was exported with 'Tagged PDF' enabled from its authoring application (Word, InDesign, etc.).",
+    "Inspect whether tags are meaningful and correct (e.g., headings tagged as <H1> not <P>, table rows tagged as <TR> not <P>)."
+  ],
+  "pass_conditions": [
+    "PDF document properties confirm it is a Tagged PDF",
+    "A complete tag tree exists that maps to all visible content in the document",
+    "All text content is contained within appropriate semantic tags (paragraphs, headings, lists, table cells, etc.)",
+    "All images are either tagged as <Figure> with alt text or marked as artifacts for decorative images",
+    "Links are tagged as <Link> with appropriate link text",
+    "The tag tree uses standard PDF tags consistent with the PDF/UA specification"
+  ],
+  "fail_conditions": [
+    "PDF is not tagged at all — document properties show 'Tagged PDF: No'",
+    "PDF has a tag tree but it is incomplete, with significant content elements missing from the structure",
+    "All content is tagged as a single type (e.g., everything is <P>) with no semantic distinction between headings, lists, tables, and paragraphs",
+    "Tags exist but are meaningless or auto-generated incorrectly (e.g., every line is a separate <P> tag instead of logical paragraphs)",
+    "Visible content exists outside the tag tree and would be skipped by assistive technology",
+    "The PDF was scanned and has no tag structure — it is essentially a flat image with no underlying text layer or tags"
+  ],
+  "na_conditions": [
+    "Document is not a PDF (e.g., DOCX, PPTX, or XLSX files use their own structural mechanisms)",
+    "File is not a document type that supports tagging"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "PDF could not be opened or its tag structure could not be inspected",
+    "Document is password-protected and its internal structure cannot be examined"
+  ],
+  "common_mistakes": [
+    "Printing to PDF from a browser or application instead of exporting as Tagged PDF — this produces an untagged flat PDF",
+    "Using 'Save As PDF' without enabling the Tagged PDF option in export settings",
+    "Scanning a paper document to PDF without running OCR and then adding tags",
+    "Auto-tagging a PDF in Acrobat without reviewing and correcting the generated tags",
+    "Having a tag tree that exists but does not match the actual content (leftover tags from editing)",
+    "Assuming that because a PDF has bookmarks it is also properly tagged — bookmarks and tags are separate features"
+  ],
+  "examples": {
+    "pass": "A PDF exported from Microsoft Word with 'Create Tagged PDF' enabled. The tag tree includes <H1> for the title, <H2> for section headings, <P> for body text, <Table> for data tables, and <Figure> for images with alt text.",
+    "fail": "A PDF created by printing a webpage to PDF. Document properties show 'Tagged PDF: No'. Screen readers cannot navigate by headings, tables, or any structural elements — they read raw text in an unpredictable order.",
+    "partial": "A PDF is tagged but the tag tree is incomplete: the first 10 pages are properly tagged from the original Word export, but 5 appended pages from a scanned document have no tags."
+  }
+}

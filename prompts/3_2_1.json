@@ -1,0 +1,67 @@
+{
+  "criterion_id": "3.2.1",
+  "criterion_name": "On Focus",
+  "visual_checks": [
+    "Tab through interactive elements in the page — does moving focus to any element cause an unexpected change of context such as a new page loading, a form submitting, or a modal opening?",
+    "Check dropdown menus and select elements — does merely focusing on them (not activating or selecting) trigger navigation or page changes?",
+    "Look at links and buttons — does focusing on them (without clicking or pressing Enter) cause content to appear, disappear, or rearrange in a confusing way?",
+    "Check for any elements that launch pop-ups, redirect the page, or submit data when they receive keyboard focus",
+    "Examine embedded content (iframes, video players, widgets) — does focusing on them trigger autoplay, page scrolls, or layout shifts?"
+  ],
+  "pass_conditions": [
+    "No component initiates a change of context (page navigation, form submission, new window, focus moved to a different component) when it receives focus",
+    "Focus indicators appear on interactive elements when focused, but no automatic actions are triggered by focus alone",
+    "Dropdown menus and select elements only open or activate when the user deliberately interacts (click, Enter, Space) — not on focus",
+    "Tooltips or supplementary information that appears on focus do not constitute a change of context (supplementary info appearing is acceptable)"
+  ],
+  "fail_conditions": [
+    "Focusing on a link or button causes automatic navigation to another page without the user activating it",
+    "A form auto-submits when the user tabs to the submit button, before the user presses Enter or clicks",
+    "A dropdown select element navigates to a new URL immediately when it receives focus or when the user arrows through options",
+    "A modal dialog or pop-up window opens automatically when an element receives focus",
+    "Focus moving to an element causes a significant rearrangement of page content that disorients the user"
+  ],
+  "na_conditions": [
+    "Page has no interactive elements that can receive keyboard focus (no links, buttons, form controls, or custom widgets)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Keyboard focus behavior could not be tested because screenshots are static and do not capture focus-triggered behavior",
+    "Dynamic behavior on focus could not be verified from DOM snapshot alone"
+  ],
+  "common_mistakes": [
+    "A select dropdown with an onchange handler that navigates on selection change, combined with keyboard behavior where arrowing through options triggers the change — this effectively causes context change on focus of each option",
+    "JavaScript onfocus handlers that open modal dialogs or redirect the page",
+    "Auto-advancing carousels or slideshows that activate when their controls receive focus",
+    "Custom widgets that move focus to a different part of the page when a component receives focus",
+    "Video or audio players that begin playback when their play button receives focus (before activation)"
+  ],
+  "examples": {
+    "pass": "A navigation menu has dropdown sub-menus that only open when the user clicks or presses Enter on the parent item — tabbing to the parent item shows a focus ring but does not open the dropdown",
+    "fail": "A <select> element with navigation options uses onchange to redirect to a new page — when a keyboard user arrows through the options, the page changes before they can make a deliberate selection",
+    "partial": "Most interactive elements behave correctly on focus, but one widget in the sidebar launches a chat pop-up window automatically when its button receives keyboard focus"
+  },
+  "plain_meaning": "Simply moving keyboard focus onto a control must not, on its own, trigger a significant change of context. A change of context means something major: opening a new window, navigating to a different page, substantially rearranging the page, or submitting a form. Merely showing a tooltip, revealing a submenu, or highlighting a focused element is NOT a change of context.",
+  "scope_applies_to": [
+    "Keyboard focus landing on interactive components (links, buttons, form fields, custom widgets)",
+    "Programmatic focus placement that causes navigation or form submission",
+    "Custom focus handlers that open new windows or redirect on focus",
+    "Components whose onfocus handler submits a form, changes URL, or rearranges the page",
+    "Auto-advancing focus logic that moves focus beyond what the user expected"
+  ],
+  "scope_does_not_apply_to": [
+    "Hover or mouseover effects (focus is about keyboard/programmatic focus)",
+    "Showing a tooltip, popover, or submenu on focus without navigating",
+    "Visual focus indicator styling (that is SC 2.4.7)",
+    "Expanding a disclosure or accordion on click (click is input, not focus)",
+    "Dropdowns opening on focus when the dropdown is a child of the focused element and does not move focus elsewhere",
+    "Autocomplete suggestions appearing below a field while typing"
+  ],
+  "borderline_calibration": [
+    "A context change is BIG: new window, URL change, form submit, major layout shuffle. Small reveals are NOT context changes.",
+    "A popover or tooltip appearing on focus is NOT a violation.",
+    "A submenu expanding under a focused menu item is NOT a violation.",
+    "Flag only when focus alone demonstrably triggers navigation, a new window, or form submission without user intent.",
+    "If evidence comes only from suspicion (no captured behavior), prefer Not Enough Evidence."
+  ]
+}

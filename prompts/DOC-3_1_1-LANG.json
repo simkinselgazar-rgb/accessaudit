@@ -1,0 +1,43 @@
+{
+  "criterion_id": "DOC-3.1.1-LANG",
+  "criterion_name": "Document Language",
+  "visual_checks": [
+    "Check the document properties or metadata for a language setting",
+    "Verify that the specified language matches the primary language of the document content",
+    "For PDFs, check the language attribute in the document catalog or tag tree",
+    "For Office documents, check the proofing language and document language settings",
+    "Scan the document content to identify the actual primary language and compare against the metadata setting"
+  ],
+  "pass_conditions": [
+    "The document properties specify the correct primary language of the content",
+    "The language code is valid and matches the predominant language used in the document",
+    "For tagged PDFs, the Lang attribute is set at the document level in the tag tree",
+    "For Office documents, the default proofing language matches the document content language"
+  ],
+  "fail_conditions": [
+    "No language is set in the document properties or metadata",
+    "The language is set to the wrong language (e.g., document is in Spanish but language is set to English)",
+    "The language field is present but empty or set to an invalid/unrecognized language code",
+    "The language is set to a default value that does not match the content (e.g., left as 'en-US' for a French document)",
+    "For tagged PDFs, the Lang entry is missing from the document catalog"
+  ],
+  "na_conditions": [
+    "The document format does not support language metadata settings"
+  ],
+  "ne_conditions": [
+    "Document properties or metadata could not be extracted for evaluation",
+    "The language setting could not be determined from the available data"
+  ],
+  "common_mistakes": [
+    "Leaving the language at the operating system default rather than setting it to match the document content",
+    "Creating a document in one language based on a template set to a different language",
+    "Converting a document to PDF without ensuring the language setting carries over to the PDF metadata",
+    "Setting the proofing language for spell-check without also setting the document-level language property",
+    "Using a generic language code (e.g., just 'en') when a more specific code is appropriate, though this is less critical than having no language set at all"
+  ],
+  "examples": {
+    "pass": "A French-language PDF has its document catalog Lang attribute set to 'fr-FR' matching the French content throughout the document",
+    "fail": "A Spanish-language document has no language set in its properties, causing screen readers to mispronounce all content using English pronunciation rules",
+    "partial": "The document language is set to 'en' (English) which is correct for the majority of the content, but the setting was inherited from a template rather than deliberately configured"
+  }
+}

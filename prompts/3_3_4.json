@@ -1,0 +1,78 @@
+{
+  "criterion_id": "3.3.4",
+  "criterion_name": "Error Prevention (Legal, Financial, Data)",
+  "visual_checks": [
+    "Identify pages where legal commitments, financial transactions, or user data modifications occur (purchases, contracts, account deletion, profile updates)",
+    "Check if a review/confirmation step is provided before final submission of legal or financial data",
+    "Look for a 'Review your order' or 'Confirm' step before completing a purchase",
+    "Check if users can review and correct their input before final submission",
+    "Look for a mechanism to reverse or undo submissions (cancel order, undo deletion, withdrawal period)",
+    "Check if data entered by the user is validated and the user is given an opportunity to correct errors before the transaction is finalized",
+    "Look for checkboxes like 'I confirm this information is correct' before final submission"
+  ],
+  "pass_conditions": [
+    "Submissions that cause legal commitments or financial transactions are reversible (e.g., order can be cancelled within a specified period)",
+    "OR data entered by the user is checked for input errors and the user is given an opportunity to correct them before final submission",
+    "OR a mechanism is provided to review, confirm, and correct information before completing the submission",
+    "At least one of these three conditions is met for all legal, financial, or user-data-modifying submissions",
+    "Purchase flows include an order review page showing all details before the final 'Place Order' button",
+    "Account deletion or data modification actions require explicit confirmation (e.g., 'Are you sure? This action cannot be undone')"
+  ],
+  "fail_conditions": [
+    "A financial transaction is completed in a single step with no review or confirmation page",
+    "Users cannot review their order details before completing a purchase",
+    "Data is submitted without validation, and errors in input (wrong amount, wrong address) are finalized immediately",
+    "Account deletion or profile changes happen immediately with no confirmation step and no way to reverse",
+    "Legal agreements are submitted without showing the user what they agreed to before finalizing",
+    "No mechanism exists to reverse, check, or confirm submissions involving legal or financial consequences"
+  ],
+  "na_conditions": [
+    "Page does not involve legal commitments, financial transactions, or user-controllable data modifications",
+    "Page is informational only with no forms that modify data or create obligations",
+    "Forms on the page collect feedback or comments with no legal, financial, or data-modification implications"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot complete the transaction flow to verify whether confirmation/review steps exist",
+    "Payment or data modification steps require authentication that was not available during testing",
+    "The full transaction flow spans multiple pages that were not all captured"
+  ],
+  "common_mistakes": [
+    "One-click purchase buttons with no confirmation step or order review",
+    "Account deletion that happens immediately when clicking 'Delete Account' with no confirmation dialog",
+    "Financial forms that submit on Enter key press without a review step",
+    "Legal agreements where clicking 'Submit' finalizes the agreement with no review of terms",
+    "Profile updates that save immediately on field change (auto-save) with no way to revert",
+    "Subscription signup that charges the credit card immediately with no order summary or confirmation",
+    "Data modification forms that do not show the user what will change before saving"
+  ],
+  "examples": {
+    "pass": "An e-commerce checkout has a 'Review Order' page showing shipping address, items, quantities, and total price. The user can click 'Edit' next to each section to make changes, then clicks 'Place Order' to finalize. The confirmation email includes a 'Cancel Order' link valid for 30 minutes.",
+    "fail": "A subscription service has a 'Subscribe Now' button that immediately charges the user's credit card with no order review page, no confirmation step, and no option to cancel within a grace period.",
+    "partial": "A checkout flow has a review page showing order details, but the user cannot edit individual items from the review page — they must go back to the cart and restart the checkout process. Account settings changes auto-save with no confirmation."
+  },
+  "plain_meaning": "For pages that cause legal commitments, financial transactions, that modify/delete user data in storage, or that submit test answers, at least one of three safeguards must be in place: submissions are reversible, data is checked for input errors and the user is offered a chance to correct, or a confirmation step lets the user review and confirm before finalizing.",
+  "scope_applies_to": [
+    "Checkout and payment pages",
+    "Contract acceptance and legal agreement pages",
+    "Account deletion, data deletion, or data modification pages",
+    "Test submission pages in educational contexts",
+    "Subscription sign-up and billing pages",
+    "Any transaction that commits the user to a legal or financial obligation"
+  ],
+  "scope_does_not_apply_to": [
+    "General information forms that do not commit legal or financial action",
+    "Newsletter sign-ups and preference toggles",
+    "Search, filter, and sort forms",
+    "Pages with no submission at all",
+    "Content pages that do not involve user-controllable data modification",
+    "Login forms that do not themselves commit a transaction"
+  ],
+  "borderline_calibration": [
+    "Any ONE of reversible, checked, or confirmed satisfies the SC.",
+    "A review/confirm step before final submit is the most common satisfier.",
+    "Undo or cancellation capability after submit also satisfies.",
+    "Do not flag ordinary non-transactional forms (Not Applicable).",
+    "Prefer Not Enough Evidence when the transaction flow was not actually captured."
+  ]
+}

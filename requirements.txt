@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+playwright
+pymupdf
+pillow
+beautifulsoup4
+lxml
+jinja2
+pydantic
+websockets
+python-docx
+openpyxl
+python-pptx
+numpy
+esprima  # optional: Layer 2 JS AST prefilter. Regex fallback runs when missing.

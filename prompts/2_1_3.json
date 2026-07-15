@@ -1,0 +1,69 @@
+{
+  "criterion_id": "2.1.3",
+  "criterion_name": "Keyboard (No Exception)",
+  "visual_checks": [
+    "Attempt to use all interactive elements (links, buttons, menus, form controls, sliders, drag-and-drop) using only the keyboard",
+    "Check that all functionality available via mouse or touch is also available via keyboard with no exceptions",
+    "Verify that custom widgets (date pickers, carousels, accordions, modals) are fully operable by keyboard",
+    "Look for drag-and-drop interfaces and verify keyboard alternatives exist for all drag operations",
+    "Check that drawing or path-dependent interactions have keyboard-accessible equivalents",
+    "Verify that no functionality requires specific pointing device gestures (e.g., multi-touch, pressure-sensitive) without a keyboard alternative"
+  ],
+  "pass_conditions": [
+    "All functionality on the page is operable through a keyboard interface with no exceptions",
+    "Custom interactive widgets (sliders, drag-and-drop, carousels, date pickers) are fully keyboard accessible",
+    "No feature requires a pointing device, touch gesture, or path-dependent input without a keyboard alternative",
+    "All interactive elements can be reached, activated, and operated using standard keyboard controls (Tab, Enter, Space, Arrow keys, Escape)",
+    "Drawing or freeform input features provide keyboard-accessible alternatives"
+  ],
+  "fail_conditions": [
+    "Any functionality is only operable by mouse, touch, or gesture with no keyboard alternative",
+    "Custom widgets (drag-and-drop, sliders, color pickers) cannot be operated via keyboard",
+    "Interactive content requires specific pointing device features (hover-based actions, multi-touch gestures) with no keyboard equivalent",
+    "Some interactive elements are unreachable or inoperable via keyboard navigation",
+    "Path-dependent input (drawing, freeform annotation) has no keyboard-accessible alternative"
+  ],
+  "na_conditions": [
+    "Page contains no interactive elements beyond basic browser-handled links and form controls that are inherently keyboard accessible"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Page content failed to load so keyboard operability cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Drag-and-drop reordering interfaces with no keyboard-based alternative for moving items",
+    "Custom sliders or range controls that only respond to mouse dragging",
+    "Map interactions (zoom, pan, pin placement) that lack keyboard controls",
+    "Canvas-based drawing tools with no keyboard or text-based input alternative",
+    "Hover-triggered menus or tooltips that cannot be activated via keyboard focus",
+    "Touch-only gestures (swipe, pinch-to-zoom) on web content with no keyboard fallback",
+    "Custom video players with controls that only respond to mouse clicks"
+  ],
+  "examples": {
+    "pass": "A project management board with drag-and-drop cards also provides keyboard shortcuts and a move-to menu to reorder and reassign cards, ensuring all functionality is keyboard accessible",
+    "fail": "A photo editing tool allows cropping and drawing only through mouse interactions with no keyboard-accessible alternatives for any editing feature",
+    "partial": "Most page functionality is keyboard accessible, but a drag-and-drop file uploader and an interactive map widget have no keyboard alternatives"
+  },
+  "plain_meaning": "This is the AAA version of SC 2.1.1 with no exceptions. ALL functionality must be keyboard-operable, including functions that 2.1.1 exempts because they depend on path of motion. The intent is full keyboard parity with pointer input for every user.",
+  "scope_applies_to": [
+    "Everything in scope for SC 2.1.1",
+    "Freehand drawing, signature capture, and handwriting input",
+    "Gesture-based controls (swipe, pinch, rotate) of any kind",
+    "Any path-dependent interaction that 2.1.1 would exempt",
+    "Analog or continuous-input controls"
+  ],
+  "scope_does_not_apply_to": [
+    "Focus order (SC 2.4.3)",
+    "Focus visibility (SC 2.4.7)",
+    "Keyboard traps (SC 2.1.2)",
+    "Character-key shortcut conflicts (SC 2.1.4)",
+    "Content with no interactive functionality"
+  ],
+  "borderline_calibration": [
+    "Apply the same rules as 2.1.1 but remove the path-dependent exemption.",
+    "A drawing canvas with no keyboard alternative fails 2.1.3 even if it passes 2.1.1.",
+    "If 2.1.1 passes and there are no path-dependent features, 2.1.3 also passes.",
+    "Do not demand pixel-identical behavior -- a keyboard alternative that achieves the same end result is sufficient."
+  ]
+}

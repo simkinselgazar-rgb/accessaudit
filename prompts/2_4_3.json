@@ -1,0 +1,74 @@
+{
+  "criterion_id": "2.4.3",
+  "criterion_name": "Focus Order",
+  "visual_checks": [
+    "Tab through the page with the keyboard and observe whether focus moves in a logical, predictable sequence that matches the visual layout",
+    "Check if focus order follows the reading order — generally left-to-right, top-to-bottom for LTR languages",
+    "Look for cases where focus jumps unexpectedly to a distant part of the page and then jumps back",
+    "When a modal dialog or popup opens, verify that focus moves into the dialog and stays trapped within it until dismissed",
+    "After closing a dialog or completing an action, check that focus returns to a logical position (e.g., the element that triggered the dialog)",
+    "Look for positive tabindex values (tabindex='1', tabindex='5') in the source that override the natural DOM order"
+  ],
+  "pass_conditions": [
+    "Focus order follows a logical and intuitive sequence that preserves meaning and operability",
+    "Focus order matches the visual layout reading order (top-to-bottom, left-to-right for LTR content)",
+    "Modal dialogs trap focus within themselves when open and return focus to the trigger element when closed",
+    "Dynamically inserted content (error messages, search results, new form fields) receives focus or is placed logically in the focus order",
+    "No positive tabindex values disrupt the natural DOM-based focus order",
+    "Skip links and landmark navigation do not cause confusing focus jumps"
+  ],
+  "fail_conditions": [
+    "Focus order is illogical — for example, focus jumps from the header to the footer, then to the sidebar, then to the main content",
+    "Positive tabindex values create a focus order that contradicts the visual layout",
+    "A modal dialog opens but focus remains behind it, allowing users to Tab to elements obscured by the overlay",
+    "After closing a dialog, focus is lost (sent to the top of the page or to the <body> element) instead of returning to a meaningful position",
+    "Dynamically added content (like form error messages) appears visually before the form but is placed at the end of the DOM, far from where the user is working",
+    "A CSS layout (flexbox order, grid placement, absolute positioning) causes visual order and DOM order to diverge significantly"
+  ],
+  "na_conditions": [
+    "Page contains no interactive elements and no dynamic content that changes focus position",
+    "Page has only a single interactive element"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot fully test focus order from static screenshots — sequential keyboard interaction testing is required",
+    "Dynamic content interactions cannot be captured in current test setup"
+  ],
+  "common_mistakes": [
+    "Using tabindex='1' or other positive values to 'fix' focus order when it results in a sequence that contradicts the visual layout. Positive tabindex is not a per-se failure — it is only a failure when the resulting order is illogical. The deterministic tab walk is ground truth.",
+    "CSS flexbox or grid with order property that reorders elements visually but not in the DOM",
+    "Modal dialogs that do not trap focus, allowing Tab to reach background content",
+    "After dismissing a popup, focus goes to the top of the page instead of the triggering element",
+    "Inserting error messages at the bottom of the DOM but displaying them at the top of the form visually",
+    "Sidebar or complementary content receiving focus before main content when it appears visually on the right"
+  ],
+  "examples": {
+    "pass": "Tabbing through a form moves focus from the first name field to the last name field to email to phone to submit button in the exact order they appear visually, and opening a confirmation dialog traps focus within the dialog until the user confirms or cancels",
+    "fail": "A page uses CSS Grid to visually place a sidebar on the right, but the sidebar content comes first in the DOM — keyboard focus goes through all sidebar links before reaching the main content heading",
+    "partial": "The main page content follows a logical focus order, but when a modal overlay opens, focus is not trapped inside it and users can Tab to the dimmed background content"
+  },
+  "plain_meaning": "When a user tabs through a page with the keyboard, the order in which focus moves between interactive elements must make sense and preserve the meaning or operability of the content. The sequence should match the logical reading flow so a keyboard or screen reader user encounters things in an order that makes the page understandable and usable. This is about the ORDER of focus stops, not whether elements can be reached and not whether focus is visible.",
+  "scope_applies_to": [
+    "The sequential order in which focusable interactive elements receive keyboard focus",
+    "Pages where the order of interaction affects meaning, task flow, or operability",
+    "Modal dialogs and overlays where focus should move into the dialog in a sensible place",
+    "Dynamically inserted content that should appear in a logical position in the focus sequence",
+    "Use of positive tabindex values that rearrange the natural DOM focus order",
+    "Return focus after a dialog or transient UI is dismissed"
+  ],
+  "scope_does_not_apply_to": [
+    "Whether focusable elements can be reached by keyboard at all (that is SC 2.1.1 Keyboard)",
+    "Whether focus can be moved away from an element without a trap (that is SC 2.1.2 No Keyboard Trap)",
+    "Whether the keyboard focus indicator is visually shown (that is SC 2.4.7 Focus Visible)",
+    "Whether focus is obscured by sticky overlays (that is SC 2.4.11 / 2.4.12)",
+    "Pages or views with zero or one focusable element",
+    "Pages where focus order has no effect on meaning or operability"
+  ],
+  "borderline_calibration": [
+    "Do not flag focus order problems from a static screenshot alone; a deterministic tab walk is ground truth.",
+    "If two orderings are both reasonable for the task, neither is a failure under this SC.",
+    "Minor divergences between DOM order and pure visual position are only failures if they actually confuse meaning or operation.",
+    "Positive tabindex values are a strong signal of a problem but are only a failure when they actually produce an illogical sequence.",
+    "If the issue is 'cannot reach the element', route that to SC 2.1.1, not here."
+  ]
+}

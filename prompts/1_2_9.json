@@ -1,0 +1,68 @@
+{
+  "criterion_id": "1.2.9",
+  "criterion_name": "Audio-only (Live)",
+  "visual_checks": [
+    "Look for live audio-only content such as live radio broadcasts, audio streams, or live podcasts",
+    "Check if a real-time text alternative (such as live captions or a live transcript) is provided alongside the audio",
+    "Verify the text alternative updates in near real-time as the live audio plays",
+    "Check if the text alternative is clearly associated with the live audio stream",
+    "Look for a link or embedded region displaying the live text alternative",
+    "Verify the text alternative captures all spoken content, not just summaries"
+  ],
+  "pass_conditions": [
+    "A real-time text alternative is provided for all live audio-only content",
+    "The text alternative updates in near real-time as the live audio plays",
+    "All spoken content in the live audio is captured in the text alternative",
+    "The text alternative is clearly associated with its live audio source",
+    "The text alternative is presented in an accessible format readable by assistive technologies"
+  ],
+  "fail_conditions": [
+    "Live audio-only content has no real-time text alternative provided",
+    "A text alternative exists but is significantly delayed behind the live audio",
+    "The text alternative only provides summaries rather than full content of the live audio",
+    "The text alternative is not clearly linked to or associated with the live audio stream",
+    "The text alternative is presented in an inaccessible format"
+  ],
+  "na_conditions": [
+    "Page contains no live audio-only content",
+    "All audio content on the page is prerecorded rather than live",
+    "The media is synchronized video-with-audio rather than audio-only"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Live audio stream could not be accessed so text alternatives cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Providing a transcript only after the live event ends instead of in real time",
+    "Real-time text alternative that only covers portions of the live audio content",
+    "Live text alternative placed on a separate page without clear navigation from the audio player",
+    "Relying on automated speech-to-text with high error rates and no human correction",
+    "Text alternative that summarizes content rather than providing full real-time transcription"
+  ],
+  "examples": {
+    "pass": "A live audio news broadcast includes a synchronized live text feed displayed below the audio player that updates in real time with all spoken content",
+    "fail": "A live radio stream on the website has no text alternative; a transcript is only made available hours after the broadcast ends",
+    "partial": "A live podcast provides real-time captions but they frequently lag by 30+ seconds and miss significant portions of the spoken content"
+  },
+  "plain_meaning": "At Level AAA, live audio-only content (a live radio-style stream with no video) must have a time-based media alternative that conveys the same information. In practice this usually means live captions or a live transcript. The intent is that deaf and hard-of-hearing users can follow live audio broadcasts.",
+  "scope_applies_to": [
+    "Live audio-only streams embedded on the page, when AAA conformance is claimed",
+    "Live radio-style broadcasts with no video component",
+    "Live audio feeds of events with no visual component"
+  ],
+  "scope_does_not_apply_to": [
+    "Live synchronized media (live video with audio) -- that belongs to SC 1.2.4",
+    "Prerecorded audio-only content -- that belongs to SC 1.2.1",
+    "Sites not claiming AAA conformance",
+    "Video-only live content",
+    "Keyboard operability of the player -- that belongs to SC 2.1.1",
+    "Missing label on the player launch button -- that belongs to SC 4.1.2"
+  ],
+  "borderline_calibration": [
+    "Live captions or a live transcript both satisfy the rule.",
+    "If no live audio-only content is present on the page, mark not-applicable.",
+    "This is AAA -- only evaluate on AAA claims or explicit request.",
+    "Missing alternative on live audio-only in AAA context is a hard failure at medium+."
+  ]
+}

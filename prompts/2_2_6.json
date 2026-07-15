@@ -1,0 +1,66 @@
+{
+  "criterion_id": "2.2.6",
+  "criterion_name": "Timeouts",
+  "visual_checks": [
+    "Look for any indication of session timeout or inactivity timeout behavior on the page",
+    "Check if users are warned about the duration of any inactivity timeout at the start of their session or activity",
+    "Look for timeout warning messages, banners, or notifications that inform the user how long they have before data loss",
+    "Check the login page or session start for information about timeout duration",
+    "Verify if data is preserved for at least 20 hours of inactivity (in which case no warning is needed)",
+    "Look for timeout information in help text, FAQs, or terms of service links near forms or login areas"
+  ],
+  "pass_conditions": [
+    "Users are warned of the duration of any inactivity timeout that could cause data loss, at or before the start of the process",
+    "Timeout duration information is clearly communicated before the user begins entering data",
+    "Data is preserved for at least 20 hours of inactivity, making a timeout warning unnecessary",
+    "No inactivity timeout exists that could result in data loss"
+  ],
+  "fail_conditions": [
+    "An inactivity timeout causes data loss without any prior warning about the timeout duration",
+    "Users are not informed of the timeout duration before beginning a data entry process",
+    "Timeout warnings appear only after the timeout has already occurred rather than in advance",
+    "The timeout duration is mentioned in hard-to-find locations (buried in terms of service) rather than at the point of the activity",
+    "Data is lost due to inactivity timeout and the preservation period is less than 20 hours with no warning"
+  ],
+  "na_conditions": [
+    "Page has no inactivity timeout that could result in data loss",
+    "User data is preserved for at least 20 hours of inactivity",
+    "Page does not involve data entry or stateful user interactions"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Timeout behavior could not be observed or triggered during evaluation"
+  ],
+  "common_mistakes": [
+    "Not informing users about session timeout duration before they begin filling out forms",
+    "Displaying timeout duration only in a terms-of-service document rather than at the activity start",
+    "Warning about an impending timeout only seconds before it occurs rather than proactively at the start",
+    "Inconsistent timeout durations across different parts of the application without clear communication",
+    "Assuming users will know about timeouts from prior experience rather than explicitly informing them",
+    "Using vague timeout warnings (e.g., 'session may expire') without specifying the actual duration"
+  ],
+  "examples": {
+    "pass": "At the start of a tax filing form, a notice states: 'Your session will expire after 30 minutes of inactivity. Please save your progress regularly to avoid data loss.'",
+    "fail": "A user spends 20 minutes filling out a long application form, and the session silently expires after 15 minutes of inactivity with no prior warning about the timeout duration, resulting in all data being lost",
+    "partial": "A timeout warning appears in a small banner at the top of the page that is easy to miss, and it only mentions the timeout exists without specifying the exact duration"
+  },
+  "plain_meaning": "If user inactivity could cause data loss, the user must be warned about the inactivity duration -- unless the data is preserved for at least 20 hours. The intent is that users are not surprised by silent data loss.",
+  "scope_applies_to": [
+    "Authenticated sessions where inactivity discards in-progress data",
+    "Forms that clear after a period of inactivity",
+    "Shopping carts that expire",
+    "Any feature where walking away for a period destroys work"
+  ],
+  "scope_does_not_apply_to": [
+    "Content where inactivity does not cause data loss",
+    "Systems where data is preserved for 20+ hours regardless",
+    "Real-time session expiration warnings (that is SC 2.2.1)",
+    "Pages with no user-entered data"
+  ],
+  "borderline_calibration": [
+    "A visible notice stating the inactivity duration and data-loss consequence on or near the entry point satisfies the SC.",
+    "If data is preserved more than 20 hours, no warning is needed.",
+    "The warning need not be dynamic -- a static disclosure is acceptable."
+  ]
+}

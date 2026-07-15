@@ -1,0 +1,73 @@
+{
+  "criterion_id": "1.2.2",
+  "criterion_name": "Captions (Prerecorded)",
+  "visual_checks": [
+    "Identify all prerecorded video content that includes audio (speech, meaningful sound effects)",
+    "Check if the video player shows a closed caption (CC) toggle button",
+    "If captions are visible, verify they match what is being spoken and include relevant non-speech sounds",
+    "Look for caption quality: proper punctuation, speaker identification, timing synchronization",
+    "Check if captions are positioned so they do not obscure critical visual content"
+  ],
+  "pass_conditions": [
+    "All prerecorded synchronized media has captions available",
+    "Captions accurately represent all dialogue and narration",
+    "Captions identify speakers when it is not visually obvious who is speaking",
+    "Meaningful sound effects are captioned (e.g., [applause], [phone ringing])",
+    "Captions are synchronized with the audio — appearing when spoken and disappearing appropriately"
+  ],
+  "fail_conditions": [
+    "Prerecorded video with audio has no captions available",
+    "Captions are present but significantly inaccurate (wrong words, missing large sections)",
+    "Captions do not identify different speakers in multi-speaker content",
+    "Important non-speech audio (sound effects, music conveying meaning) is not captioned",
+    "Captions are present but completely out of sync with the audio"
+  ],
+  "na_conditions": [
+    "Page contains no prerecorded video with audio content",
+    "All video content is video-only (no audio track)",
+    "Media is clearly labeled as a media alternative for text and identified as such"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Video could not be played to verify caption presence",
+    "Cannot determine if the video is prerecorded or live"
+  ],
+  "common_mistakes": [
+    "Auto-generated captions (YouTube auto-captions) with no human review — often full of errors",
+    "Captions that only include dialogue but miss important sound effects like alarms or music cues",
+    "Captions that do not distinguish between speakers",
+    "Open captions burned into the video that obscure visual content and cannot be turned off",
+    "Captions that paraphrase instead of accurately transcribing dialogue"
+  ],
+  "examples": {
+    "pass": "A training video has synchronized closed captions that identify each speaker by name, include [background music] and [door slams], and accurately transcribe all dialogue",
+    "fail": "A product demo video has speech throughout but no caption option in the player and no transcript provided",
+    "partial": "Captions are available but appear to be auto-generated with noticeable errors in technical terminology and no speaker identification"
+  },
+  "plain_meaning": "When prerecorded video contains audio that carries information (dialogue, narration, meaningful sound), captions must be provided that present the spoken content and relevant non-speech sounds synchronized with the video. The intent is that deaf and hard-of-hearing users get the same information hearing users get. Auto-generated captions from a platform count only when they are accurate; captions that are gibberish or wildly wrong do not satisfy the rule. The criterion does not apply when the media is itself a media alternative for text and is clearly labeled as such.",
+  "scope_applies_to": [
+    "Prerecorded synchronized media on the page (video with an audio track)",
+    "Embedded third-party players (YouTube, Vimeo, Wistia, etc.) that host prerecorded video with audio",
+    "Self-hosted <video> elements with an audio track",
+    "Video carousels, hero-video backgrounds if they carry meaningful audio content",
+    "Linked video files offered as page content"
+  ],
+  "scope_does_not_apply_to": [
+    "Live synchronized media -- that belongs to SC 1.2.4",
+    "Prerecorded audio-only content (podcasts) -- that belongs to SC 1.2.1",
+    "Prerecorded video-only (silent) content -- that belongs to SC 1.2.1",
+    "Audio description of visual content -- that belongs to SC 1.2.3 / 1.2.5",
+    "Media that is a media alternative for text on the same page and is clearly labeled as such",
+    "Keyboard access to the video player -- that belongs to SC 2.1.1",
+    "Missing accessible name on the video's containing iframe or player button -- that belongs to SC 1.1.1 / 4.1.2",
+    "Contrast of caption text rendering -- that belongs to SC 1.4.3",
+    "Videos with purely decorative ambient audio carrying no information (rare; verify before exempting)"
+  ],
+  "borderline_calibration": [
+    "Auto-generated captions count as captions IF they are accurate. Obviously garbled auto-captions are a fail.",
+    "Captions must cover dialogue AND important non-speech sounds (e.g. '[applause]', '[door slams]') when those are meaningful.",
+    "Presence of a CC button in the player UI is evidence but not proof -- if you can verify captions play, that's sufficient.",
+    "If the video has no audible content at all, 1.2.2 is not applicable; route the concern to 1.2.1 for video-only.",
+    "Missing captions on informational prerecorded video is a hard failure at medium+."
+  ]
+}

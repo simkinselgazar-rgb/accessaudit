@@ -1,0 +1,67 @@
+{
+  "criterion_id": "3.2.2",
+  "criterion_name": "On Input",
+  "visual_checks": [
+    "Look at form controls — does changing the value of a checkbox, radio button, text input, or select element cause an unexpected change of context (page navigation, form submission, or a major layout change)?",
+    "Check select/dropdown elements — does choosing an option immediately navigate to a new page or submit a form, without the user pressing a submit button?",
+    "Examine checkboxes and radio buttons — does selecting one cause new page sections to appear, content to be removed, or focus to move unexpectedly?",
+    "Look for search fields that auto-submit or navigate as the user types, without an explicit search button or clear indication this will happen",
+    "Check if any form control has a visible warning or instruction that changing its value will cause a context change (this would make the change acceptable)"
+  ],
+  "pass_conditions": [
+    "Changing the setting of any form control does not automatically cause a change of context unless the user has been advised of the behavior before using the component",
+    "Select elements that serve as navigation have an explicit 'Go' button rather than auto-navigating on selection change",
+    "Form controls that do trigger context changes have clear instructions beforehand explaining this behavior",
+    "Auto-updating content areas that respond to input changes (like live search results) update without shifting focus or navigating away"
+  ],
+  "fail_conditions": [
+    "A select dropdown auto-navigates to a new URL when the user selects an option, with no prior warning and no Go button",
+    "Checking a checkbox or selecting a radio button causes the form to auto-submit or the page to navigate",
+    "Typing in a text field causes automatic form submission or page navigation without the user pressing Enter or a submit button",
+    "Changing a form control causes a new browser window or tab to open without prior warning",
+    "A settings toggle causes a full page reload or navigation without advance notice"
+  ],
+  "na_conditions": [
+    "Page contains no form controls (no inputs, selects, checkboxes, radio buttons, or custom interactive widgets that accept user input)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Dynamic input behavior could not be tested from static screenshots and DOM snapshots alone",
+    "JavaScript event handlers on form controls could not be fully evaluated"
+  ],
+  "common_mistakes": [
+    "A 'Sort by' or 'Filter by' select dropdown that reloads the page immediately on change instead of using a separate Apply/Go button",
+    "A language or region selector that navigates to a different URL on change without warning",
+    "Radio buttons that auto-submit a form when a selection is made, bypassing the submit button",
+    "Search inputs that navigate to a results page as the user types, without communicating this will happen",
+    "A checkbox that immediately enables/disables page sections and shifts focus without prior notice"
+  ],
+  "examples": {
+    "pass": "A 'Sort by' dropdown has options for 'Price', 'Name', 'Date' and a 'Go' button next to it — selecting an option does not reload until the user presses 'Go'",
+    "fail": "A country-selection <select> element immediately redirects to that country's version of the website when the user picks a country, with no submit button and no prior warning",
+    "partial": "Most form controls behave predictably, but a 'Number of results per page' dropdown at the bottom of a search results list auto-reloads the page on change with no Go button and no advance notice"
+  },
+  "plain_meaning": "Changing the value or state of a form control (typing, selecting an option, checking a box) must not automatically cause a major change of context unless the user was told in advance that it would. Auto-submitting a form when a select value changes, navigating away when a radio is selected, or jumping to a new page on typing are the classic violations.",
+  "scope_applies_to": [
+    "Form controls whose change event triggers navigation or submission",
+    "Select dropdowns that navigate on selection without a submit button",
+    "Radio or checkbox inputs that submit the form on change",
+    "Text inputs that trigger navigation on keystroke",
+    "Custom input widgets whose value change causes a page or window change"
+  ],
+  "scope_does_not_apply_to": [
+    "Filtering or sorting a visible list on the same page without navigation",
+    "Showing/hiding dependent form fields based on a value",
+    "Inline validation feedback appearing next to a field",
+    "Autocomplete or typeahead suggestion lists",
+    "Focus changes within the same form (SC 3.2.1 handles focus, and minor focus moves are not context changes)",
+    "Changes the user was clearly advised of in advance (instructions visible before the control)"
+  ],
+  "borderline_calibration": [
+    "The test is whether a BIG context change (new window, URL change, form submit, major layout shuffle) fires on a setting change.",
+    "Revealing dependent fields or updating a widget's own content is NOT a context change.",
+    "If the user was warned via visible instructions before the control, PASS even if the behavior fires.",
+    "If captured behavior shows selecting an option causes navigation with no prior warning, FAIL.",
+    "Prefer Not Enough Evidence if no interaction was actually captured."
+  ]
+}

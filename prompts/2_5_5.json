@@ -1,0 +1,46 @@
+{
+  "criterion_id": "2.5.5",
+  "criterion_name": "Target Size (Enhanced)",
+  "visual_checks": [
+    "Look at all clickable elements (buttons, links, form controls) — are any visually small or difficult to target?",
+    "Check navigation menus, icon buttons, close buttons, and social media links for adequate size",
+    "Look for densely packed interactive elements where targets may overlap or be too close together"
+  ],
+  "pass_conditions": [
+    "All pointer input targets are at least 44x44 CSS pixels",
+    "Small targets have equivalent larger targets available on the same page",
+    "Inline links within sentences are excluded from size requirements"
+  ],
+  "fail_conditions": [
+    "Interactive elements are smaller than 44x44 CSS pixels without an equivalent larger target",
+    "Icon buttons or close buttons are too small to easily tap on touch devices"
+  ],
+  "na_conditions": [
+    "Page has no interactive elements that accept pointer input"
+  ],
+  "common_mistakes": [
+    "Icon-only buttons with no padding (just the icon size)",
+    "Close/dismiss buttons on dialogs that are very small",
+    "Social media icon links that are smaller than 44px"
+  ],
+  "plain_meaning": "This AAA rule requires pointer targets to be at least 44 by 44 CSS pixels. Exceptions are targets with an equivalent alternative, inline targets within a sentence, targets whose size is controlled by the user agent, and targets whose specific size is essential.",
+  "scope_applies_to": [
+    "Buttons, links, and controls used with touch or mouse",
+    "Icon buttons, close buttons, and small controls",
+    "Tap targets in mobile-optimized layouts",
+    "Custom controls where the author sets target size"
+  ],
+  "scope_does_not_apply_to": [
+    "Inline links within sentences of running text",
+    "Controls whose size is determined by the user agent (native form controls with default styling)",
+    "Targets with an equivalent larger alternative elsewhere on the page",
+    "Cases where the specific size is essential to the information being conveyed",
+    "Non-interactive elements"
+  ],
+  "borderline_calibration": [
+    "This is the 44px AAA version; do not confuse with SC 2.5.8 (24px AA minimum).",
+    "Inline links in paragraphs are exempt regardless of size.",
+    "Only flag when the clickable area is clearly under 44x44 CSS pixels AND no exception applies.",
+    "User-agent default controls pass even if small."
+  ]
+}

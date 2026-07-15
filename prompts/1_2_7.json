@@ -1,0 +1,68 @@
+{
+  "criterion_id": "1.2.7",
+  "criterion_name": "Extended Audio Description (Prerecorded)",
+  "visual_checks": [
+    "Look for prerecorded video content where pauses in dialogue are insufficient to describe important visual information",
+    "Check if the video player supports extended audio description where playback pauses to allow longer descriptions",
+    "Verify that the extended descriptions cover all visually important content not conveyed through dialogue alone",
+    "Check if there is a toggle or option to enable/disable the extended audio description track",
+    "Look for visual indicators (such as a pause or freeze-frame) that signal extended descriptions are being delivered",
+    "Verify that the video resumes seamlessly after each extended description completes"
+  ],
+  "pass_conditions": [
+    "Extended audio descriptions are provided where standard audio description pauses are insufficient",
+    "The video pauses playback to allow time for the extended description before resuming",
+    "All important visual information that cannot fit in natural pauses is covered by extended descriptions",
+    "Extended descriptions are synchronized with the relevant visual content",
+    "An option exists to enable or disable the extended audio description track"
+  ],
+  "fail_conditions": [
+    "Prerecorded video has important visual information with no extended audio description provided",
+    "Standard audio description is offered but gaps in dialogue are too short and no extended pausing is used",
+    "Extended audio descriptions are available but do not cover all essential visual content",
+    "The video does not pause to allow extended descriptions, causing them to overlap with dialogue",
+    "No mechanism to activate or access the extended audio description track"
+  ],
+  "na_conditions": [
+    "Page contains no prerecorded synchronized media (video with audio)",
+    "All visual information in the video is adequately conveyed through standard audio description within natural pauses",
+    "The media is live rather than prerecorded"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Video content failed to load so audio description cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Providing only standard audio description when natural pauses are too short to describe all visual content",
+    "Extended descriptions that skip over complex visual scenes or on-screen text",
+    "Video player does not support pausing for extended descriptions, so descriptions are crammed into insufficient gaps",
+    "No user control to enable extended audio description independently from standard description",
+    "Extended descriptions that are too verbose, causing unnecessarily long pauses disrupting the viewing experience"
+  ],
+  "examples": {
+    "pass": "A documentary with rapid scene changes pauses the video at key moments to deliver extended audio descriptions of complex visual sequences before resuming playback",
+    "fail": "A training video with dense visual demonstrations provides only brief standard audio descriptions that miss important on-screen steps because pauses are too short",
+    "partial": "Extended audio descriptions are provided for the first half of the video but the second half reverts to standard descriptions that miss some visual content"
+  },
+  "plain_meaning": "When the normal pauses in a prerecorded video's dialogue are too short to fit all necessary audio description, extended audio description must be provided. Extended audio description pauses the video at key moments so the narrator can describe more than a quick gap would allow. This is a Level AAA requirement and only applies when standard audio description cannot convey the visuals in the available pauses.",
+  "scope_applies_to": [
+    "Prerecorded synchronized media claiming AAA conformance where dialogue is dense and visuals carry significant additional information",
+    "Video content where standard 1.2.5 audio description would leave key visuals undescribed due to insufficient pauses"
+  ],
+  "scope_does_not_apply_to": [
+    "Live content",
+    "Video where normal 1.2.5 audio description is sufficient to convey the visuals",
+    "Sites not claiming AAA conformance",
+    "Audio-only or video-only content -- that belongs to SC 1.2.1",
+    "Captions -- that belongs to SC 1.2.2",
+    "Media that is a media alternative for text and is clearly labeled as such",
+    "Player keyboard operability -- that belongs to SC 2.1.1"
+  ],
+  "borderline_calibration": [
+    "Only applies when 1.2.5-level audio description is genuinely insufficient due to pause density.",
+    "If the video already satisfies 1.2.5 comfortably, 1.2.7 is not-applicable.",
+    "This is AAA -- only evaluate on request or on explicit AAA claims.",
+    "Judgment is heavily context-dependent; flag at medium only with clear evidence that key visuals are undescribed."
+  ]
+}

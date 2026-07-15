@@ -1,0 +1,88 @@
+{
+  "criterion_id": "2.2.2",
+  "criterion_name": "Pause, Stop, Hide",
+  "visual_checks": [
+    "Look for any moving, blinking, or scrolling content that starts automatically — banners, marquees, animated text, scrolling news tickers, or parallax animations",
+    "Identify auto-playing video or animation content that runs continuously without user initiation",
+    "Check for auto-updating content areas — live feeds, stock tickers, social media streams, chat messages, or notification counters that change without user action",
+    "Look for animated GIFs, CSS animations, or SVG animations that loop continuously",
+    "Identify loading spinners or progress indicators that persist for more than 5 seconds and coexist with other content",
+    "Check for a visible pause, stop, or hide mechanism (pause button, animation toggle, 'reduce motion' setting) near or associated with each moving/auto-updating element",
+    "Look for decorative animations in the background or hero sections that may distract from the main content",
+    "Check for blinking or flashing UI elements such as notification badges, cursor blinks in non-input areas, or attention-grabbing animated buttons"
+  ],
+  "pass_conditions": [
+    "Moving, blinking, or scrolling content that starts automatically and lasts more than 5 seconds has a visible mechanism to pause, stop, or hide it",
+    "Auto-updating content (live feeds, tickers, notifications) has a mechanism to pause, stop, hide, or control the frequency of updates",
+    "Pausing moving content causes it to resume from where it was paused (not restart from the beginning) unless this is essential",
+    "Auto-playing video has clearly visible and keyboard-accessible pause/stop controls",
+    "The pause/stop/hide mechanism is presented alongside the moving content so users can find it easily",
+    "No content blinks for longer than 5 seconds, or a mechanism to stop it is provided",
+    "Information conveyed by auto-updating content can also be obtained in a non-auto-updating form"
+  ],
+  "fail_conditions": [
+    "A carousel, banner, or slideshow auto-rotates with no visible pause or stop button",
+    "A scrolling news ticker or marquee element runs continuously with no mechanism to pause or hide it",
+    "An animated background or hero animation loops indefinitely with no toggle to stop it",
+    "Auto-playing video starts without user action and has no pause control, or the pause control is not keyboard accessible",
+    "Auto-updating content (live feed, chat, notifications) updates continuously with no way to pause or control the update frequency",
+    "Animated GIFs or CSS animations loop continuously with no mechanism to stop them, and they are not purely decorative to all users",
+    "Blinking content (text, icons, badges) blinks for more than 5 seconds with no stop mechanism",
+    "Moving content provides a pause mechanism but pausing it also hides essential information that the user needs"
+  ],
+  "na_conditions": [
+    "Page has no moving, blinking, scrolling, or auto-updating content — all content is static or changes only in response to direct user action",
+    "The only auto-playing media on the page is a <video autoplay muted> element -- silent video without audio track does not trigger 2.2.2's 'plays for more than 5 seconds in parallel with audio' requirement (and the auto-motion requirement is only a concern if it lasts >5s AND runs in parallel with other content the user is trying to read)",
+    "The [AUTOPLAY MEDIA PROBE -- DETERMINISTIC] block in the user prompt reports has_autoplay_audio=false AND the page has no other moving/auto-updating content"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Static screenshots cannot capture moving or auto-updating behavior — video recording or direct interaction data is needed but not available",
+    "Animations or auto-updates may be triggered by conditions not present during the test (e.g., new data arrival, specific time of day)"
+  ],
+  "common_mistakes": [
+    "Carousels with auto-rotation that provide navigation dots or arrows but no explicit pause button",
+    "Background video or animation in hero sections with no visible or keyboard-accessible stop control",
+    "News or social media feeds that auto-update by inserting new content above the user's reading position, causing content to shift",
+    "Animated GIFs used for instructional content with no static alternative or pause mechanism",
+    "Loading animations that persist while actual content is already available alongside them",
+    "Pause buttons that are only visible on mouse hover and not reachable by keyboard",
+    "CSS animations marked as decorative but that actually draw attention and interfere with reading adjacent content"
+  ],
+  "examples": {
+    "pass": "A homepage hero carousel auto-rotates every 5 seconds but has a clearly visible Pause button in the carousel controls. Clicking Pause stops rotation and the button label changes to Play. The button is keyboard accessible with a visible focus indicator.",
+    "fail": "A news ticker scrolls headlines continuously across the top of the page. There is no pause, stop, or hide button. Users who are distracted by moving content or who need extra time to read cannot stop the ticker.",
+    "partial": "An auto-playing background video has a pause button, but the button is a small semi-transparent icon overlaid on the video that is only visible on mouse hover and is not reachable by keyboard Tab navigation."
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging '<video autoplay muted>' as a 2.2.2 violation on the grounds that 'it plays automatically without a pause control'. A muted autoplay video is already covered by WCAG's pass condition 'the animation is part of an essential activity or conveys information' when it's a brand video, and the pause/stop requirement ties to the 5-second rule for auto-updating content in parallel with other content -- the video itself being muted means it doesn't need a pause/mute control for 2.2.2 audio purposes. Only flag if the video element AND shows meaningful moving content for >5s AND blocks reading other content AND has no pause control.",
+    "OFF-TOPIC: CSS animations, `prefers-reduced-motion`, @keyframes animation decoration, scroll-linked parallax -- these belong to SC 2.3.3 Animation from Interactions and WCAG 2.1 2.3.3, NOT SC 2.2.2. Do NOT report them in a 2.2.2 evaluation.",
+    "OFF-TOPIC: Keyboard-accessibility of pause controls -- that is SC 2.1.1 Keyboard, not 2.2.2. Report the pause button's missing keyboard support under 2.1.1.",
+    "GROUND TRUTH RULE: the user prompt may contain an [AUTOPLAY MEDIA PROBE -- DETERMINISTIC] block. It reports which auto-playing media elements exist and their runtime state (autoplay, muted, duration). TREAT IT AS AUTHORITATIVE. If the probe reports no auto-playing media (or only muted media), do not fabricate auto-playing content that isn't on the page."
+  ],
+  "plain_meaning": "If the page has content that moves, blinks, scrolls, or auto-updates on its own for more than five seconds while other content is also visible, the user must have a way to pause, stop, or hide that content (or for auto-updating content, control its frequency). The intent is to help users with attention or reading disabilities focus on the rest of the page without being distracted by motion.",
+  "scope_applies_to": [
+    "Auto-advancing image carousels and slideshows",
+    "Marquee-style scrolling text or news tickers",
+    "Animated banners, GIFs, or video loops longer than five seconds shown alongside other content",
+    "Live-updating feeds, stock tickers, or notification streams",
+    "Auto-playing animations that continue while text content is also on screen",
+    "Blinking elements that run for more than five seconds"
+  ],
+  "scope_does_not_apply_to": [
+    "Muted autoplay video with no audio track when the motion is under five seconds or when nothing else is presented in parallel",
+    "Motion respecting prefers-reduced-motion (that is SC 2.3.3 for interaction-triggered animation)",
+    "Whether the pause/stop/hide control itself is keyboard-operable (that is SC 2.1.1)",
+    "Flashing content in the seizure danger zone (that is SC 2.3.1/2.3.2)",
+    "Auto-playing audio (that is SC 1.4.2)",
+    "Time limits on user tasks (that is SC 2.2.1)",
+    "Video with user-initiated playback"
+  ],
+  "borderline_calibration": [
+    "Muted autoplay video with NO audio track is exempt unless it runs longer than five seconds AND is shown in parallel with other content; even then, offering a pause control satisfies the SC.",
+    "Content under 5 seconds of duration is exempt from the moving/blinking/scrolling clause.",
+    "A visible pause/stop/hide button anywhere that controls the moving content is sufficient; it does not have to be adjacent.",
+    "If the motion is the ONLY content on the page (nothing in parallel), the SC does not apply.",
+    "Auto-updating content needs a mechanism to pause OR to control update frequency -- either one passes."
+  ]
+}

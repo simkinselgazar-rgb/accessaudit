@@ -1,0 +1,68 @@
+{
+  "criterion_id": "2.2.4",
+  "criterion_name": "Interruptions",
+  "visual_checks": [
+    "Look for pop-ups, modal dialogs, notifications, or alerts that appear automatically without user action",
+    "Check if the page displays non-emergency interruptions such as promotional banners, chat widgets, or update notifications",
+    "Verify whether users can postpone or suppress non-emergency interruptions",
+    "Look for settings or preferences that allow users to control notification frequency or disable interruptions",
+    "Check for auto-updating content regions that shift focus or insert new content unexpectedly",
+    "Identify any interruptions that are genuine emergencies (safety warnings, critical errors) which may be exempt"
+  ],
+  "pass_conditions": [
+    "Users can postpone or suppress all non-emergency interruptions",
+    "A mechanism is provided (such as a settings panel or dismiss control) to turn off or delay notifications and alerts",
+    "Non-emergency interruptions do not appear automatically or can be controlled by user preference",
+    "Emergency interruptions (safety alerts, critical system errors) are the only interruptions that cannot be suppressed",
+    "Auto-updating content does not forcibly shift focus or disrupt the user's current activity"
+  ],
+  "fail_conditions": [
+    "Non-emergency pop-ups, alerts, or notifications appear with no way for the user to postpone or suppress them",
+    "Promotional or informational interruptions cannot be dismissed or disabled by the user",
+    "No mechanism exists to control the frequency or display of non-emergency interruptions",
+    "Auto-updating content regions forcibly shift focus away from the user's current task",
+    "Chat widgets or notification banners appear repeatedly with no option to suppress them"
+  ],
+  "na_conditions": [
+    "Page has no automatic interruptions, pop-ups, notifications, or auto-updating content",
+    "All interruptions on the page are genuine emergencies (safety alerts, critical error messages)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Page could not be monitored long enough to observe potential interruptions"
+  ],
+  "common_mistakes": [
+    "Newsletter sign-up pop-ups that cannot be permanently dismissed or suppressed",
+    "Cookie consent banners that reappear after dismissal on every page load",
+    "Chat widgets that automatically open and steal focus from the user's current task",
+    "Auto-playing promotional overlays with no preference setting to prevent them",
+    "Push notification requests that repeatedly interrupt the user with no way to suppress them site-wide",
+    "Treating promotional content as emergency-level interruptions that justify forced display"
+  ],
+  "examples": {
+    "pass": "A website's notification preferences page allows users to disable all non-emergency pop-ups and promotional alerts, and a 'Do not disturb' toggle suppresses chat widget interruptions",
+    "fail": "A promotional pop-up appears every time the user visits a new page on the site, with only an 'X' to close it temporarily but no way to prevent it from reappearing",
+    "partial": "Users can dismiss individual notification pop-ups but there is no global setting to suppress or postpone all non-emergency interruptions"
+  },
+  "plain_meaning": "The user must be able to postpone or suppress interruptions (alerts, popups, notifications, auto-updates that grab attention) unless the interruption is an emergency. The intent is to stop the page from breaking the user concentration with non-critical messages.",
+  "scope_applies_to": [
+    "Non-emergency popups, toasts, or modal notifications",
+    "Alert banners that appear automatically",
+    "Auto-refreshing content that interrupts reading",
+    "Chat widget prompts that open without user action",
+    "Promotional overlays triggered by time or scroll"
+  ],
+  "scope_does_not_apply_to": [
+    "Emergency alerts (severe weather, safety warnings, critical security notices)",
+    "User-initiated dialogs (e.g. confirmation on clicking a button)",
+    "Content that does not interrupt (passive background updates)",
+    "Form validation triggered by user action"
+  ],
+  "borderline_calibration": [
+    "If the page has no automatic interruptions, this SC is N/A.",
+    "Emergency alerts are exempt -- do not flag them.",
+    "The user must be able to postpone OR suppress -- either mechanism passes.",
+    "A chat widget that opens automatically without a way to dismiss and silence it fails."
+  ]
+}

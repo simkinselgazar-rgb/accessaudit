@@ -1,0 +1,68 @@
+{
+  "criterion_id": "3.2.5",
+  "criterion_name": "Change on Request",
+  "visual_checks": [
+    "Check if the page auto-redirects to another page without user action",
+    "Look for content that updates or changes automatically without the user requesting it",
+    "Check if new windows or tabs open without the user clicking a link or button",
+    "Look for forms that auto-submit when a selection is made (e.g., dropdown changes triggering navigation)",
+    "Check if carousels or slideshows advance automatically without user control",
+    "Verify that any automatic context changes can be disabled or are initiated only on user request"
+  ],
+  "pass_conditions": [
+    "Context changes occur only when the user explicitly requests them (button click, link activation, form submission)",
+    "Auto-updating content has a mechanism to pause, stop, or disable automatic changes",
+    "No new windows or popups open unless the user clicks a control that clearly indicates it will open a new window",
+    "Form selections do not trigger automatic navigation or submission — a submit button is required",
+    "Carousels and slideshows only advance when the user activates next/previous controls or autoplay can be disabled"
+  ],
+  "fail_conditions": [
+    "The page auto-redirects to a different URL after a timed delay without user action",
+    "Selecting an option in a dropdown automatically navigates to a new page without a Go button",
+    "New browser windows or tabs open automatically without user-initiated action",
+    "Content on the page changes automatically (auto-refresh) with no way to disable it",
+    "A carousel advances slides automatically with no pause or stop mechanism"
+  ],
+  "na_conditions": [
+    "Page is entirely static with no dynamic content, automatic updates, or context-changing interactions"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Dynamic behavior and context changes could not be observed in the testing environment"
+  ],
+  "common_mistakes": [
+    "Using onChange events on select elements to auto-navigate instead of requiring a submit action",
+    "Auto-advancing carousels or news tickers with no visible pause control",
+    "Meta refresh tags that redirect the page after a delay",
+    "Opening links in new windows via target='_blank' without informing the user",
+    "Live regions that update content automatically without a mechanism for the user to control updates"
+  ],
+  "examples": {
+    "pass": "A category filter dropdown is accompanied by a 'Go' button — selecting a category does nothing until the user clicks the button, and a carousel has visible play/pause controls defaulting to paused",
+    "fail": "A language selector dropdown automatically redirects the user to a different page version when an option is selected, and a news carousel auto-advances every 3 seconds with no pause control",
+    "partial": "Most interactive elements require explicit user action, but one navigation dropdown on the site auto-submits on change, redirecting the user without clicking a button"
+  },
+  "plain_meaning": "Changes of context (new windows, page navigation, major layout changes, form submission) must only happen when the user explicitly asks for them, OR the user must be able to turn off automatic context changes. Auto-refreshing pages, auto-opening new windows, and automatic redirects all fall under this rule.",
+  "scope_applies_to": [
+    "Automatic page refreshes that reload or redirect",
+    "Pop-up windows that open without user action",
+    "Automatic redirects after a timer",
+    "Content that reloads or navigates on a schedule",
+    "Auto-play behaviors that open new contexts",
+    "Any mechanism where a context change happens without user request"
+  ],
+  "scope_does_not_apply_to": [
+    "Changes triggered directly by user click, keypress, or explicit gesture",
+    "Popovers, tooltips, and in-page expansions (not context changes)",
+    "Timed warnings that do not themselves change context",
+    "User-initiated saves or form submissions",
+    "Pages with no automatic behavior at all"
+  ],
+  "borderline_calibration": [
+    "This is Level AAA and often Not Applicable.",
+    "If an automatic context change exists AND a mechanism to turn it off is available, PASS.",
+    "Only flag when automatic context change is observed AND no opt-out is offered.",
+    "Prefer Not Enough Evidence if no timed behavior was captured."
+  ]
+}

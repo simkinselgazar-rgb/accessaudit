@@ -1,0 +1,75 @@
+{
+  "criterion_id": "2.5.4",
+  "criterion_name": "Motion Actuation",
+  "visual_checks": [
+    "Look for any functionality triggered by device motion such as shaking, tilting, or rotating the device",
+    "Check if the page uses the DeviceMotion or DeviceOrientation APIs to trigger actions like undo-by-shake, tilt-to-scroll, or rotate-to-change-view",
+    "Identify any parallax effects, shake-to-refresh, or tilt-based navigation that rely on physical movement of the device",
+    "Verify whether conventional UI controls (buttons, links, form inputs) are provided as alternatives to every motion-triggered action",
+    "Check if a setting or mechanism exists to disable motion-based responses to prevent accidental activation by users with tremors or involuntary movement"
+  ],
+  "pass_conditions": [
+    "All functionality triggered by device motion or user motion can also be operated through conventional UI controls such as buttons or form elements",
+    "A visible mechanism or setting is provided to disable motion actuation so that accidental activation from tremors or involuntary movement is prevented",
+    "Shake-to-undo provides an on-screen undo button as an alternative",
+    "Tilt-to-scroll provides conventional scroll controls or works with standard scrolling mechanisms",
+    "Motion-based features are supplementary enhancements, not the only means of operating the functionality"
+  ],
+  "fail_conditions": [
+    "A shake-to-undo feature is the only way to undo an action with no on-screen undo button or keyboard shortcut alternative",
+    "Tilting the device is the only way to navigate between views or scroll content, with no button or swipe alternative",
+    "Device orientation change triggers a layout or content change with no UI control to achieve the same result",
+    "Motion-activated features cannot be disabled, causing accidental activation for users with motor impairments or tremors",
+    "A rotate-to-reveal feature shows hidden content only when the device is rotated, with no tap or click alternative"
+  ],
+  "na_conditions": [
+    "Page does not use any device motion or orientation APIs and contains no functionality triggered by physical movement of the device or user gestures detected by motion sensors"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Motion-based features cannot be detected through static code analysis alone and require testing on a physical device with motion sensors"
+  ],
+  "common_mistakes": [
+    "Implementing shake-to-undo without an on-screen undo button, assuming all users can perform the shake gesture",
+    "Using device tilt for navigation in a game or interactive experience without providing an alternative input mode",
+    "Not providing a way to disable motion responses, leaving users with tremors vulnerable to accidental activation",
+    "Assuming that motion actuation is only relevant to mobile — laptop accelerometers and webcam-based gesture detection also apply",
+    "Confusing motion actuation with screen orientation — locking orientation is a separate concern, but orientation-triggered actions fall under this criterion"
+  ],
+  "examples": {
+    "pass": "A drawing app supports shake-to-clear-canvas but also provides a clearly visible 'Clear Canvas' button that performs the same action",
+    "fail": "A fitness app requires the user to shake the device to start a timer, with no on-screen start button — users who cannot shake the device are unable to use the feature",
+    "partial": "Most motion-triggered features have button alternatives, but a tilt-to-scroll feature on one page section has no alternative scrolling mechanism"
+  },
+  "plain_meaning": "When functionality can be triggered by moving the device (shake to undo, tilt to scroll) or by user motion detected by a sensor, the same functionality must also be available via regular UI controls, and users must be able to disable motion actuation to prevent accidents. Supported assistive technology interfaces and cases where motion is essential are exempt.",
+  "scope_applies_to": [
+    "Shake-to-undo and similar device-motion triggers",
+    "Tilt, rotation, or orientation-based controls",
+    "Camera or sensor-based motion controls that activate functionality",
+    "The availability of an equivalent non-motion UI control",
+    "A setting or mechanism to disable motion actuation"
+  ],
+  "scope_does_not_apply_to": [
+    "Motion that is essential to the function (a pedometer, a motion-based fitness app's core metric)",
+    "Motion routed through supported accessibility APIs",
+    "Pointer and touch input covered by other SCs",
+    "Pure decorative parallax that does not trigger functionality",
+    "Carousels, sliders, or marquees that auto-cycle their content (these belong to SC 2.2.2 Pause, Stop, Hide, NOT 2.5.4)",
+    "Animated UI elements without device-motion triggering (covered by SC 2.2.2 / 2.3.x)",
+    "Auto-advancing content of any kind that does not respond to device motion sensors"
+  ],
+  "off_scope_topics": [
+    "carousel auto-cycle / auto-advance",
+    "slider autoplay",
+    "marquee animation",
+    "animated content without motion-sensor trigger",
+    "moving content the user did not initiate via device motion"
+  ],
+  "borderline_calibration": [
+    "Only flag when motion is the ONLY trigger for functionality and cannot be disabled.",
+    "Essential motion use (a compass, a level tool) is exempt.",
+    "A UI button that does the same thing as the motion gesture satisfies this SC.",
+    "Most web content has no motion actuation and this SC is not applicable."
+  ]
+}

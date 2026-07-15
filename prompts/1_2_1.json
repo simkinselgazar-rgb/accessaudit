@@ -1,0 +1,69 @@
+{
+  "criterion_id": "1.2.1",
+  "criterion_name": "Audio-only and Video-only (Prerecorded)",
+  "visual_checks": [
+    "Identify any audio-only content (podcasts, audio clips, sound effects) on the page",
+    "Identify any video-only content (silent video, animations without narration) on the page",
+    "For audio-only: look for a nearby text transcript or a link to one",
+    "For video-only: look for a text description or an audio track alternative describing the visual content",
+    "Check if media players have controls and whether transcript links are visually apparent"
+  ],
+  "pass_conditions": [
+    "All prerecorded audio-only content has a text transcript that conveys equivalent information",
+    "All prerecorded video-only content has either a text description or an audio track describing the visual content",
+    "Transcripts are easily locatable near the media or linked clearly",
+    "Transcripts include all spoken content and identify different speakers for audio-only"
+  ],
+  "fail_conditions": [
+    "Audio-only content (e.g., podcast) with no transcript provided",
+    "Video-only content (e.g., silent animation) with no text alternative or audio description",
+    "Transcript exists but is incomplete, missing significant portions of the audio content",
+    "Transcript link is broken or leads to an empty page"
+  ],
+  "na_conditions": [
+    "Page contains no prerecorded audio-only or video-only content",
+    "All media on the page is synchronized audio+video (covered by 1.2.2, 1.2.3 instead)",
+    "Media is live, not prerecorded"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Media content could not be played or inspected",
+    "Cannot determine whether the media is prerecorded or live"
+  ],
+  "common_mistakes": [
+    "Providing a transcript that summarizes instead of fully transcribing the audio",
+    "Transcript missing speaker identification when multiple speakers are present",
+    "Video-only content assumed to be decorative when it actually conveys information",
+    "Auto-generated transcripts with significant errors left uncorrected"
+  ],
+  "examples": {
+    "pass": "A podcast episode has a full transcript linked below the audio player with 'Read Transcript' button, including speaker labels and all spoken content",
+    "fail": "An audio interview is embedded on the page with only a play button and no transcript or link to one",
+    "partial": "A transcript is provided for the audio clip but it only summarizes the key points rather than providing a full verbatim transcript"
+  },
+  "plain_meaning": "Prerecorded audio-only content (like a podcast) must come with a text transcript that conveys the same information. Prerecorded video-only content (silent video, a mute animation showing a process) must come with either a text description or an equivalent audio track. The intent is that users who cannot hear the audio, or who cannot see the video, still get the information the media carries. This does not apply when the media is itself a media alternative for text that is already on the page and is clearly labeled as such.",
+  "scope_applies_to": [
+    "Prerecorded audio-only clips embedded or linked on the page (podcasts, recorded speeches, music with lyrics that carry information, recorded interviews)",
+    "Prerecorded video-only content with no audio track (silent demo videos, animated infographics, muted GIF-like clips that convey information)",
+    "Audio or video-only files offered for download if they are presented as page content",
+    "Audio-only and video-only content embedded via <audio>, <video>, iframes, or third-party players",
+    "Media that acts as a primary source of information on the page"
+  ],
+  "scope_does_not_apply_to": [
+    "Synchronized media (video with audio) -- that belongs to SC 1.2.2 (captions), SC 1.2.3/1.2.5 (audio description)",
+    "Live audio-only content -- that belongs to SC 1.2.9",
+    "Media that is a media alternative for text on the same page and is clearly labeled as such (exempt by the criterion's own conformance note)",
+    "Purely decorative audio or video with no informational value (background ambient loops, decorative motion graphics)",
+    "Missing alt text on thumbnail images that launch media -- that belongs to SC 1.1.1",
+    "Keyboard operability of the media player -- that belongs to SC 2.1.1",
+    "Controls without visible focus indicators -- that belongs to SC 2.4.7",
+    "Captions on live streams or synchronized prerecorded media (SC 1.2.2 / 1.2.4)"
+  ],
+  "borderline_calibration": [
+    "Presence of a transcript link near the audio player is sufficient -- do NOT demand that the transcript be inline.",
+    "A transcript does not need to be a verbatim word-for-word dump; it must present equivalent information. Minor paraphrasing is fine.",
+    "If the media is clearly labeled as an alternative to text already on the page, mark the SC not-applicable and note the exemption.",
+    "When it is unclear whether a clip is audio-only or synchronized media, check the file itself or the player metadata before failing.",
+    "Missing transcript for an informational audio-only clip is a hard failure at medium+."
+  ]
+}

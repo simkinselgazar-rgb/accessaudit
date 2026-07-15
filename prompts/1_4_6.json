@@ -1,0 +1,79 @@
+{
+  "criterion_id": "1.4.6",
+  "criterion_name": "Contrast (Enhanced)",
+  "visual_checks": [
+    "Check all normal-sized text (below 18pt or 14pt bold) for a contrast ratio of at least 7:1 against its background",
+    "Check all large text (18pt+ regular or 14pt+ bold) for a contrast ratio of at least 4.5:1 against its background",
+    "Look for text over images or gradients where contrast may vary across the text",
+    "Check placeholder text in form fields for sufficient contrast",
+    "Look for light gray text on white backgrounds or dark gray text on black backgrounds that may fail enhanced contrast",
+    "Verify that text in hover states, focus states, and active states also meets enhanced contrast requirements"
+  ],
+  "pass_conditions": [
+    "All normal-sized text has a contrast ratio of at least 7:1 against its background",
+    "All large text (18pt+ regular or 14pt+ bold) has a contrast ratio of at least 4.5:1 against its background",
+    "Text over images or gradients maintains the required contrast ratio across all portions of the text",
+    "Placeholder text and form labels meet the enhanced contrast requirements",
+    "Interactive state text (hover, focus, active) meets the enhanced contrast requirements"
+  ],
+  "fail_conditions": [
+    "Normal-sized text has a contrast ratio below 7:1 against its background",
+    "Large text has a contrast ratio below 4.5:1 against its background",
+    "Text placed over images or gradients drops below the required contrast in some areas",
+    "Placeholder text or form labels have insufficient contrast (e.g., light gray on white)",
+    "Text in hover, focus, or active states fails to meet enhanced contrast ratios"
+  ],
+  "na_conditions": [
+    "Page contains no text content (unlikely but possible for purely decorative pages)",
+    "Text is part of a logo or brand name where no contrast requirement applies",
+    "Text is purely decorative and conveys no information",
+    "Text is part of an inactive or disabled UI component"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Page styles failed to load so actual text colors cannot be determined"
+  ],
+  "common_mistakes": [
+    "Meeting the AA 4.5:1 standard but not the enhanced AAA 7:1 ratio for normal text",
+    "Using mid-gray text (#767676 or lighter) on white that passes AA but fails AAA",
+    "Text over photographic backgrounds where contrast varies depending on the image region",
+    "Placeholder text with very low contrast assumed to be exempt from requirements",
+    "Ignoring contrast of text in interactive states (links on hover, focused button text)",
+    "Assuming large text thresholds when the actual rendered font size is below 18pt/14pt bold"
+  ],
+  "examples": {
+    "pass": "Body text is #000000 on #FFFFFF (21:1 ratio) and headings are #1a1a1a on #FFFFFF (17.4:1 ratio), both exceeding the 7:1 enhanced requirement",
+    "fail": "Body text is #767676 on #FFFFFF (4.54:1 ratio) which passes AA but fails the AAA enhanced requirement of 7:1",
+    "partial": "Most text on the page meets 7:1 contrast, but navigation links at #595959 on #FFFFFF (5.9:1) and footer text at #888888 on #F5F5F5 (3.5:1) fall below the enhanced thresholds"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging contrast/color of elements that are not visible to sighted users. Bootstrap '.visually-hidden' / '.sr-only' (and the older '.screen-reader-text', '.visuallyhidden') are CSS utility classes that clip the element to a 1px box and remove it from the visual layout while leaving it in the accessibility tree. The element is intentionally only readable by screen readers -- it is not rendered to the screen at all -- so visual rules like color contrast, font size, and luminance ratios DO NOT APPLY. Before flagging text or a control for contrast, check whether the element (or any ancestor) carries one of these utility classes or an equivalent clip:rect(0,0,0,0)/position:absolute/width:1px/height:1px pattern. If it does, do NOT report a contrast finding -- there is no rendered pixel to measure."
+  ],
+  "plain_meaning": "A stricter version of 1.4.3: text and images of text must have a contrast ratio of at least 7:1 (4.5:1 for large text). This AAA threshold targets users with more significant low vision. Logotypes, incidental text, and disabled controls remain exempt.",
+  "scope_applies_to": [
+    "Body text, headings, labels, and paragraph copy in their rendered state",
+    "Button text and link text in their normal state",
+    "Images of text in the informational content",
+    "Menu, tab, and navigation labels",
+    "Placeholder text when used to convey information"
+  ],
+  "scope_does_not_apply_to": [
+    "Elements removed from the accessibility tree (aria-hidden, display:none, visibility:hidden, hidden attribute)",
+    "Visually-hidden / sr-only text clipped to a 1px box (no rendered glyphs to measure)",
+    "Disabled / inactive form controls and buttons (explicitly exempt)",
+    "Logotypes and brand marks",
+    "Incidental text in photographs or background imagery",
+    "Non-text UI components (that is SC 1.4.11)",
+    "Focus indicator contrast (that is SC 2.4.7)",
+    "Content not yet visible (hover/focus reveals evaluated in their visible state)"
+  ],
+  "borderline_calibration": [
+    "Measured ratios of 7:1 or higher for normal text PASS.",
+    "Large text threshold is 4.5:1; treat it as a hard line.",
+    "Do NOT flag sr-only / visually-hidden text as AAA contrast failures.",
+    "Disabled controls are explicitly exempt.",
+    "This is a Level AAA criterion; apply it only when AAA evaluation is requested or when 1.4.3 already passes and stricter review is appropriate.",
+    "Borderline results within 0.1 of the threshold should be reported with reduced severity."
+  ]
+}

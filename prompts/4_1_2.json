@@ -1,0 +1,92 @@
+{
+  "criterion_id": "4.1.2",
+  "criterion_name": "Name, Role, Value",
+  "visual_checks": [
+    "Look at all interactive elements (buttons, links, form fields, custom widgets, dropdowns, tabs, accordions) — the programmatic data shows their accessible names and roles. Compare what you SEE on the page (visible labels, button text, icon meaning) against what the programmatic data says the accessible name is. Are there mismatches? Are there custom widgets that appear interactive but have no ARIA role?",
+    "Check icon-only buttons and links — do they have an accessible name that conveys the same meaning as the icon?",
+    "Look for custom-built controls (toggle switches, star ratings, sliders, date pickers) and verify they expose an appropriate ARIA role",
+    "Check expandable/collapsible elements (accordions, menus, disclosure widgets) for correct aria-expanded state",
+    "Look for form fields and verify each one has a visible label that matches its programmatic accessible name",
+    "Identify any elements styled to look like buttons or links but built with div or span — do they have role='button' or role='link'?",
+    "Check tabs and tab panels — do tabs have role='tab', the container role='tablist', and panels role='tabpanel' with correct aria-selected state?"
+  ],
+  "pass_conditions": [
+    "All interactive elements (links, buttons, inputs) have accessible names that accurately describe their purpose",
+    "Custom widgets use appropriate ARIA roles (e.g., role='tab', role='switch', role='slider', role='dialog')",
+    "Accessible names match or meaningfully correspond to visible labels and text",
+    "States such as aria-expanded, aria-selected, aria-checked, and aria-pressed are present and correctly reflect the current UI state",
+    "Form fields are programmatically associated with their labels via for/id, aria-label, or aria-labelledby",
+    "Values for range-type controls (sliders, spinbuttons, progress bars) are exposed via aria-valuenow, aria-valuemin, and aria-valuemax",
+    "Elements that can be disabled use aria-disabled or the native disabled attribute appropriately"
+  ],
+  "fail_conditions": [
+    "Interactive elements have no accessible name (empty or missing name in the accessibility tree)",
+    "Buttons or links contain only an icon or image with no text alternative, leaving the accessible name empty",
+    "Custom widgets built from generic elements (div, span) lack ARIA roles, making them unrecognizable to assistive technology",
+    "Accessible name does not match the visible label text (violates Name, Role, Value and may also affect 2.5.3)",
+    "State attributes are missing — e.g., an accordion toggle has no aria-expanded, a checkbox has no aria-checked",
+    "State attributes are present but never updated when the user interacts (e.g., aria-expanded stays 'false' after opening)",
+    "Form inputs have no programmatic label — no associated label element, no aria-label, no aria-labelledby",
+    "iframes have no title attribute describing their content"
+  ],
+  "na_conditions": [
+    "Page contains no interactive elements, form fields, or custom widgets — only static text and non-interactive content"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Programmatic data for the accessibility tree could not be retrieved",
+    "Dynamic widget states could not be evaluated because the page requires user interaction to trigger state changes"
+  ],
+  "common_mistakes": [
+    "Icon buttons (hamburger menu, close X, search magnifying glass) with no aria-label or visually hidden text",
+    "Using placeholder text as the only label for a form field — placeholders disappear on input and are not reliable accessible names",
+    "Custom dropdown menus built with divs that have no role='listbox' or role='menu' and no aria-expanded on the trigger",
+    "Toggle switches that look like checkboxes or switches but use div/span without role='switch' or role='checkbox'",
+    "Links or buttons whose accessible name is just 'click here' or 'read more' without context",
+    "Visible label says 'Search' but aria-label says 'site search box' — mismatch between visible text and accessible name",
+    "Forgetting to update aria-expanded, aria-checked, or aria-selected dynamically via JavaScript when state changes",
+    "Using aria-label on a non-interactive element like a div without a role, where assistive technology may ignore it"
+  ],
+  "examples": {
+    "pass": "A hamburger menu button has <button aria-label='Open main menu' aria-expanded='false'> with an SVG icon inside. When clicked, aria-expanded updates to 'true'. A custom toggle switch uses role='switch' with aria-checked reflecting its on/off state. All form fields have <label> elements with matching for/id pairs.",
+    "fail": "A search icon button is coded as <div onclick='search()'> with no role='button', no aria-label, and no keyboard access — screen readers do not recognize it as interactive. A sidebar accordion uses <div class='toggle'> with no aria-expanded attribute, so users cannot tell whether sections are open or closed.",
+    "partial": "Most buttons and links have correct accessible names, but two icon-only buttons in the toolbar (print and share) have no aria-label, and a custom date picker widget lacks role='dialog' on its popup — the majority of the page is compliant but these controls are inaccessible."
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE (CRITICAL — wrapped image): flagging a link or button as 'empty' or 'lacking accessible name' when it wraps an <img> with non-empty alt text. Per ARIA 1.2 accessible-name computation, the wrapped image's alt becomes the WRAPPER's accessible name. ALWAYS inspect the link/button's child elements before reporting it as nameless. Concrete examples that MUST NOT be flagged: <a href='/'><img alt='Home'></a> has accessible name 'Home' and is COMPLIANT. <button><img alt='Search'></button> has accessible name 'Search' and is COMPLIANT. <a><svg><title>Menu</title></svg></a> has accessible name 'Menu' and is COMPLIANT. Verify every link in your finding by reading its children in dom.html — if ANY child carries an alt/title/aria-label that resolves to non-empty text, the link has a name and is NOT a 4.1.2 failure on this ground.",
+    "FALSE POSITIVE: flagging any element as 'missing accessible name' when the element has a non-empty accessible name via ANY of these W3C-standard mechanisms (ARIA 1.2 accessible-name computation): alt attribute (img/area/input[type=image]), aria-label, aria-labelledby pointing at label-bearing elements, inner <title> for inline SVG, <label for='id'> pointing at the element, visible text content of <button>/<a>/table-cell headers, or title attribute (weakest form but still counts).",
+    "FALSE POSITIVE: flagging an icon-only <button> or <a> where the parent has a valid accessible name via aria-label, aria-labelledby, or text content. The parent's name IS the element's name. Do NOT flag the child icon separately.",
+    "FALSE POSITIVE: flagging an inline <svg> with <title> child as 'missing name and role'. The <title> element provides the name AND role='img' (or the default SVG role) provides the role. The element is compliant.",
+    "FALSE POSITIVE: flagging a form control whose role is implicit from its HTML tag (<input type='text'>, <select>, <textarea>) as 'missing role'. Native HTML elements have implicit roles -- only add role=... when the element is a non-native custom control.",
+    "FALSE POSITIVE: flagging FontAwesome / Bootstrap / Material icons with role='img' and aria-hidden='true' as 'missing name'. aria-hidden=true REMOVES the element from the accessibility tree; name/role/value rules do not apply. These are the W3C-recommended decorative-icon pattern.",
+    "FALSE POSITIVE: flagging elements that do not have an ARIA role and do not need one (e.g. plain <div> containers that are just visual wrappers). 4.1.2 only applies to user-interface COMPONENTS -- interactive elements. Non-interactive wrappers are out of scope.",
+    "GROUND TRUTH RULE -- form_fields data: The user prompt's [PROGRAMMATIC DATA] block includes a ``form_fields`` array. Each entry has a ``label`` field that is the deterministic accessible-name computation result -- it already accounts for <label for=>, aria-label, aria-labelledby, wrapping <label>, and placeholder fallback. BEFORE flagging any form input, radio, checkbox, select, or textarea as 'missing programmatic name', you MUST search form_fields for that selector. If form_fields shows label='Search this site' for #form-search__sitesearch, the radio HAS a programmatic name -- do NOT report it as nameless. This is non-negotiable: contradicting form_fields.label is the same kind of error as contradicting the tab walk on SC 2.1.1."
+  ],
+  "plain_meaning": "Every user interface component (buttons, links, form controls, custom widgets) must expose a programmatic name, a programmatic role, and any states/properties/values that the user can set. Assistive technologies must be able to read the name and role and be notified of state changes. The name can come from any standard mechanism (visible text, alt, aria-label, aria-labelledby, label, title). The role comes from the HTML tag or an explicit role attribute.",
+  "scope_applies_to": [
+    "Native interactive elements (button, a[href], input, select, textarea)",
+    "Custom widgets built with ARIA (role=button, role=tab, role=dialog, etc.)",
+    "Icon-only controls that act as buttons or links",
+    "Toggles, switches, sliders, comboboxes, and other stateful widgets",
+    "Components whose states (expanded, selected, checked, pressed) must be exposed to AT",
+    "Script-generated interactive components"
+  ],
+  "scope_does_not_apply_to": [
+    "Plain div or span wrappers that are NOT interactive (non-clickable layout containers are out of scope)",
+    "Text runs, paragraphs, and non-interactive visual styling",
+    "Purely decorative images and graphics",
+    "Presentational tables and layout structures",
+    "Static text content with no role and no user interaction",
+    "Container elements that only group other components without themselves being interactive",
+    "Content whose accessibility concerns belong to other SCs (for example contrast, language)"
+  ],
+  "borderline_calibration": [
+    "A component with ANY accessible name via ANY W3C-standard mechanism (alt, aria-label, aria-labelledby, label[for], visible text, title) is NOT 'missing name'.",
+    "A native button element has implicit role=button, do NOT flag it for missing role.",
+    "A non-interactive div with no role and no handlers is OUT OF SCOPE, do not flag it.",
+    "Flag only when an interactive component truly lacks a name, role, or programmatic state.",
+    "Custom widgets must expose states (aria-expanded, aria-checked, etc.) that the user can change.",
+    "When a label exists but is visually hidden, that still satisfies name."
+  ]
+}

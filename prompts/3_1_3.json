@@ -1,0 +1,68 @@
+{
+  "criterion_id": "3.1.3",
+  "criterion_name": "Unusual Words",
+  "visual_checks": [
+    "Scan the page for jargon, technical terms, or domain-specific vocabulary that general audiences may not know",
+    "Look for idioms or figurative expressions that could be confusing if taken literally",
+    "Check if a glossary, definition list, or tooltip mechanism is provided for unusual words",
+    "Look for inline definitions or parenthetical explanations following specialized terms",
+    "Check whether the page links to a glossary page for the first occurrence of each unusual term",
+    "Identify any abbreviation or acronym that doubles as specialized terminology"
+  ],
+  "pass_conditions": [
+    "A glossary is provided and linked for specialized or unusual terms used on the page",
+    "Inline definitions or parenthetical explanations follow the first use of jargon or idioms",
+    "Definition lists (dl/dt/dd) are used to define technical terms within the content",
+    "Tooltips or expandable elements provide definitions when users interact with unusual words",
+    "Idioms and figurative language are accompanied by explanations of their intended meaning"
+  ],
+  "fail_conditions": [
+    "Specialized jargon or technical terms are used without any definition or explanation",
+    "Idioms or figurative expressions are used with no mechanism to clarify their meaning",
+    "A glossary exists but is not linked from pages that use the unusual terms",
+    "Terms are used in a domain-specific way that differs from common usage with no clarification",
+    "No mechanism of any kind is provided to help users understand unusual vocabulary"
+  ],
+  "na_conditions": [
+    "Page content uses only common, everyday language with no jargon, idioms, or specialized terms"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "The target audience's vocabulary level could not be determined to assess which terms are unusual"
+  ],
+  "common_mistakes": [
+    "Assuming all users understand industry-specific jargon without providing definitions",
+    "Providing a glossary that is difficult to find or not linked from relevant content pages",
+    "Defining a term on one page but using it without definition on other pages",
+    "Using idioms or colloquialisms in interface text where literal meaning differs from intended meaning",
+    "Acronyms that are also specialized terms defined only by expansion without explaining the concept"
+  ],
+  "examples": {
+    "pass": "A medical information page defines 'myocardial infarction' inline as '(heart attack)' on first use and links all specialized terms to a glossary accessible from every page",
+    "fail": "A legal services page uses terms like 'force majeure', 'estoppel', and 'laches' throughout with no glossary, definitions, or explanations provided anywhere",
+    "partial": "Some technical terms are defined in a glossary linked from the footer, but several jargon terms introduced in newer content pages are not yet included in the glossary"
+  },
+  "plain_meaning": "When words or phrases are used in an unusual, restricted, idiomatic, or jargon sense, readers need a way to look up the intended definition. This does not mean every page must define every term, but some mechanism (a glossary link, inline definition, dfn element, tooltip, or similar) must be available for the unusual terms in the content.",
+  "scope_applies_to": [
+    "Idioms whose meaning is not deducible from the component words",
+    "Jargon or domain-specific terminology used in a restricted sense",
+    "Words used with a meaning different from their common dictionary sense",
+    "Coined or project-specific terminology",
+    "Specialized acronyms whose expansion alone is insufficient to convey the concept"
+  ],
+  "scope_does_not_apply_to": [
+    "Common words used in their ordinary sense",
+    "Proper names",
+    "Abbreviations as such (that is SC 3.1.4)",
+    "Pronunciation concerns (that is SC 3.1.6)",
+    "Content whose reading difficulty is just complex but not idiomatic or jargon-laden",
+    "Terms that are immediately defined in the surrounding prose"
+  ],
+  "borderline_calibration": [
+    "A single glossary link available from the page (or from a consistent location in the site) is generally sufficient.",
+    "Do not require every unusual term to have its own inline definition.",
+    "If an idiom is explained right next to it in plain text, PASS for that term.",
+    "Only flag when unusual/jargon terms are clearly present AND no mechanism (glossary, dfn, tooltip, inline definition) is offered anywhere."
+  ]
+}

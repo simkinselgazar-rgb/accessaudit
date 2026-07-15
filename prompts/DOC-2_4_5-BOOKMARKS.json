@@ -1,0 +1,46 @@
+{
+  "criterion_id": "DOC-2.4.5-BOOKMARKS",
+  "criterion_name": "PDF Bookmarks",
+  "visual_checks": [
+    "Check the PDF bookmarks panel to see if bookmarks are present",
+    "Count the total number of pages in the document to determine if bookmarks are expected (documents over 9 pages should have bookmarks)",
+    "Compare the bookmark structure against the heading structure visible in the document content",
+    "Verify that bookmark labels match or closely correspond to the heading text in the document",
+    "Check that the bookmark hierarchy reflects the heading levels (H1, H2, H3) used in the document"
+  ],
+  "pass_conditions": [
+    "PDFs with more than 9 pages include bookmarks in the bookmarks panel",
+    "Bookmarks correspond to the heading structure of the document",
+    "Bookmark labels match the heading text they point to",
+    "Bookmark nesting/hierarchy reflects the document's heading level hierarchy",
+    "Each bookmark navigates to the correct location in the document"
+  ],
+  "fail_conditions": [
+    "A PDF with more than 9 pages has no bookmarks at all",
+    "Bookmarks are present but do not match the document's heading structure",
+    "Bookmark labels are generic or auto-generated (e.g., 'Bookmark 1', 'Page 3') rather than matching headings",
+    "Bookmarks point to incorrect locations in the document",
+    "The bookmark hierarchy is flat when the document has multiple heading levels",
+    "Significant sections or headings in the document are missing from the bookmarks"
+  ],
+  "na_conditions": [
+    "The PDF is 9 pages or fewer and bookmarks are not required",
+    "The document is not a PDF"
+  ],
+  "ne_conditions": [
+    "The PDF bookmark data could not be extracted for evaluation",
+    "The total page count of the document could not be determined"
+  ],
+  "common_mistakes": [
+    "Converting a Word document to PDF without enabling the option to generate bookmarks from headings",
+    "Having bookmarks that were correct for an earlier version of the document but were not updated after content changes",
+    "Creating bookmarks only for top-level headings while omitting sub-section headings that provide important navigation",
+    "Bookmark text not matching the actual heading text in the document due to manual editing",
+    "Generating bookmarks from a table of contents rather than the heading structure, resulting in mismatches"
+  ],
+  "examples": {
+    "pass": "A 45-page policy document has bookmarks for every heading (H1 through H3) that match the document's heading text and navigate to the correct sections",
+    "fail": "A 30-page annual report has no bookmarks, forcing assistive technology users to navigate page by page with no way to jump to specific sections",
+    "partial": "A long PDF has bookmarks for the main chapter headings but is missing bookmarks for all sub-section headings, limiting navigation granularity"
+  }
+}

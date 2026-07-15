@@ -1,0 +1,66 @@
+{
+  "criterion_id": "1.2.4",
+  "criterion_name": "Captions (Live)",
+  "visual_checks": [
+    "Identify any live audio content in synchronized media (live streams, webinars, live events)",
+    "Check if the live video player offers real-time captions (CC button or auto-caption indicator)",
+    "Look for CART (Communication Access Realtime Translation) or live captioning service indicators",
+    "If captions are visible, assess whether they appear in real-time with reasonable accuracy",
+    "Check if the live event page mentions captioning availability in its description"
+  ],
+  "pass_conditions": [
+    "All live synchronized media provides real-time captions",
+    "Live captions are reasonably accurate and appear with minimal delay",
+    "A captioning method is clearly provided (CART, automated with human correction, or equivalent)",
+    "Captions identify speakers in multi-speaker live events when not visually obvious"
+  ],
+  "fail_conditions": [
+    "Live synchronized media has no captioning option",
+    "Live captions are present but too inaccurate to be usable (garbled, missing large portions)",
+    "Captioning service is advertised but not actually functional during the live event",
+    "Live captions have extreme delay (more than several seconds) making them unusable"
+  ],
+  "na_conditions": [
+    "Page contains no live synchronized media",
+    "All media content is prerecorded (covered by 1.2.2 instead)",
+    "Page has live audio-only content but no synchronized video"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Live content is not currently active and cannot be tested",
+    "Cannot confirm whether the content is live or prerecorded"
+  ],
+  "common_mistakes": [
+    "Relying solely on auto-generated live captions without any human monitoring or correction",
+    "Providing captions only for the main speaker but not for audience questions or panel discussions",
+    "Caption feed that drops out intermittently during the live broadcast",
+    "No indication to users that live captions are available — users do not know to enable them"
+  ],
+  "examples": {
+    "pass": "A live webinar uses a CART captioner providing real-time captions with speaker identification, accessible via a CC toggle in the video player",
+    "fail": "A live-streamed town hall meeting has no captioning whatsoever — participants who are deaf cannot follow the discussion",
+    "partial": "Live auto-captions are enabled but technical terminology and proper nouns are frequently mangled with no human correction"
+  },
+  "plain_meaning": "Live audio in synchronized media (a live webcast, live stream, live webinar with speakers on camera) must include captions as it is broadcast. The intent is that deaf and hard-of-hearing users can follow live events in real time. Unlike 1.2.2, there is no exemption for media that is an alternative for text, because live events rarely are one.",
+  "scope_applies_to": [
+    "Live synchronized media streams embedded on the page (live webinars, live lectures, live news, live events)",
+    "Embedded live players for platforms that broadcast video with live audio",
+    "Scheduled live webcasts promoted from the page and played in-page",
+    "Live question-and-answer sessions with spoken audio and video"
+  ],
+  "scope_does_not_apply_to": [
+    "Prerecorded synchronized media -- that belongs to SC 1.2.2",
+    "Live audio-only content with no video -- that belongs to SC 1.2.9 (AAA)",
+    "Video-only (silent) live content with no audio",
+    "Archived recordings of previously-live events (those become prerecorded and fall under 1.2.2)",
+    "Audio description for live video -- not required at any WCAG level for live content",
+    "Missing alt text on a thumbnail launching the stream -- that belongs to SC 1.1.1",
+    "Keyboard access to the live player -- that belongs to SC 2.1.1"
+  ],
+  "borderline_calibration": [
+    "Professionally produced live captions (human or accurate automatic) satisfy the rule.",
+    "If the page only advertises a future live event without embedding it, 1.2.4 is not yet applicable.",
+    "If the event is already ended and only the recording is present, evaluate under 1.2.2 instead.",
+    "Missing captions on an embedded live stream is a hard failure at medium+."
+  ]
+}

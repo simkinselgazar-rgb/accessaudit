@@ -1,0 +1,74 @@
+{
+  "criterion_id": "2.4.11",
+  "criterion_name": "Focus Not Obscured (Minimum)",
+  "visual_checks": [
+    "When tabbing through the page, check if any focused element is fully hidden behind a sticky header, fixed footer, floating banner, cookie consent bar, or chat widget",
+    "Look for sticky or fixed-position elements (navigation bars, toolbars, banners, floating action buttons) that could cover focused elements as the user scrolls and tabs",
+    "Check if modal overlays, non-modal dialogs, or toast notifications obscure the currently focused element",
+    "Verify that when focus moves to an element near the top or bottom of the viewport, it is not fully hidden behind a sticky header or fixed footer",
+    "Look for cookie consent banners, promotional overlays, or chat widgets that remain on screen and may cover focused content underneath"
+  ],
+  "pass_conditions": [
+    "No focused element is entirely hidden by author-created content — at least part of the focus indicator is always visible",
+    "Sticky headers and fixed footers do not completely cover focused elements when the user Tabs to them",
+    "Cookie consent banners, chat widgets, and floating action buttons are positioned so they do not fully obscure focused elements",
+    "When a non-modal dialog or toast notification appears, it does not completely cover the element that currently has focus",
+    "The page scrolls or adjusts to ensure focused elements are at least partially visible when sticky or fixed elements are present"
+  ],
+  "fail_conditions": [
+    "A focused element is entirely hidden behind a sticky header or fixed navigation bar, with no part of the element or its focus indicator visible",
+    "A cookie consent banner or promotional overlay covers the full area of a focused element, making it invisible to the user",
+    "A fixed-position chat widget completely obscures a focused link or button in the lower-right corner of the page",
+    "A toast notification appears directly over the currently focused element, hiding it entirely",
+    "Sticky footer or bottom navigation bar covers focused elements near the bottom of the page with no visible portion remaining"
+  ],
+  "na_conditions": [
+    "Page has no fixed-position, sticky, or floating elements that could obscure content",
+    "Page contains no keyboard-focusable elements"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot test focus obscuring from static screenshots — keyboard navigation through the page with fixed elements is required",
+    "Sticky or fixed elements are dynamically loaded and not present in the initial capture"
+  ],
+  "common_mistakes": [
+    "Sticky header that is tall enough to cover focused elements near the top of the scrolled viewport when the browser scrolls an element into view",
+    "Cookie consent banner that sits at the bottom of the viewport and covers links or buttons in the footer when the user Tabs to them",
+    "Chat widget floating button that overlaps the last few focusable elements in the page flow",
+    "Scroll-into-view behavior (scrollIntoView or browser default) that scrolls a focused element to be just barely visible but behind a sticky header",
+    "Fixed promotional banner that covers focused elements and has no dismiss button or close mechanism",
+    "Non-modal notifications (toasts) that appear directly over the focused element and do not reposition"
+  ],
+  "auditor_anti_patterns": [
+    "DO NOT confuse 'focused element is below the fold / requires scrolling' with 'focused element is obscured by a sticky overlay'. An element that the browser will auto-scroll into view when focused is NOT a 2.4.11 failure -- it is normal keyboard navigation. The SC fails ONLY when, after the focus-induced scroll completes, a sticky/fixed/floating AUTHOR-created overlay still ENTIRELY covers the focused element.",
+    "DO NOT flag focused elements that appear partially covered. SC 2.4.11 (Minimum) explicitly allows partial occlusion -- that is the stricter SC 2.4.12 territory. The verdict is 'failure' only when the element is ENTIRELY hidden.",
+    "DO NOT infer a 2.4.11 failure from screenshots that do not include a focused state. The full-page screenshot has no focus on it. Use the deterministic tab walk's per-stop focus screenshots, which capture the post-focus-scroll state with overlays in their actual position.",
+    "DO NOT report 'obscured by sticky element' if the page has no sticky/fixed/floating author content (na_conditions). Verify the page actually has a sticky header / fixed footer / floating chat / cookie banner before claiming this SC fails.",
+    "DO NOT confuse browser UI (address bar, find bar, scrollbar) with author-created overlays. User-agent UI is explicitly out of scope."
+  ],
+  "examples": {
+    "pass": "The page has a sticky header (80px tall) and uses scroll-padding-top: 100px in CSS, so when the browser scrolls a focused element into view it clears the sticky header, and the cookie consent banner at the bottom has enough margin that footer links remain visible when focused",
+    "fail": "A sticky navigation bar covers 120px at the top of the viewport, and when a user Tabs to an anchor link target near the top of a section, the focused element scrolls behind the sticky header and is completely hidden — the user cannot see what has focus",
+    "partial": "Most focused elements are visible, but a persistent chat widget in the lower-right corner completely covers the 'Back to top' button when it receives focus, and one footer link is fully hidden behind the cookie consent banner"
+  },
+  "plain_meaning": "When a user tabs to a component and it receives keyboard focus, that component must not be ENTIRELY hidden by author-created content such as sticky headers, sticky footers, cookie banners, or floating chat widgets. At least some part of the focused control must remain visible. User-agent-created UI such as the browser find bar is excluded.",
+  "scope_applies_to": [
+    "Focused interactive components in pages with sticky or fixed overlays",
+    "Sticky headers, sticky footers, floating chat bubbles, cookie banners, and similar author-created overlays",
+    "Any author overlay that can cover a focused element entirely",
+    "Scroll positions where a newly focused element lands underneath an overlay"
+  ],
+  "scope_does_not_apply_to": [
+    "User-agent UI such as the browser address bar or find bar",
+    "Cases where only part of the component is covered (that is the stricter SC 2.4.12)",
+    "Whether the focus indicator itself is visible on a visible element (that is SC 2.4.7)",
+    "Focus order problems (that is SC 2.4.3)",
+    "Pages with no sticky or overlay content at all"
+  ],
+  "borderline_calibration": [
+    "Only flag when evidence shows the focused component is ENTIRELY hidden, not merely partially covered.",
+    "Partial occlusion is acceptable under 2.4.11 (though not under 2.4.12).",
+    "If there is no sticky or floating author content on the page, this SC is not applicable.",
+    "Rely on captured tab walk screenshots rather than guessing about overlay behavior."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "criterion_id": "1.4.5",
+  "criterion_name": "Images of Text",
+  "visual_checks": [
+    "Look for text rendered as images instead of live HTML text — common in logos, banners, and headings",
+    "Check headings: are they rendered as <img> or background images containing text instead of HTML text?",
+    "Look for buttons that are images containing text instead of styled HTML buttons",
+    "Check for infographics or banners where the text is baked into the image",
+    "Look for navigation items that are image-based rather than text-based",
+    "Check promotional banners and hero sections for images of text"
+  ],
+  "pass_conditions": [
+    "Text is rendered as actual HTML text rather than images of text",
+    "CSS styling is used to achieve the desired visual presentation of text",
+    "Where images of text are used, they are customizable by the user (e.g., server-side text rendering that accepts user style preferences)",
+    "Images of text are only used for logotypes/brand names where the particular visual presentation is essential",
+    "Charts and graphs that contain text have that text also available in accessible form (data table, long description)"
+  ],
+  "fail_conditions": [
+    "Page headings rendered as images containing text instead of styled HTML headings",
+    "Navigation buttons or links implemented as images of text",
+    "Banner or hero text that is part of an image rather than overlaid HTML text",
+    "Informational content rendered as images of text that could be presented as HTML with CSS",
+    "Call-to-action buttons implemented as images with text baked in",
+    "Body content rendered as image scans of text documents"
+  ],
+  "na_conditions": [
+    "No images of text are present on the page",
+    "All images of text are logotypes or brand names where the specific presentation is essential",
+    "The particular presentation of the text IS essential (e.g., a font sample, historical document reproduction)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot distinguish between images of text and styled HTML text from DOM alone without visual inspection",
+    "Image content could not be loaded to determine if it contains text"
+  ],
+  "common_mistakes": [
+    "Using image headers instead of web fonts with CSS styling for custom typography",
+    "Embedding text in promotional banners instead of overlaying HTML text on a background image",
+    "Scanned PDF content displayed as images instead of accessible HTML or tagged PDF",
+    "Navigation menus using image sprites with text baked into the images",
+    "Using image-based buttons because they were easier to style than CSS buttons"
+  ],
+  "examples": {
+    "pass": "The site uses Google Fonts and CSS to style headings with a custom typeface — all text is live HTML that can be selected, copied, and resized by the user",
+    "fail": "The page header 'Welcome to Our Company' is an <img> tag containing the text in a decorative font, rather than using a web font with CSS — the text cannot be resized, recolored, or read by screen readers without alt text",
+    "partial": "Most page text is HTML but the promotional banner uses an image containing the sale price and description text that could have been rendered as HTML over a background image"
+  },
+  "plain_meaning": "When the technology in use can render real text with the needed visual style, authors should use real text instead of pictures of text. Images of text cannot be resized cleanly, cannot be restyled by users, and lose fidelity at high zoom. Logotypes and cases where a specific visual presentation is essential are exempt.",
+  "scope_applies_to": [
+    "Headings, banners, and hero text rendered as images",
+    "Button labels rendered as image files",
+    "Menu items or navigation links rendered as image graphics",
+    "Promotional graphics containing informational text baked into the image",
+    "Quotes, announcements, or marketing copy composited into images"
+  ],
+  "scope_does_not_apply_to": [
+    "Logotypes and brand marks (explicitly exempt)",
+    "Text where a particular visual presentation is essential to meaning (e.g., a font sample, a signature)",
+    "Decorative imagery with no informational text",
+    "Elements removed from the accessibility tree (aria-hidden, display:none)",
+    "Visually-hidden / sr-only alternatives that pair with an image of text (they belong to SC 1.1.1)",
+    "Text rendered via web fonts or SVG <text> elements (that is real text, not an image of text)",
+    "Captions in video, which are a different SC"
+  ],
+  "borderline_calibration": [
+    "SVG that uses <text> elements is REAL text, not an image of text. Do not flag.",
+    "Web fonts rendering real text characters are REAL text. Do not flag.",
+    "A logo containing the brand name is exempt regardless of style.",
+    "An image of text used alongside an equivalent real-text version is still a technical failure but severity should be lower.",
+    "Hero banners that bake tagline text into a JPEG are a classic failure when the technology clearly supports real text."
+  ]
+}

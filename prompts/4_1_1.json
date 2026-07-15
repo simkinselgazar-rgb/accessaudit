@@ -1,0 +1,67 @@
+{
+  "criterion_id": "4.1.1",
+  "criterion_name": "Parsing",
+  "visual_checks": [
+    "This criterion is evaluated programmatically — visual checks are supplementary only",
+    "Review the source code for obvious markup errors visible in the DOM inspector",
+    "Check whether the page renders inconsistently across browsers (a sign of parsing issues)"
+  ],
+  "pass_conditions": [
+    "IMPORTANT: For WCAG 2.2 evaluations, this criterion ALWAYS passes — it was deprecated because modern browsers handle parsing robustly. Skip all checks below and report Supports.",
+    "For WCAG 2.0 and 2.1: All elements have complete, correctly matched start and end tags",
+    "For WCAG 2.0 and 2.1: Elements are nested according to the HTML specification",
+    "For WCAG 2.0 and 2.1: No element has duplicate attributes",
+    "For WCAG 2.0 and 2.1: All id attribute values are unique within the document"
+  ],
+  "fail_conditions": [
+    "NOTE: These fail conditions apply ONLY to WCAG 2.0 and 2.1 evaluations. For WCAG 2.2, this criterion always passes.",
+    "Elements have mismatched or misnested start/end tags (e.g. <b><i>text</b></i>)",
+    "Required closing tags are missing, causing the browser to infer unintended structure",
+    "An element has the same attribute specified more than once (e.g. <div class=\"a\" class=\"b\">)",
+    "Multiple elements share the same id value, breaking aria-labelledby/describedby references",
+    "Obsolete elements are used (<font>, <center>, <marquee>, <blink>, <strike>, <big>, <tt>)",
+    "Orphaned closing tags appear without matching opening tags"
+  ],
+  "na_conditions": [
+    "Content is not implemented using markup languages",
+    "WCAG 2.2 evaluations: This criterion was deprecated and always passes"
+  ],
+  "ne_conditions": [
+    "Page HTML source could not be captured for analysis",
+    "AI response could not be parsed"
+  ],
+  "common_mistakes": [
+    "Using a rich text editor or CMS that produces invalid HTML (unclosed tags, improperly nested elements)",
+    "Copy-pasting content from word processors that introduces malformed markup",
+    "JavaScript-generated DOM that produces duplicate IDs dynamically",
+    "Template systems that output duplicate attributes when merging data attributes",
+    "Obsolete elements carried forward from legacy code without cleanup"
+  ],
+  "examples": {
+    "pass": "All HTML elements are properly opened and closed, nested correctly, have unique IDs, and contain no duplicate attributes — the document parses unambiguously across all user agents",
+    "fail": "The document contains <font> elements for styling, has multiple elements sharing id=\"content\", and several <div> tags are misnested with overlapping <span> boundaries",
+    "partial": "IDs are unique and nesting is mostly correct, but several obsolete <center> and <font> elements remain in legacy content sections"
+  },
+  "plain_meaning": "OBSOLETE in WCAG 2.2. This criterion no longer applies to WCAG 2.2 evaluations and should be reported as Not Applicable. For WCAG 2.1 evaluations only, it required markup to have complete start and end tags, correct nesting, no duplicate attributes on an element, and unique IDs, except where the specification allows.",
+  "scope_applies_to": [
+    "WCAG 2.1 evaluations of HTML documents (legacy only)",
+    "Duplicate id attribute detection in a single document (2.1 only)",
+    "Unclosed or improperly nested tags that break accessibility-tree construction (2.1 only)",
+    "Duplicate attributes on a single element (2.1 only)",
+    "Other markup parsing defects that actually impact assistive technology (2.1 only)"
+  ],
+  "scope_does_not_apply_to": [
+    "Any WCAG 2.2 evaluation (treat as Not Applicable)",
+    "Minor validator warnings that do not affect parsing",
+    "Deprecated tags that still render and are interpreted correctly",
+    "Self-closing tag style differences",
+    "Whitespace, indentation, or formatting concerns",
+    "Issues that belong to SC 4.1.2 (name/role/value)"
+  ],
+  "borderline_calibration": [
+    "For WCAG 2.2: return Not Applicable. Do not flag anything.",
+    "For WCAG 2.1: only flag duplicate IDs, unclosed tags, or malformed markup that actually affect AT.",
+    "Do not flag decorative validator nits.",
+    "When in doubt and the review target is 2.2, prefer Not Applicable."
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "criterion_id": "1.3.6",
+  "criterion_name": "Identify Purpose",
+  "visual_checks": [
+    "Look for ARIA landmark roles (banner, navigation, main, complementary, contentinfo, search, form, region) identifying page regions",
+    "Check if UI components use appropriate autocomplete attributes on input fields for common personal data (name, email, address, phone)",
+    "Verify that icons and visual indicators have programmatically determinable purpose through ARIA labels or semantic HTML",
+    "Look for links and buttons whose purpose can be determined from their accessible name or surrounding context",
+    "Check if page regions such as header, nav, main, aside, and footer use proper HTML5 semantic elements or ARIA roles",
+    "Look for input fields collecting user information and verify they use the correct autocomplete token values"
+  ],
+  "pass_conditions": [
+    "Page regions are identified using HTML5 landmark elements or ARIA landmark roles",
+    "Input fields for common personal information use appropriate autocomplete attribute values (e.g., autocomplete='name', 'email', 'tel', 'street-address')",
+    "The purpose of icons, links, and buttons can be programmatically determined through accessible names or semantic markup",
+    "All major page sections (header, navigation, main content, footer) have identifiable purposes via landmarks",
+    "UI components that collect standardized user data use recognized autocomplete tokens per HTML specification"
+  ],
+  "fail_conditions": [
+    "Page regions lack ARIA landmarks or HTML5 semantic elements, making their purpose indeterminate",
+    "Input fields collecting personal data (name, email, phone, address) are missing autocomplete attributes",
+    "Icons convey meaning but have no programmatically determinable purpose (no aria-label, no text alternative)",
+    "Navigation, header, and footer regions are built with generic div elements and no landmark roles",
+    "Autocomplete attribute values are incorrect or do not match the type of data the field collects"
+  ],
+  "na_conditions": [
+    "Page contains no identifiable regions, input fields, or UI components whose purpose needs to be programmatically determined",
+    "Page is a minimal document with a single content area and no form inputs"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Page failed to load so landmarks and autocomplete attributes cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Using generic div or span containers for major page regions instead of semantic HTML5 elements or ARIA landmarks",
+    "Omitting autocomplete attributes on form fields that collect standard personal information",
+    "Using incorrect autocomplete token values that do not match the field purpose (e.g., autocomplete='name' on an email field)",
+    "Having multiple banner or main landmarks on a single page without distinguishing labels",
+    "Icons or image buttons with purely visual meaning but no programmatic label",
+    "Using role='region' without an accessible name, making the landmark meaningless"
+  ],
+  "examples": {
+    "pass": "A page uses <header>, <nav>, <main>, <aside>, and <footer> elements for page structure, and all personal data input fields include correct autocomplete attributes such as autocomplete='given-name' and autocomplete='email'",
+    "fail": "A page uses <div class='header'> and <div class='nav'> with no ARIA landmark roles, and form fields collecting name and email have no autocomplete attributes",
+    "partial": "Landmark roles are correctly applied to major page regions, but several input fields for address and phone number are missing autocomplete attributes"
+  },
+  "plain_meaning": "At Level AAA, the purpose of UI components, icons, and page regions must be programmatically determinable -- typically through ARIA roles, landmarks, or semantic tokens -- so that personalization tools can adapt the presentation (e.g., replace icons with familiar symbols, highlight a specific region type). The intent is to support users with cognitive disabilities who use tools that re-skin or simplify pages based on identified purpose.",
+  "scope_applies_to": [
+    "UI components whose purpose could be signaled via ARIA roles or microdata (buttons, links, navigation items)",
+    "Page regions that map to landmark roles (banner, navigation, main, contentinfo, complementary, search)",
+    "Icons whose meaning could be identified via semantic markup",
+    "Any page evaluated at Level AAA scope (the criterion does not depend on the site claiming a conformance level)"
+  ],
+  "scope_does_not_apply_to": [
+    "Reviews scoped to Level A or AA only (1.3.6 is a Level AAA criterion)",
+    "Structural relationships within content -- that belongs to SC 1.3.1",
+    "Text alternatives for non-text content -- that belongs to SC 1.1.1",
+    "Input field purpose -- that belongs to SC 1.3.5",
+    "Color and contrast -- SC 1.4.1 / 1.4.3",
+    "Focus visibility -- SC 2.4.7",
+    "Keyboard operability -- SC 2.1.1"
+  ],
+  "borderline_calibration": [
+    "SC 1.3.6 is a Level AAA criterion: evaluate it whenever the review scope includes AAA. It does NOT depend on the site claiming any conformance level — never condition the verdict or rationale on a claimed or assumed conformance level.",
+    "Presence of landmark roles / HTML5 semantic regions on header/nav/main/footer is a strong signal the criterion is met.",
+    "Missing landmark roles on major page regions is a failure at medium+.",
+    "The criterion is intentionally broad and under-specified; prefer info/note severity over hard fails unless there is clear neglect of programmatic purpose."
+  ],
+  "auditor_anti_patterns": [
+    "Do NOT assume, infer, or assert that the site claims any WCAG conformance level. Only an explicit, published accessibility-conformance statement counts as a conformance claim. The string 'AAA' or 'AA' appearing in CSS, class names, color hex values, or code is NOT a conformance claim. Never base a finding or its rationale on an assumed conformance claim.",
+    "Do NOT flag overly long, verbose, or redundant accessible names under 1.3.6 — accessible-name quality belongs to SC 2.4.4 / 4.1.2, not Identify Purpose.",
+    "role='presentation' on a nested structural wrapper inside a CMS template is not automatically a 1.3.6 failure — judge whether the page's REGIONS have a determinable purpose via the top-level landmarks, not every nested wrapper."
+  ]
+}

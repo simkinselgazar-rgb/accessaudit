@@ -1,0 +1,66 @@
+{
+  "criterion_id": "2.4.8",
+  "criterion_name": "Location",
+  "visual_checks": [
+    "Look for breadcrumb navigation showing the user's current position within the site hierarchy",
+    "Check if the current page is highlighted or indicated in the site navigation menu",
+    "Look for a site map that shows the overall structure and the user's location within it",
+    "Check the page title or heading to see if it clearly identifies where the user is",
+    "Look for step indicators in multi-step processes (e.g., 'Step 2 of 5')",
+    "Observe whether navigation elements use aria-current or visual styling to mark the active page"
+  ],
+  "pass_conditions": [
+    "Breadcrumb navigation is present showing the path from the homepage to the current page",
+    "The current page is visually highlighted in the site navigation with aria-current='page'",
+    "A site map is available and linked from the page providing full structural context",
+    "Multi-step processes include a step indicator showing current position and total steps",
+    "At least one mechanism is provided to help users understand their location within the site"
+  ],
+  "fail_conditions": [
+    "No breadcrumbs, highlighted navigation items, or other location indicators are present",
+    "The user has no way to determine where they are within the website hierarchy",
+    "Multi-step processes lack step indicators or progress information",
+    "Navigation menus exist but do not indicate which page is currently active"
+  ],
+  "na_conditions": [
+    "The page is a standalone single-page site with no hierarchical structure or multi-step process"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "The site structure could not be determined from the current page alone"
+  ],
+  "common_mistakes": [
+    "Breadcrumbs that are visually present but lack proper semantic markup (nav element with aria-label)",
+    "Navigation menus that highlight the current section but not the specific page",
+    "Step indicators that show progress visually but are not accessible to screen readers",
+    "Breadcrumbs that omit intermediate levels of the hierarchy",
+    "Using only the page title as a location indicator without any navigational context"
+  ],
+  "examples": {
+    "pass": "A product page includes breadcrumbs 'Home > Electronics > Laptops > Model X' with a nav element labeled 'Breadcrumb', and the 'Electronics' section is highlighted in the main navigation with aria-current='true'",
+    "fail": "A deeply nested article page has no breadcrumbs, the navigation menu does not indicate the current section, and there is no site map — users cannot determine where they are in the site",
+    "partial": "Breadcrumbs are present on most content pages but the blog section lacks any location indicator, and the navigation menu does not highlight the current page"
+  },
+  "plain_meaning": "Users need a way to understand where they currently are within a larger set of pages. Common mechanisms include breadcrumb trails, a site map with the current page indicated, a current-page indicator in a navigation menu, or a page title that reflects the location. This helps users orient themselves within the site structure.",
+  "scope_applies_to": [
+    "Breadcrumb trails showing the path to the current page",
+    "Navigation menus that mark the current page as current",
+    "Site maps that indicate the current location",
+    "Page titles that include hierarchical location information",
+    "Any other mechanism that communicates current location within a site"
+  ],
+  "scope_does_not_apply_to": [
+    "Standalone pages that are not part of a set",
+    "The styling or visual design of breadcrumbs",
+    "Whether navigation is keyboard operable (that is SC 2.1.1)",
+    "Whether link purposes are clear (that is SC 2.4.4)",
+    "Multi-step forms where step indicators cover this differently"
+  ],
+  "borderline_calibration": [
+    "Any single working mechanism is sufficient; this SC does not require multiple.",
+    "A clear hierarchical page title alone can satisfy this SC.",
+    "Only flag when the user has no way at all to determine their location in the site.",
+    "Do not fail based on stylistic preferences about breadcrumb presentation."
+  ]
+}

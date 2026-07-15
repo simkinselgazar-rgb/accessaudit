@@ -1,0 +1,68 @@
+{
+  "criterion_id": "3.1.5",
+  "criterion_name": "Reading Level",
+  "visual_checks": [
+    "Read through the main content and assess whether the language complexity exceeds lower secondary education level",
+    "Look for long, complex sentences with multiple subordinate clauses",
+    "Check if supplemental content is provided such as summaries, illustrations, or simplified versions",
+    "Look for text alternatives like diagrams, infographics, or videos that explain complex content",
+    "Check if the page offers a simplified or easy-read version of the content",
+    "Identify whether proper names, titles, or unavoidable technical terms inflate the perceived reading level"
+  ],
+  "pass_conditions": [
+    "The main text content is written at or below a lower secondary education reading level",
+    "Supplemental content (summaries, illustrations, simplified versions) is provided for complex text",
+    "An easy-read or plain language version is available and linked from the complex content",
+    "Visual aids such as diagrams or infographics supplement difficult textual content",
+    "Content that must be complex (e.g., legal, scientific) provides a plain-language summary"
+  ],
+  "fail_conditions": [
+    "Text content exceeds lower secondary education reading level with no supplemental aids",
+    "Complex or dense language is used throughout with no simplified alternative or summary",
+    "No visual aids, summaries, or plain-language versions are provided for advanced content",
+    "The page contains only the complex version of content with no mechanism to aid comprehension",
+    "Reading level is unnecessarily high due to overly complex sentence structures that could be simplified"
+  ],
+  "na_conditions": [
+    "All text content is already at or below lower secondary education reading level without supplemental aids",
+    "Content consists only of proper names, titles, or technical terms that cannot be simplified"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Reading level of the content could not be reliably assessed"
+  ],
+  "common_mistakes": [
+    "Assuming that educated audiences do not need supplemental content for complex material",
+    "Providing a 'simple' version that is still above lower secondary reading level",
+    "Using passive voice and long sentences throughout when active voice and shorter sentences would suffice",
+    "Not providing summaries for legal terms and conditions or privacy policies",
+    "Supplemental content that is hidden or difficult to find from the main content page"
+  ],
+  "examples": {
+    "pass": "A government policy page includes the full legal text followed by a clearly linked 'Plain Language Summary' section that explains the key points using short sentences and common vocabulary at a lower secondary reading level",
+    "fail": "A public health information page uses dense medical and statistical language throughout with no summary, glossary, illustrations, or simplified version — readers without advanced education cannot easily comprehend the content",
+    "partial": "A university research page provides a simplified abstract at the top but the main body uses highly complex academic language with no additional supplemental aids such as diagrams or a plain-language version"
+  },
+  "plain_meaning": "If the content of a page requires reading ability beyond roughly a lower-secondary (about 9 years of schooling) reading level after removing proper names and titles, then either supplemental easier content or a simplified alternate version must be available. The goal is that readers with lower literacy or cognitive disabilities can access the information one way or another.",
+  "scope_applies_to": [
+    "Running prose text that conveys important information",
+    "Instructions, policies, and procedural content",
+    "Educational and informational articles",
+    "Narrative or expository passages whose comprehension is required to use the site",
+    "Whichever sections of the content carry the substantive information"
+  ],
+  "scope_does_not_apply_to": [
+    "Proper names and titles (excluded from the readability measurement)",
+    "Poetry, literary art, and content whose form is inherently complex",
+    "Content that is inherently technical and has no simpler equivalent",
+    "Tables, navigation, short UI labels",
+    "Pages whose measured reading level is already at or below lower secondary"
+  ],
+  "borderline_calibration": [
+    "This SC is Level AAA and is often Not Applicable when the content is already at or below the threshold.",
+    "A supplemental summary, illustrations, audio version, or simplified alternate all count as satisfying.",
+    "Do not flag technical content that is inherently specialized unless no supplemental support is offered.",
+    "If reading level is borderline, prefer Not Enough Evidence over a hard FAIL."
+  ]
+}

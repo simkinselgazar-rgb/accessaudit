@@ -1,0 +1,64 @@
+{
+  "criterion_id": "2.2.3",
+  "criterion_name": "No Timing",
+  "visual_checks": [
+    "Look for any timed interactions such as countdown timers, auto-advancing content, or time-limited forms",
+    "Check if any content or functionality is gated by a timer or deadline",
+    "Look for auto-playing slideshows, carousels, or content rotators with timed transitions",
+    "Check for session timeouts, quiz timers, or auction countdowns",
+    "Verify that no interactive process requires completion within a time limit",
+    "Look for real-time events (live auctions, live streams) where timing may be inherent and essential"
+  ],
+  "pass_conditions": [
+    "No timing constraints are imposed on any user interaction or content consumption",
+    "Users can take as long as needed to complete any task or process on the page",
+    "Any timed elements are non-essential and do not affect the user's ability to access content or complete tasks",
+    "If timing exists, it is part of a real-time event where timing is an essential and unavoidable aspect of the activity"
+  ],
+  "fail_conditions": [
+    "A time limit is imposed on completing a form, quiz, or interactive process where timing is not essential",
+    "Content auto-advances or expires after a set period without user control",
+    "A session timeout logs the user out without timing being essential to the activity",
+    "Auto-playing carousels or slideshows advance on a timer with no way to stop or control the timing",
+    "Timed assessments impose limits where the subject matter does not require real-time performance"
+  ],
+  "na_conditions": [
+    "Page contains no timed interactions, auto-advancing content, or time-limited processes",
+    "All timed elements on the page are part of inherently real-time events (e.g., live auction, live broadcast) where removing timing would fundamentally change the activity"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Page content failed to load so timing behaviors cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Imposing time limits on forms or surveys where timing serves no essential purpose",
+    "Auto-advancing carousels that move content away before users finish reading",
+    "Quiz or test timers where the knowledge being assessed does not require timed performance",
+    "Session timeouts treated as necessary when the activity itself has no real-time requirement",
+    "Promotional banners or notifications that disappear after a set time without user control",
+    "Assuming that time limits are acceptable as long as they are generous"
+  ],
+  "examples": {
+    "pass": "An online course quiz allows users unlimited time to answer questions, with no countdown timer, because the knowledge assessment does not depend on speed",
+    "fail": "A feedback survey imposes a 10-minute time limit to complete all questions, even though there is no essential reason for the time constraint",
+    "partial": "Most forms and interactions have no time limits, but an auto-advancing product carousel moves slides every 5 seconds with no pause or stop control"
+  },
+  "plain_meaning": "AAA version of 2.2.1: timing must not be essential to the activity at all, except for non-interactive synchronized media and real-time events. The intent is complete removal of time pressure from interactive tasks.",
+  "scope_applies_to": [
+    "Timed tests, quizzes, or tasks imposed by the content",
+    "Session timeouts that interrupt user activity",
+    "Any interactive activity with an imposed deadline"
+  ],
+  "scope_does_not_apply_to": [
+    "Non-interactive synchronized media (videos, audio with captions)",
+    "Real-time events (live auctions, live streaming)",
+    "Moving/auto-updating content (that is SC 2.2.2)",
+    "Pages with no time limits at all"
+  ],
+  "borderline_calibration": [
+    "If no imposed timing exists, this SC is N/A.",
+    "Real-time events and synchronized media playback are categorically exempt.",
+    "Any interactive deadline set by the content that is not essential fails this SC even if 2.2.1 passes with adjustment options."
+  ]
+}

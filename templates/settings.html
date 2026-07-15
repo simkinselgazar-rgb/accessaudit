@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - WCAG Trusted Tester</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;">Skip to main content</a>
+  <header class="app-header">
+    <div class="container">
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="/" class="header-brand">
+          <img src="/static/icon.svg" alt="WCAG Trusted Tester" width="36" height="36" style="border-radius:4px;">
+          <div class="brand-text">
+            <h1>WCAG Trusted Tester</h1>
+            <span class="brand-tool">WCAG Testing Tool</span>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="header-link">Dashboard</a>
+          <a href="/#form-heading" class="header-link">New Review</a>
+          <a href="/settings" class="header-link" aria-current="page">Settings</a>
+        </div>
+      </nav>
+      <p class="subtitle">Section 508 &amp; WCAG Conformance Testing</p>
+    </div>
+  </header>
+
+  <main class="container" id="main-content">
+
+    <!-- Phase → Model Assignments reference -->
+    <section class="card" style="margin-bottom:16px;">
+      <h2 class="card-title">Phase → Model Assignments</h2>
+      <p style="font-size:.85rem;color:#616161;margin-bottom:12px;">
+        This table shows which model handles each phase of a review. Every
+        assignment below is configurable in the form on this page. The
+        routing rules live in <code>functions/llm.py:_select_model</code>
+        and are driven entirely by the settings below &mdash; nothing is
+        hard-coded.
+      </p>
+      <table style="width:100%;font-size:.85rem;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:6px 8px;">Phase / Task</th>
+            <th style="text-align:left;padding:6px 8px;">Setting</th>
+            <th style="text-align:left;padding:6px 8px;">What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Phase 1 &mdash; Inventory Audit</strong></td>
+            <td style="padding:6px 8px;"><code>ai_local_judge_*</code></td>
+            <td style="padding:6px 8px;">Reads each HTML section + screenshot and reports elements the deterministic extraction missed. Uses the Image Analysis model (runs as a tool call with images attached).</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Phase 2 &mdash; Visual AI Explorer</strong></td>
+            <td style="padding:6px 8px;"><code>ai_local_judge_*</code></td>
+            <td style="padding:6px 8px;">For each interactive element, compares before/after/focus screenshots and classifies the interaction type (dropdown, submenu, modal, focus_visible, etc). Image-bearing, so routed to the Image Analysis model for accuracy.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Phase 3 &mdash; Video Segment Planning</strong></td>
+            <td style="padding:6px 8px;"><code>ai_model</code> (primary text)</td>
+            <td style="padding:6px 8px;">Decides which interaction sequences to record as video segments. Text-only call.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Audio Detection</strong></td>
+            <td style="padding:6px 8px;"><code>ai_explorer_*</code></td>
+            <td style="padding:6px 8px;">Watches the observation video and reports whether audio plays automatically. Uses the Explorer model because it handles video + audio natively.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Video Description (keyboard walkthrough, observation, segments)</strong></td>
+            <td style="padding:6px 8px;"><code>ai_video_*</code></td>
+            <td style="padding:6px 8px;">Watches each captured video and produces a prose description to be reused across SC checks. Videos are chunked into &le;60s clips with rolling continuity context.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Visual AI (per SC check)</strong></td>
+            <td style="padding:6px 8px;"><code>ai_local_judge_*</code></td>
+            <td style="padding:6px 8px;">Examines page screenshots for each success criterion. Image-bearing, so routed to the Image Analysis model.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Code AI (per SC check)</strong></td>
+            <td style="padding:6px 8px;"><code>ai_model</code> (primary text)</td>
+            <td style="padding:6px 8px;">Reads the HTML source for each success criterion. Text-only, so uses the primary text model. Large HTML is chunked by landmark.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Judge (per SC final verdict)</strong></td>
+            <td style="padding:6px 8px;"><code>ai_judge_*</code></td>
+            <td style="padding:6px 8px;">Arbitrates between the visual/code/programmatic/AT-sim verdicts and produces the final VPAT finding text. Can use a stronger model than the primary.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Synthesis (executive summary)</strong></td>
+            <td style="padding:6px 8px;"><code>ai_model</code> (primary text)</td>
+            <td style="padding:6px 8px;">Writes the executive summary across all SC results.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>LLM Restructure Fallback</strong></td>
+            <td style="padding:6px 8px;"><code>ai_fallback_*</code></td>
+            <td style="padding:6px 8px;">When a tool call fails to parse after 3 retries, the raw prose is sent to this model with "convert this to a tool call" to recover the data.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px 8px;"><strong>Crawl Page Selection</strong></td>
+            <td style="padding:6px 8px;"><code>ai_model</code> (primary text)</td>
+            <td style="padding:6px 8px;">Analyzes a site crawl and picks which pages to test.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:.8rem;color:#888;margin-top:12px;">
+        <strong>Accuracy rule:</strong> All image-bearing calls route to the
+        Image Analysis model (<code>ai_local_judge_*</code>) regardless of
+        other settings. Smaller models like the Explorer were observed
+        hallucinating focus indicators on byte-identical screenshots, so we
+        always pick accuracy over speed for vision work.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">AI Backend Settings</h2>
+
+      <form id="settings-form">
+
+        <!-- Backend Provider -->
+        <div class="form-group">
+          <label for="ai-backend">AI Provider</label>
+          <select id="ai-backend" name="ai_backend">
+            <option value="vllm" {% if settings.ai_backend == 'vllm' %}selected{% endif %}>Local vLLM (self-hosted)</option>
+            <option value="gemini" {% if settings.ai_backend == 'gemini' %}selected{% endif %}>Google Gemini</option>
+            <option value="openai" {% if settings.ai_backend == 'openai' %}selected{% endif %}>OpenAI</option>
+            <option value="anthropic" {% if settings.ai_backend == 'anthropic' %}selected{% endif %}>Anthropic Claude</option>
+            <option value="openrouter" {% if settings.ai_backend == 'openrouter' %}selected{% endif %}>OpenRouter (any model)</option>
+          </select>
+        </div>
+
+        <!-- API Key -->
+        <div class="form-group">
+          <label for="api-key">API Key</label>
+          <input type="password" id="api-key" name="api_key"
+                 value="{{ settings.api_key_masked }}"
+                 placeholder="Enter your API key (not needed for local vLLM)"
+                 aria-describedby="api-key-help">
+          <small id="api-key-help" class="text-muted">Required for Gemini, OpenAI, and Anthropic. Leave blank for local vLLM.</small>
+        </div>
+
+        <!-- API Base URL -->
+        <div class="form-group">
+          <label for="api-url">API Base URL</label>
+          <input type="url" id="api-url" name="api_base_url"
+                 value="{{ settings.api_base_url }}"
+                 placeholder="https://generativelanguage.googleapis.com/v1beta/openai"
+                 aria-describedby="api-url-help">
+          <small id="api-url-help" class="text-muted">Auto-fills when you change provider. Override for custom endpoints.</small>
+        </div>
+
+        <!-- Text Model -->
+        <div class="form-group">
+          <label for="text-model">Primary Model (text + images)</label>
+          <input type="text" id="text-model" name="ai_model" list="model-suggestions"
+                 value="{{ settings.ai_model }}"
+                 placeholder="gemini-2.5-flash"
+                 aria-describedby="text-model-help">
+          <datalist id="model-suggestions"></datalist>
+          <small id="text-model-help" class="text-muted">Main model for visual analysis and code review. Handles text + images.</small>
+        </div>
+
+        <!-- Local Vision Model (Qwen3-VL) -->
+        <div class="form-group">
+          <label for="vision-model">Local Vision Model (fallback image path)</label>
+          <input type="text" id="vision-model" name="ai_vision_model" list="vision-model-suggestions"
+                 value="{{ settings.ai_vision_model }}"
+                 placeholder="Qwen/Qwen2.5-VL-32B-Instruct"
+                 aria-describedby="vision-model-help">
+          <datalist id="vision-model-suggestions"></datalist>
+          <small id="vision-model-help" class="text-muted">
+            The local vLLM vision-language model. <strong>Currently unused by the default routing</strong>
+            &mdash; all image calls go to the Image Analysis model (Gemma 26B) below.
+            Kept here for health-checks and as a secondary path.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="vision-url">Local Vision API URL</label>
+          <input type="url" id="vision-url" name="ai_vision_api_url"
+                 value="{{ settings.ai_vision_api_url }}"
+                 placeholder="http://localhost:11802/v1"
+                 aria-describedby="vision-url-help">
+          <small id="vision-url-help" class="text-muted">Port running the local VL model (not used unless you explicitly override routing).</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Explorer Model (Phase 2 + Audio Detection)</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">Fast model for screenshot comparisons and audio analysis. Needs image + audio support. Uses Gemma 4 E4B locally.</p>
+
+        <div class="form-group">
+          <label for="explorer-model">Explorer Model</label>
+          <input type="text" id="explorer-model" name="ai_explorer_model" list="explorer-model-suggestions"
+                 value="{{ settings.get('ai_explorer_model', '') }}"
+                 placeholder="gemma-4-e4b (local) or same as primary (cloud)"
+                 aria-describedby="explorer-model-help">
+          <datalist id="explorer-model-suggestions"></datalist>
+          <small id="explorer-model-help" class="text-muted">Handles Phase 2 screenshot comparison and audio detection in videos. Leave empty to use the primary model.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="explorer-url">Explorer API URL</label>
+          <input type="url" id="explorer-url" name="ai_explorer_url"
+                 value="{{ settings.get('ai_explorer_url', '') }}"
+                 placeholder="http://localhost:11804/v1"
+                 aria-describedby="explorer-url-help">
+          <small id="explorer-url-help" class="text-muted">Leave empty to use the primary API URL. For local vLLM, set to the E4B port.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Image Analysis Model</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">Model for Visual AI (screenshot analysis with tool calls). Uses Gemma 4 26B locally since Qwen 35B can't do tool calls with images.</p>
+
+        <div class="form-group">
+          <label for="local-judge-model">Image Analysis / Local Judge Model</label>
+          <input type="text" id="local-judge-model" name="ai_local_judge_model" list="image-model-suggestions"
+                 value="{{ settings.get('ai_local_judge_model', '') }}"
+                 placeholder="gemma-4-26b (local) or same as primary (cloud)"
+                 aria-describedby="local-judge-model-help">
+          <datalist id="image-model-suggestions"></datalist>
+          <small id="local-judge-model-help" class="text-muted">Also used as the local judge. Leave empty to use the primary model. For local vLLM, set to the Gemma 4 26B.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="local-judge-url">Image Analysis / Local Judge API URL</label>
+          <input type="url" id="local-judge-url" name="ai_local_judge_url"
+                 value="{{ settings.get('ai_local_judge_url', '') }}"
+                 placeholder="http://localhost:11805/v1"
+                 aria-describedby="local-judge-url-help">
+          <small id="local-judge-url-help" class="text-muted">Leave empty to use the primary API URL. For local vLLM, set to the 26B port.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Video Model (Gemini / dedicated video endpoint)</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">
+          Used by the Video Describer to describe the keyboard walkthrough,
+          observation, and Phase 3 segment videos. Local vLLM models crash on
+          videos &gt; ~1 MB so this usually points at Gemini. Leave empty to
+          route video calls to the Vision Model instead.
+        </p>
+
+        <div class="form-group">
+          <label for="video-model">Video Model</label>
+          <input type="text" id="video-model" name="ai_video_model"
+                 value="{{ settings.get('ai_video_model', '') }}"
+                 placeholder="gemini-2.5-flash-lite"
+                 aria-describedby="video-model-help">
+          <small id="video-model-help" class="text-muted">
+            Reliable with multi-minute videos. Gemini 2.5 flash-lite is cheap and fast for this.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="video-url">Video Model API URL</label>
+          <input type="url" id="video-url" name="ai_video_api_url"
+                 value="{{ settings.get('ai_video_api_url', '') }}"
+                 placeholder="https://generativelanguage.googleapis.com/v1beta/openai"
+                 aria-describedby="video-url-help">
+          <small id="video-url-help" class="text-muted">OpenAI-compatible endpoint for the video model.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="video-api-key">Video Model API Key</label>
+          <input type="password" id="video-api-key" name="ai_video_api_key"
+                 value="{{ settings.get('ai_video_api_key_masked', '') }}"
+                 placeholder="Gemini API key"
+                 aria-describedby="video-api-key-help">
+          <small id="video-api-key-help" class="text-muted">Only needed if the video endpoint requires a separate key.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Fallback Model (Restructure + retry backstop)</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">
+          When a tool call fails to parse after 3 retries, the raw prose
+          response is sent to this model with a "convert this into a tool
+          call" instruction. Also used by <code>LLMClient</code> if the
+          primary endpoint errors out. Typically points at a reliable
+          structured-output text model (Qwen 35B locally, or a cloud model).
+        </p>
+
+        <div class="form-group">
+          <label for="fallback-model">Fallback Model</label>
+          <input type="text" id="fallback-model" name="ai_fallback_model"
+                 value="{{ settings.get('ai_fallback_model', '') }}"
+                 placeholder="/path/to/Qwen3.5-35B or gemini-2.5-flash"
+                 aria-describedby="fallback-model-help">
+          <small id="fallback-model-help" class="text-muted">Leave empty to reuse the primary model.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="fallback-url">Fallback API URL</label>
+          <input type="url" id="fallback-url" name="ai_fallback_url"
+                 value="{{ settings.get('ai_fallback_url', '') }}"
+                 placeholder="http://localhost:11801/v1"
+                 aria-describedby="fallback-url-help">
+          <small id="fallback-url-help" class="text-muted">Leave empty to reuse the primary API URL.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Judge AI Settings</h3>
+        <p style="font-size:.85rem;color:#616161;margin-bottom:12px;">The judge makes the final conformance call. You can use a different provider than the primary — e.g., local Qwen for primary but Gemini Pro for judge, or vice versa.</p>
+
+        <!-- Judge Provider -->
+        <div class="form-group">
+          <label for="judge-provider">Judge Provider</label>
+          <select id="judge-provider">
+            <option value="same">Same as primary</option>
+            <option value="vllm">Local vLLM</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic Claude</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+          <small class="text-muted">Choose a different provider for the judge, or "Same as primary" to use the primary provider.</small>
+        </div>
+
+        <!-- Judge Model -->
+        <div class="form-group">
+          <label for="judge-model">Judge Model</label>
+          <input type="text" id="judge-model" name="ai_judge_model" list="judge-model-suggestions"
+                 value="{{ settings.get('ai_judge_model', '') }}"
+                 placeholder="gemini-2.5-pro"
+                 aria-describedby="judge-model-help">
+          <datalist id="judge-model-suggestions"></datalist>
+          <small id="judge-model-help" class="text-muted">Use a stronger model here for better accuracy (e.g., gemini-2.5-pro, claude-opus-4, or your local 35B).</small>
+        </div>
+
+        <!-- Judge API URL -->
+        <div class="form-group">
+          <label for="judge-api-url">Judge API URL</label>
+          <input type="url" id="judge-api-url" name="ai_judge_api_url"
+                 value="{{ settings.get('ai_judge_api_url', '') }}"
+                 placeholder="Auto-fills from judge provider"
+                 aria-describedby="judge-api-url-help">
+          <small id="judge-api-url-help" class="text-muted">Auto-fills when you change judge provider. Override for custom endpoints.</small>
+        </div>
+
+        <!-- Judge API Key -->
+        <div class="form-group">
+          <label for="judge-api-key">Judge API Key</label>
+          <input type="password" id="judge-api-key" name="ai_judge_api_key"
+                 value="{{ settings.get('ai_judge_api_key_masked', '') }}"
+                 placeholder="Auto-fills from saved keys"
+                 aria-describedby="judge-api-key-help">
+          <small id="judge-api-key-help" class="text-muted">Uses saved key for the judge provider. Only needed if different from primary.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Advanced</h3>
+
+        <div class="options-row">
+          <div class="form-group">
+            <label for="max-tokens">Max Tokens</label>
+            <input type="number" id="max-tokens" name="ai_max_tokens" value="{{ settings.ai_max_tokens }}" min="1024" max="32768">
+          </div>
+          <div class="form-group">
+            <label for="timeout">Timeout (seconds)</label>
+            <input type="number" id="timeout" name="ai_timeout" value="{{ settings.ai_timeout }}" min="30" max="3600">
+          </div>
+          <div class="form-group">
+            <label for="max-retries">Max Retries</label>
+            <input type="number" id="max-retries" name="ai_max_retries" value="{{ settings.ai_max_retries }}" min="1" max="10">
+          </div>
+        </div>
+
+        <div class="options-row">
+          <div class="form-group">
+            <label for="max-concurrent">Max Concurrent LLM Calls</label>
+            <input type="number" id="max-concurrent" name="ai_max_concurrent"
+                   value="{{ settings.ai_max_concurrent or 1 }}"
+                   min="1" max="50"
+                   aria-describedby="max-concurrent-help">
+            <small id="max-concurrent-help" class="text-muted">
+              1 = serial (REQUIRED for local vLLM; safe default).
+              Set 5-20 ONLY with cloud providers (Gemini/OpenAI/Anthropic).
+              Cuts Phase 4 wall-clock ~3x at 10. Restart server after changing.
+            </small>
+          </div>
+          <div class="form-group">
+            <label for="rpm">Rate Limit (RPM, 0 = unlimited)</label>
+            <input type="number" id="rpm" name="ai_rpm"
+                   value="{{ settings.ai_rpm or 0 }}"
+                   min="0" max="10000"
+                   aria-describedby="rpm-help">
+            <small id="rpm-help" class="text-muted">
+              Token bucket cap for requests per minute. Gemini free tier
+              = 15; Tier 1 = 4000. Token bucket is concurrency-aware and
+              throttles across all in-flight calls.
+            </small>
+          </div>
+        </div>
+
+        <div class="form-group mt-2">
+          <button type="submit" class="btn-submit" id="save-btn">Save Settings</button>
+          <button type="button" class="btn-submit" style="background:#666;margin-left:8px;" onclick="testConnection()">Test Connection</button>
+        </div>
+
+        <div id="settings-status" style="margin-top:12px;"></div>
+      </form>
+    </section>
+
+    <!-- Current Status -->
+    <section class="card" style="margin-top:16px;">
+      <h3 class="card-title">Current Connection Status</h3>
+      <div id="connection-status">Loading...</div>
+    </section>
+
+    <!-- Local Model Fleet -->
+    <section class="card" style="margin-top:16px;">
+      <h3 class="card-title">Local Model Fleet</h3>
+      <p style="font-size:.82rem;color:#616161;margin-bottom:8px;">Models running on your local machine. Phase 2 and audio detection use the fast E4B model automatically.</p>
+      <div id="fleet-status">Checking...</div>
+      <script>
+      (function() {
+        var fleet = [
+          {port: 11801, name: 'Qwen3.5-35B', role: 'Primary / Code AI', caps: 'Text, Images'},
+          {port: 11802, name: 'Qwen3-VL-32B', role: 'Video Analysis', caps: 'Text, Images, Video'},
+          {port: 11803, name: 'Whisper', role: 'Caption Verification', caps: 'Audio to Text'},
+          {port: 11804, name: 'Gemma 4 E4B', role: 'Phase 2 Explorer / Audio', caps: 'Text, Images, Video, Audio'},
+          {port: 11805, name: 'Gemma 4 26B', role: 'Local Judge', caps: 'Text, Images'},
+        ];
+        var th = 'style="text-align:left;padding:6px 8px;border-bottom:2px solid #ddd;font-size:.8rem;"';
+        var html = '<table style="width:100%;font-size:.85rem;border-collapse:collapse;"><thead><tr>';
+        html += '<th ' + th + '>Port</th><th ' + th + '>Model</th><th ' + th + '>Role</th><th ' + th + '>Capabilities</th><th ' + th + '>Status</th><th ' + th + '>Model ID</th>';
+        html += '</tr></thead><tbody>';
+        fleet.forEach(function(m) {
+          var td = 'style="padding:5px 8px;border-bottom:1px solid #eee;"';
+          html += '<tr>';
+          html += '<td ' + td + '>' + m.port + '</td>';
+          html += '<td ' + td + '><strong>' + m.name + '</strong></td>';
+          html += '<td ' + td + '>' + m.role + '</td>';
+          html += '<td ' + td + ' style="padding:5px 8px;border-bottom:1px solid #eee;font-size:.78rem;">' + m.caps + '</td>';
+          html += '<td ' + td + ' id="fleet-status-' + m.port + '">...</td>';
+          html += '<td ' + td + ' id="fleet-model-' + m.port + '" style="padding:5px 8px;border-bottom:1px solid #eee;font-size:.75rem;color:#888;max-width:200px;overflow:hidden;text-overflow:ellipsis;">...</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('fleet-status').innerHTML = html;
+
+        fleet.forEach(function(m) {
+          // Health check
+          fetch('http://localhost:' + m.port + '/health')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              var el = document.getElementById('fleet-status-' + m.port);
+              el.innerHTML = '<span style="color:#2e7d32;font-weight:600;">Online</span>';
+              if (d.queue_depth > 0) el.innerHTML += ' <span style="color:#f57f17;">(busy: ' + d.queue_depth + ')</span>';
+            })
+            .catch(function() {
+              document.getElementById('fleet-status-' + m.port).innerHTML = '<span style="color:#c62828;font-weight:600;">Offline</span>';
+            });
+
+          // Model ID check
+          fetch('http://localhost:' + m.port + '/v1/models')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              if (d.data && d.data[0]) {
+                var id = d.data[0].id;
+                var short = id.split('/').pop();
+                document.getElementById('fleet-model-' + m.port).textContent = short;
+                document.getElementById('fleet-model-' + m.port).title = id;
+              }
+            })
+            .catch(function() {});
+        });
+      })();
+      </script>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="container" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <img src="/static/icon.svg" alt="" width="20" height="20" style="height:20px;width:20px;border-radius:3px;">
+      <span>WCAG Trusted Tester v2.0.0</span>
+    </div>
+  </footer>
+
+  <script>
+    // Provider configs with model suggestions and per-provider API key storage
+    var providers = {
+      vllm: {
+        url: 'http://localhost:11801/v1',
+        model: 'Qwen/Qwen3-32B',
+        visionModel: 'Qwen/Qwen2.5-VL-32B-Instruct',
+        visionUrl: 'http://localhost:11802/v1',
+        judgeModel: 'google/gemma-3-27b-it',
+        judgeUrl: 'http://localhost:11805/v1',
+        explorerModel: 'google/gemma-3n-E4B-it',
+        explorerUrl: 'http://localhost:11804/v1',
+        imageModel: 'google/gemma-3-27b-it',
+        imageUrl: 'http://localhost:11805/v1',
+        models: [
+          'Qwen/Qwen3-32B',
+          'google/gemma-3-27b-it',
+          'google/gemma-3n-E4B-it',
+        ],
+        judgeModels: [
+          'google/gemma-3-27b-it',
+          'Qwen/Qwen3-32B',
+        ],
+        explorerModels: ['google/gemma-3n-E4B-it'],
+        imageModels: ['google/gemma-3-27b-it'],
+      },
+      gemini: {
+        url: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        model: 'gemini-2.5-flash',
+        visionModel: 'gemini-2.5-flash',
+        visionUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        judgeModel: 'gemini-2.5-pro',
+        judgeUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        models: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+        judgeModels: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+        explorerModel: '', explorerUrl: '', imageModel: '', imageUrl: '',
+      },
+      openai: {
+        url: 'https://api.openai.com/v1',
+        model: 'gpt-4o',
+        visionModel: 'gpt-4o',
+        visionUrl: 'https://api.openai.com/v1',
+        judgeModel: 'gpt-4o',
+        judgeUrl: 'https://api.openai.com/v1',
+        models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini', 'o3', 'o4-mini'],
+        judgeModels: ['gpt-4o', 'gpt-4.1', 'o3', 'o4-mini'],
+        explorerModel: '', explorerUrl: '', imageModel: '', imageUrl: '',
+      },
+      anthropic: {
+        url: 'https://api.anthropic.com/v1',
+        model: 'claude-sonnet-4-20250514',
+        visionModel: 'claude-sonnet-4-20250514',
+        visionUrl: 'https://api.anthropic.com/v1',
+        judgeModel: 'claude-opus-4-20250514',
+        judgeUrl: 'https://api.anthropic.com/v1',
+        models: ['claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-haiku-4-20250514'],
+        judgeModels: ['claude-opus-4-20250514', 'claude-sonnet-4-20250514'],
+        explorerModel: '', explorerUrl: '', imageModel: '', imageUrl: '',
+      },
+      openrouter: {
+        url: 'https://openrouter.ai/api/v1',
+        model: 'google/gemini-2.5-flash',
+        visionModel: 'google/gemini-2.5-flash',
+        visionUrl: 'https://openrouter.ai/api/v1',
+        judgeModel: 'google/gemini-2.5-pro',
+        judgeUrl: 'https://openrouter.ai/api/v1',
+        models: ['google/gemini-2.5-pro', 'google/gemini-2.5-flash', 'openai/gpt-4o', 'anthropic/claude-sonnet-4', 'anthropic/claude-opus-4'],
+        judgeModels: ['google/gemini-2.5-pro', 'openai/gpt-4o', 'anthropic/claude-opus-4'],
+        explorerModel: '', explorerUrl: '', imageModel: '', imageUrl: '',
+      },
+    };
+
+    // Per-provider API key storage (localStorage)
+    var KEYS_STORAGE = 'wcag_tester_api_keys';
+    function loadSavedKeys() {
+      try { return JSON.parse(localStorage.getItem(KEYS_STORAGE) || '{}'); } catch(e) { return {}; }
+    }
+    function saveKeyForProvider(provider, key) {
+      if (!key || key.includes('*')) return; // Don't save masked keys
+      var keys = loadSavedKeys();
+      keys[provider] = key;
+      localStorage.setItem(KEYS_STORAGE, JSON.stringify(keys));
+    }
+    function getKeyForProvider(provider) {
+      return loadSavedKeys()[provider] || '';
+    }
+
+    function populateDatalist(id, items) {
+      var dl = document.getElementById(id);
+      if (!dl) return;
+      dl.innerHTML = '';
+      items.forEach(function(m) {
+        var opt = document.createElement('option');
+        opt.value = m;
+        dl.appendChild(opt);
+      });
+    }
+
+    function switchProvider(provider) {
+      var p = providers[provider];
+      if (!p) return;
+      document.getElementById('api-url').value = p.url;
+      document.getElementById('text-model').value = p.model;
+      document.getElementById('vision-model').value = p.visionModel;
+      document.getElementById('vision-url').value = p.visionUrl;
+      document.getElementById('judge-model').value = p.judgeModel;
+      document.getElementById('judge-api-url').value = p.judgeUrl;
+      // Explorer and image analysis models
+      document.getElementById('explorer-model').value = p.explorerModel || '';
+      document.getElementById('explorer-url').value = p.explorerUrl || '';
+      document.getElementById('local-judge-model').value = p.imageModel || '';
+      document.getElementById('local-judge-url').value = p.imageUrl || '';
+      // Restore saved API key for this provider
+      var savedKey = getKeyForProvider(provider);
+      if (savedKey) {
+        document.getElementById('api-key').value = savedKey;
+        document.getElementById('judge-api-key').value = '';
+      }
+      // Populate model suggestions
+      populateDatalist('model-suggestions', p.models);
+      populateDatalist('vision-model-suggestions', p.models);
+      populateDatalist('judge-model-suggestions', p.judgeModels);
+      populateDatalist('explorer-model-suggestions', p.explorerModels || p.models);
+      populateDatalist('image-model-suggestions', p.imageModels || p.models);
+    }
+
+    document.getElementById('ai-backend').addEventListener('change', function() {
+      switchProvider(this.value);
+    });
+
+    // Judge provider — independent from primary
+    document.getElementById('judge-provider').addEventListener('change', function() {
+      var val = this.value;
+      if (val === 'same') {
+        // Copy from primary
+        var primary = document.getElementById('ai-backend').value;
+        var p = providers[primary];
+        if (p) {
+          document.getElementById('judge-model').value = p.judgeModel;
+          document.getElementById('judge-api-url').value = p.judgeUrl;
+          document.getElementById('judge-api-key').value = '';
+          populateDatalist('judge-model-suggestions', p.judgeModels);
+        }
+      } else {
+        var p = providers[val];
+        if (p) {
+          document.getElementById('judge-model').value = p.judgeModel;
+          document.getElementById('judge-api-url').value = p.url;
+          populateDatalist('judge-model-suggestions', p.judgeModels);
+          // Restore saved key for this provider
+          var savedKey = getKeyForProvider(val);
+          document.getElementById('judge-api-key').value = savedKey || '';
+        }
+      }
+    });
+
+    // Detect current judge provider on load from URL
+    (function() {
+      var judgeUrl = document.getElementById('judge-api-url').value || '';
+      var judgeSelect = document.getElementById('judge-provider');
+      if (judgeUrl.includes('localhost') || judgeUrl.includes('127.0.0.1')) {
+        judgeSelect.value = 'vllm';
+      } else if (judgeUrl.includes('generativelanguage.googleapis')) {
+        judgeSelect.value = 'gemini';
+      } else if (judgeUrl.includes('api.openai.com')) {
+        judgeSelect.value = 'openai';
+      } else if (judgeUrl.includes('api.anthropic.com')) {
+        judgeSelect.value = 'anthropic';
+      } else if (judgeUrl.includes('openrouter.ai')) {
+        judgeSelect.value = 'openrouter';
+      } else {
+        judgeSelect.value = 'same';
+      }
+    })();
+
+    // Populate suggestions for current provider on load
+    (function() {
+      var current = document.getElementById('ai-backend').value;
+      var p = providers[current];
+      if (p) {
+        populateDatalist('model-suggestions', p.models);
+        populateDatalist('vision-model-suggestions', p.models);
+      }
+      // Judge suggestions from judge provider
+      var judgeProvider = document.getElementById('judge-provider').value;
+      if (judgeProvider === 'same') {
+        if (p) populateDatalist('judge-model-suggestions', p.judgeModels);
+      } else {
+        var jp = providers[judgeProvider];
+        if (jp) populateDatalist('judge-model-suggestions', jp.judgeModels);
+      }
+    })();
+
+    // Save settings
+    document.getElementById('settings-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var fd = new FormData(this);
+      var data = {};
+      fd.forEach(function(v, k) { data[k] = v; });
+
+      // Save API key per-provider in localStorage before sending
+      var provider = data.ai_backend || 'gemini';
+      if (data.api_key && !data.api_key.includes('*')) {
+        saveKeyForProvider(provider, data.api_key);
+      }
+
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var status = document.getElementById('settings-status');
+        if (d.status === 'ok') {
+          status.innerHTML = '<span style="color:green;">Settings saved. Restart the server for changes to take effect.</span>';
+        } else {
+          status.innerHTML = '<span style="color:red;">Error: ' + (d.error || 'Unknown') + '</span>';
+        }
+      })
+      .catch(function(err) {
+        document.getElementById('settings-status').innerHTML = '<span style="color:red;">Error: ' + err + '</span>';
+      });
+    });
+
+    // Test connection
+    function testConnection() {
+      var status = document.getElementById('connection-status');
+      status.textContent = 'Testing...';
+      fetch('/api/health')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var html = '<ul style="list-style:none;padding:0;">';
+          html += '<li>Status: <strong>' + d.status + '</strong></li>';
+          if (d.text_model !== undefined) html += '<li>Text Model: ' + (d.text_model ? 'Connected' : 'Not connected') + '</li>';
+          if (d.vision_model !== undefined) html += '<li>Vision Model: ' + (d.vision_model ? 'Connected' : 'Not connected') + '</li>';
+          if (d.backend) html += '<li>Backend: ' + d.backend + '</li>';
+          if (d.model) html += '<li>Model: ' + d.model + '</li>';
+          html += '</ul>';
+          status.innerHTML = html;
+        })
+        .catch(function(err) {
+          status.innerHTML = '<span style="color:red;">Connection failed: ' + err + '</span>';
+        });
+    }
+
+    // Auto-test on load
+    testConnection();
+  </script>
+</body>
+</html>

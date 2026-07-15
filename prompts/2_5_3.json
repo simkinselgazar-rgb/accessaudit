@@ -1,0 +1,72 @@
+{
+  "criterion_id": "2.5.3",
+  "criterion_name": "Label in Name",
+  "visual_checks": [
+    "Compare the visible text label of each interactive element against its programmatic accessible name — does the accessible name contain the visible text?",
+    "Check buttons, links, form inputs, tabs, and menu items: read the visible label on screen, then inspect the accessible name (from aria-label, aria-labelledby, or the element's text content) to confirm the visible text appears within it",
+    "Look for icon buttons that have visible adjacent text but a different aria-label that does not include that visible text",
+    "Identify form fields where the visible label text says one thing but the associated <label>, aria-label, or aria-labelledby provides a different name",
+    "Check image links and image buttons where visible text is present alongside the image but the accessible name comes from alt text that does not include the visible text"
+  ],
+  "pass_conditions": [
+    "Every interactive element's accessible name contains the visible text label as a contiguous substring",
+    "Buttons with visible text like 'Search' have an accessible name that includes 'Search' (e.g., aria-label='Search products' is acceptable because it contains 'Search')",
+    "Form inputs with visible labels have programmatic names that include the full visible label text",
+    "Links with visible text have accessible names that start with or contain that visible text",
+    "Tabs and menu items have accessible names matching their displayed text"
+  ],
+  "fail_conditions": [
+    "A button displays 'Search' visually but has aria-label='Find items' — the accessible name does not contain the visible text",
+    "A form field has a visible label 'Email' but aria-label='Enter your electronic mail address' without the word 'Email'",
+    "A link displays 'Read more' but has aria-label='Continue to article' — the visible text is not contained in the accessible name",
+    "An icon button shows 'Close' next to an X icon but has aria-label='Dismiss dialog' without the word 'Close'",
+    "A navigation tab displays 'Settings' but has aria-labelledby pointing to a hidden element with text 'Configuration options'"
+  ],
+  "na_conditions": [
+    "Page contains no interactive elements with visible text labels (e.g., page is entirely non-interactive content or all controls are icon-only without visible text)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Accessible names could not be determined because programmatic data was not available or could not be extracted"
+  ],
+  "common_mistakes": [
+    "Setting aria-label to a completely different phrase than the visible text, breaking voice control commands like 'Click Search'",
+    "Providing an aria-label that paraphrases the visible label instead of including it verbatim (e.g., visible: 'Submit', aria-label: 'Send form')",
+    "Using aria-labelledby to reference a hidden element whose text differs from the visible label",
+    "Truncating visible text in the accessible name (e.g., visible: 'Add to Cart', aria-label: 'Add')",
+    "Placing the visible text at the end of a long accessible name — while technically passing, it can confuse speech-input users if the start differs significantly"
+  ],
+  "examples": {
+    "pass": "A button displays 'Add to Cart' and has aria-label='Add to Cart — Widget Pro' — the accessible name contains the full visible text 'Add to Cart'",
+    "fail": "A button displays 'Search' but has aria-label='Look up products' — a voice-input user saying 'Click Search' will not activate it because the accessible name does not contain 'Search'",
+    "partial": "Most buttons and links have matching visible and accessible names, but two icon buttons have aria-labels that do not include their adjacent visible text"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging a control as 'accessible name does not contain visible label text' when the control has NO visible text label at all -- this criterion only applies when there IS a visible label. Icon-only buttons without visible text are covered by 4.1.2, not 2.5.3.",
+    "FALSE POSITIVE: flagging when the accessible name FULLY CONTAINS the visible label text, even if the accessible name has additional words. WCAG 2.5.3 requires the visible label to be AT THE START of the accessible name, not an exact match.",
+    "FALSE POSITIVE: flagging a control whose accessible name comes from aria-labelledby pointing at the same element that contains the visible label -- this guarantees the accessible name matches the visible label by construction.",
+    "FALSE POSITIVE: flagging a submit/reset <input> whose accessible name is its value attribute when the visible text on the button IS the same value attribute -- by definition those match."
+  ],
+  "plain_meaning": "When a user interface component has a visible text label, the component's accessible name must contain that visible text. A voice-control user saying the visible word must be able to activate the component. The accessible name can have additional words, but the visible text must appear in it, and ideally at the start, so voice commands work reliably.",
+  "scope_applies_to": [
+    "Controls with visible text labels (buttons, links, form controls with visible labels)",
+    "Matching between the visible text and the accessible name via aria-label, aria-labelledby, or implicit naming",
+    "Buttons whose visible text is an image of text with an accessible name",
+    "Submit buttons and similar controls with text on the face of the control"
+  ],
+  "scope_does_not_apply_to": [
+    "Icon-only controls with no visible text label",
+    "Controls with no label at all (that is SC 4.1.2 / 3.3.2)",
+    "Decorative elements that are not interactive",
+    "Non-text visual symbols that do not include text",
+    "Tooltip-only labels that are not part of the visible name"
+  ],
+  "borderline_calibration": [
+    "This is a contains-check, not an equals-check: the accessible name may have extra words as long as the visible text appears in it.",
+    "The visible text should appear at or near the start of the accessible name for reliable voice control.",
+    "Only applicable when there IS visible text; do not flag icon-only controls under this SC.",
+    "Minor punctuation or whitespace differences are not failures.",
+    "If the control has no accessible name at all, that is SC 4.1.2, not this SC."
+  ]
+}

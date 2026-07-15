@@ -1,0 +1,68 @@
+{
+  "criterion_id": "2.4.2",
+  "criterion_name": "Page Titled",
+  "visual_checks": [
+    "Look at the browser tab or title bar — does the page have a descriptive title that identifies its subject or purpose?",
+    "Check if the title distinguishes this page from other pages on the same site",
+    "Verify the title matches the actual content of the page",
+    "For multi-step processes (forms, wizards), check if the title indicates the current step",
+    "Look at the <title> element in the page source — is it present, non-empty, and descriptive?"
+  ],
+  "pass_conditions": [
+    "The page has a <title> element with descriptive text that identifies the page subject or purpose",
+    "The title is specific enough to distinguish this page from other pages on the site",
+    "The title accurately reflects the current page content",
+    "A title combining the site/organization name with a page label (e.g., 'Site Name - Home', 'About Us | Organization') is valid — it identifies both the site and the page purpose",
+    "The word 'Home' or 'Homepage' in a title IS descriptive when used on the actual homepage — it identifies the page as the landing page",
+    "For multi-step processes, the title indicates the current step or stage",
+    "The title is concise but informative"
+  ],
+  "fail_conditions": [
+    "The page has no <title> element",
+    "The <title> element is empty or contains only whitespace",
+    "The title is a generic placeholder with no identifying information (e.g., 'Untitled Document', 'Page', 'index.html', 'React App')",
+    "Every page on the site has the EXACT SAME title with no page-specific differentiation whatsoever",
+    "The title does not match the actual page content (e.g., title says 'About Us' but page shows products)",
+    "IMPORTANT: Only fail if the title provides NO useful identifying information. A title with the organization name and a page label passes."
+  ],
+  "na_conditions": [
+    "This criterion applies to all web pages — there are no N/A conditions"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Page DOM could not be captured to verify the <title> element",
+    "The page failed to load so its title cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Using the same title on every page of the site with no page-specific text at all",
+    "Placeholder titles left from a template (e.g., 'React App', 'Document', 'index.html')",
+    "Title is excessively long, burying the meaningful part after many keywords",
+    "SPA (Single Page Application) that never updates the <title> when navigating between views",
+    "Do NOT over-flag: titles that combine an organization name with a page identifier like 'Home', 'Contact', 'About' are valid per WCAG. The criterion requires the title to describe the topic or purpose — a homepage titled with the org name and 'Home' does exactly that."
+  ],
+  "examples": {
+    "pass": "A page title that includes the site name and a page-specific label such as 'Contact Us — Organization Name' or 'Organization - Home' — these identify both the site and the page purpose",
+    "fail": "Every page has the title 'Welcome' with no way to distinguish pages from each other, or the title is 'Untitled Document' or completely empty",
+    "partial": "The title contains only the site name on every page with no page-specific text — it identifies the site but not which page the user is on"
+  },
+  "plain_meaning": "Each web page must have a title element that describes the page topic or purpose. The intent is that users can identify which page they are on (especially with multiple tabs open) and that screen readers announce a meaningful title on load.",
+  "scope_applies_to": [
+    "The document title element in the head",
+    "Every distinct page in a multi-page site",
+    "Single-page applications that update document.title on route change"
+  ],
+  "scope_does_not_apply_to": [
+    "Heading text within the page body (that is SC 2.4.6)",
+    "Navigation link labels",
+    "ARIA labels on page regions",
+    "The h1 of the page (a separate concern)",
+    "Meta description or Open Graph tags",
+    "Visual branding in the header"
+  ],
+  "borderline_calibration": [
+    "A title that includes topic or purpose passes -- it does not need to be poetic.",
+    "A missing title, an empty title, or a generic placeholder (Untitled, Document, New Page) fails.",
+    "Identical titles across distinct pages is a failure because it does not describe the specific page.",
+    "Do not fail on title length or aesthetic concerns -- only on whether it describes topic/purpose."
+  ]
+}

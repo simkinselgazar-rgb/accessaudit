@@ -1,0 +1,74 @@
+{
+  "criterion_id": "2.1.2",
+  "criterion_name": "No Keyboard Trap",
+  "visual_checks": [
+    "Follow the tab walk sequence and check whether focus ever gets stuck in one component without progressing further through the page",
+    "Look for modal dialogs, lightboxes, or overlays — verify that the tab walk shows focus eventually leaving these components",
+    "Identify embedded content (iframes, video players, embedded maps, third-party widgets) and check if the tab walk was able to exit them",
+    "Look for rich text editors, code editors, or other complex widgets where Tab may be captured for in-widget functionality — verify an escape mechanism is evident",
+    "Check for expandable/collapsible sections or accordion panels that might trap focus when expanded",
+    "Look for auto-complete or suggestion dropdowns that might capture keyboard focus indefinitely",
+    "Examine the overall tab walk flow — does focus progress logically from start to end of page without looping within a single component?"
+  ],
+  "pass_conditions": [
+    "Focus moves freely through all components on the page — no component captures focus indefinitely",
+    "Modal dialogs trap focus intentionally while open but release focus when dismissed via Escape or a close button",
+    "Embedded widgets (iframes, video players, maps) can be tabbed into and tabbed out of using standard keys",
+    "Components that capture Tab for internal use (rich text editors, data grids) document and provide an alternative exit key (e.g., Escape) and the tab walk confirms focus exits",
+    "The tab walk shows focus progressing through the entire page and eventually cycling back to the browser chrome or page start"
+  ],
+  "fail_conditions": [
+    "Focus enters a component (modal, iframe, widget, video player) and cannot exit — the tab walk shows repeated cycling within the same component",
+    "A plugin or embedded object captures keyboard focus with no documented or functional way to leave",
+    "Tab key cycles repeatedly through a set of elements within a widget without ever moving to content outside the widget",
+    "A modal or overlay does not close with Escape and has no close button reachable by keyboard, effectively trapping the user",
+    "An auto-complete dropdown captures focus and neither Escape nor Tab moves focus out of it",
+    "The tab walk ends prematurely inside a component, never reaching elements that appear later in the page"
+  ],
+  "na_conditions": [
+    "Page contains no components capable of trapping focus — simple page with standard links, buttons, and form fields that use native HTML elements only"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Tab walk data was not captured or is incomplete, making it impossible to determine whether focus was trapped",
+    "Page content did not fully load, preventing evaluation of keyboard trap conditions"
+  ],
+  "common_mistakes": [
+    "Modal dialogs that do not close on Escape and have no keyboard-reachable close mechanism",
+    "Iframes for third-party content (ads, embedded maps, social widgets) that capture focus without an exit path",
+    "Rich text editors that consume Tab for indentation but do not provide Escape or another key to exit the editor",
+    "Custom dropdown widgets where pressing Tab after the last option loops back to the first option instead of moving to the next page element",
+    "Video or audio players embedded with plugins that steal keyboard focus",
+    "Single-page application route changes that programmatically set focus inside a component with no keyboard exit",
+    "Chat widgets or support popups that trap focus when opened but have no keyboard-accessible close"
+  ],
+  "examples": {
+    "pass": "A modal dialog opens and focus is contained within it (dialog, close button, form fields). Pressing Escape closes the modal and returns focus to the triggering element. The tab walk confirms focus continues through the rest of the page after dismissal.",
+    "fail": "Focus enters an embedded Google Maps iframe and the tab walk shows focus cycling between the map controls repeatedly — the user cannot Tab out to reach the content below the map. No exit instruction is provided.",
+    "partial": "Most components are fine, but a third-party chat widget in the bottom-right traps focus when opened — the close button is not keyboard reachable, requiring a mouse click to dismiss it and free focus."
+  },
+  "plain_meaning": "Once keyboard focus enters any component, the user must be able to move focus back out using only the keyboard. If the exit method is anything other than plain Tab/Shift+Tab or arrow keys, the page must tell the user how to leave. The intent is to prevent users from getting stuck in a widget, iframe, plugin, or dialog with no way out.",
+  "scope_applies_to": [
+    "Embedded plugins and third-party widgets that capture focus",
+    "Modal dialogs and overlays that intentionally constrain focus",
+    "Custom widgets that intercept Tab/Shift+Tab (e.g. rich text editors, code editors)",
+    "Iframes containing content that traps focus internally",
+    "Date pickers, comboboxes, and menus with custom key handling",
+    "Any component where focus enters but standard keys do not move it out"
+  ],
+  "scope_does_not_apply_to": [
+    "Elements that are simply not keyboard-focusable at all (that is SC 2.1.1 Keyboard)",
+    "Modal dialogs that correctly cycle focus within themselves AND release on Escape or a close button -- that is a standard exit, not a trap",
+    "Focus order issues within a component (that is SC 2.4.3)",
+    "The page as a whole -- users are expected to leave pages via browser controls, not page content",
+    "Elements where focus never enters in the first place",
+    "Shortcut-key conflicts (that is SC 2.1.4)"
+  ],
+  "borderline_calibration": [
+    "A trap exists only when BOTH conditions hold: focus CAN enter AND focus CANNOT leave with standard keys or a disclosed method.",
+    "Modal dialogs that loop focus internally are NOT traps if Escape or a visible Close button releases focus.",
+    "If the exit method is non-standard (e.g. Ctrl+F6 to leave a plugin), the page must visibly advise the user -- otherwise fail.",
+    "Do not flag 'focus does not visit this element' as a trap; that belongs to SC 2.1.1.",
+    "When the tab walk shows focus entering a component and the next Tab keeps focus inside indefinitely, that is a trap."
+  ]
+}

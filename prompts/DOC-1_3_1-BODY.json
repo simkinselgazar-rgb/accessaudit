@@ -1,0 +1,53 @@
+{
+  "criterion_id": "DOC-1.3.1-BODY",
+  "criterion_name": "Meaningful Content in Body",
+  "visual_checks": [
+    "CRITICAL — CONTENT COVERAGE: Compare what you SEE visually in the document against what is present in the tag structure. Any meaningful visible content that is NOT in the tag tree is invisible to assistive technology.",
+    "Look for content that appears in headers, footers, or watermarks — is this content also represented in the tag structure or accessible to screen readers?",
+    "Check for text or images placed as background elements or watermarks that convey meaningful information (e.g., 'DRAFT', 'CONFIDENTIAL', 'APPROVED' stamps).",
+    "In PDFs, check whether any visible content is marked as an artifact when it should be tagged content. Artifacts are invisible to screen readers.",
+    "In PDFs, look for content placed directly on the page without being in the tag tree — this 'untagged' content is inaccessible.",
+    "Check for text boxes, floating elements, or annotations that may sit outside the main document flow and its tag structure.",
+    "Look for meaningful page numbers, footnotes, and endnotes — are they part of the accessible structure?",
+    "Verify that form fields, if present, are within the tag structure and not floating outside it."
+  ],
+  "pass_conditions": [
+    "All meaningful visible content is contained within the document's tag structure (PDF) or body content (DOCX/PPTX)",
+    "Content in headers and footers that is meaningful (e.g., document title, section names, page numbers) is accessible to assistive technology",
+    "No meaningful content is placed as a background image, watermark, or artifact that would be skipped by screen readers",
+    "All text boxes and floating elements are part of the tag tree in the correct reading position",
+    "Form fields are tagged within the document structure and accessible to assistive technology",
+    "Footnotes and endnotes are tagged and linked to their reference marks in the body text"
+  ],
+  "fail_conditions": [
+    "Meaningful content is placed as a background image that is not in the tag structure — screen readers skip it entirely",
+    "Visible text or data exists on the page but is not included in the tag tree (untagged content in PDF)",
+    "Important information is conveyed only through watermarks or stamps (e.g., 'DRAFT' or 'APPROVED') that are marked as artifacts",
+    "Text boxes containing critical information float outside the tag structure",
+    "Content is placed in header/footer areas as the only location for important information (e.g., the document title exists only in the header and is not in the body)",
+    "Form fields are overlaid on the page but not integrated into the tag tree, making them invisible to screen readers",
+    "Annotations or comments contain essential information but are not accessible through the tag structure"
+  ],
+  "na_conditions": [
+    "Document contains only standard body content with no headers, footers, watermarks, background elements, floating text boxes, or form fields",
+    "Document is not a format where content can exist outside the body/tag structure"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Document could not be opened or its content structure could not be fully inspected",
+    "The document's tag tree cannot be compared against its visual content"
+  ],
+  "common_mistakes": [
+    "Placing the document title only in the header area without repeating it as a tagged heading in the body content",
+    "Using a background image for a decorative purpose that actually conveys meaning (e.g., a 'CONFIDENTIAL' watermark that is the only indicator of document classification)",
+    "Inserting text boxes in Word or PowerPoint that do not get included in the reading order or tag tree when exported to PDF",
+    "Marking visible meaningful content as an artifact in Acrobat because it was 'not important' to the author — but it is visible and conveys information",
+    "Placing important notices, disclaimers, or instructions as annotations or sticky notes instead of body content",
+    "Footnotes that are visually present at the bottom of pages but not structurally linked to the tag tree"
+  ],
+  "examples": {
+    "pass": "A PDF report has a title in the body tagged as <H1>, page numbers in the footer tagged as artifacts (acceptable since page numbers are supplementary), all body text tagged as <P>, and a 'DRAFT' watermark that is also indicated in the document title tag: 'DRAFT — Quarterly Budget Report'.",
+    "fail": "A PDF has a full-page background image containing a flowchart with text labels describing a business process. The image is marked as an artifact. A screen reader reads only the title and a short introductory paragraph — the entire flowchart is invisible to assistive technology.",
+    "partial": "A tagged PDF has most content in the tag tree, but two text boxes on page 3 containing important policy exceptions are outside the tag structure and invisible to screen readers."
+  }
+}

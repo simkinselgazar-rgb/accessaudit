@@ -1,0 +1,83 @@
+{
+  "criterion_id": "2.1.1",
+  "criterion_name": "Keyboard",
+  "visual_checks": [
+    "Look at all interactive elements visible on the page and compare against the tab walk data — are there buttons, links, or controls that appear clickable but were not reached by keyboard?",
+    "Identify drag-and-drop interfaces, sliders, custom widgets, or map controls that may require mouse-specific gestures",
+    "Check for hover-triggered menus, tooltips, or dropdowns that have no keyboard-triggered equivalent visible in the tab walk",
+    "Look for image carousels, accordions, or tab panels — verify that keyboard navigation reached each interactive part",
+    "Identify custom controls styled to look interactive (colored/underlined text, icon buttons) that may not be in the tab order",
+    "Look for embedded content such as video players, embedded maps, or third-party widgets and check whether the tab walk entered and operated them",
+    "Check if any visible form controls (checkboxes, radio buttons, selects, date pickers) were skipped during keyboard navigation"
+  ],
+  "pass_conditions": [
+    "All interactive elements visible on the page can be reached and operated using only the keyboard",
+    "Custom widgets (sliders, drag-and-drop, color pickers) provide keyboard alternatives such as arrow keys, Enter, or Space",
+    "Dropdown menus and submenus can be opened and navigated using keyboard (Enter/Space to open, arrow keys to navigate, Escape to close)",
+    "Links, buttons, and form controls all receive visible focus during the tab walk",
+    "Embedded media players can be controlled (play, pause, volume, seek) via keyboard",
+    "All functionality available by mouse click or gesture is also available by keyboard, except where the underlying function requires analog input (e.g., freehand drawing)"
+  ],
+  "fail_conditions": [
+    "Interactive elements visible on the page are unreachable via keyboard tabbing — they never receive focus",
+    "Custom controls (sliders, drag-and-drop areas, date pickers) require mouse interaction and provide no keyboard alternative",
+    "Dropdown menus open only on mouse hover with no keyboard trigger",
+    "onclick handlers are attached to non-focusable elements (div, span) without tabindex or keyboard event handlers",
+    "A visible button or link cannot be activated with Enter or Space",
+    "Scrollable content regions cannot be scrolled via keyboard",
+    "Functionality requires mouse-specific gestures (right-click context menu, double-click, drag) with no keyboard equivalent"
+  ],
+  "na_conditions": [
+    "Page contains no interactive elements — it is purely static text or images with no links, buttons, forms, or controls"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Tab walk data was not captured or is incomplete, making keyboard accessibility impossible to evaluate",
+    "Page failed to load interactive content during testing"
+  ],
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE (CRITICAL — element is in tab walk): claiming an element is 'not keyboard reachable' when its selector appears in the [TAB ORDER] / tab_walk block in the user prompt. The deterministic tab walk is ground truth — if the selector appears at any tab_index, the element WAS reached. Before reporting any 'unreachable' finding, search the tab_walk for that selector. Only flag the element if it is genuinely absent from tab_walk AND it is interactive on the page.",
+    "FALSE POSITIVE (CRITICAL — invented coverage stats): inventing or contradicting tab_coverage numbers. Use ONLY the exact values from `tab_coverage.total_interactive`, `tab_coverage.reached_by_tab`, and `tab_coverage.coverage_percent` in the captured data. If the data shows 35 of 60 reached (58.33%), do NOT write '56 of 84 unreached' or any other made-up ratio. If you cannot find the source value, drop the statistic from your finding rather than invent one.",
+    "FALSE POSITIVE: flagging a form input as 'unreachable' when the captured form_fields data shows it has visible=false (the form is intentionally collapsed via aria-hidden or display:none). A correctly hidden form input is supposed to be excluded from the tab order. The 4.1.2 issue (aria-hidden + focusable conflict) is a different concern — keep them separate."
+  ],
+  "common_mistakes": [
+    "Using div or span elements styled as buttons without adding tabindex='0' and keyboard event handlers",
+    "Relying on onClick alone without onKeyDown/onKeyUp for custom interactive elements",
+    "Dropdown menus that respond only to mouseenter/mouseleave events",
+    "Drag-and-drop interfaces with no keyboard-based reordering alternative",
+    "Custom video players built with div elements that cannot be operated by keyboard",
+    "Sliders or range inputs implemented as custom widgets without arrow key support",
+    "Links implemented with javascript:void(0) or # href that do not respond to Enter key"
+  ],
+  "examples": {
+    "pass": "All navigation links, buttons, and form fields receive focus during the tab walk. A dropdown menu opens with Enter and its items are navigable with arrow keys. A custom slider responds to arrow keys for value adjustment.",
+    "fail": "A 'Sort by' dropdown menu only opens on mouse hover — keyboard users can tab to the trigger but pressing Enter or Space does nothing. Three icon buttons for social sharing are built with div elements and have no tabindex, so they are never reached by keyboard.",
+    "partial": "Most interactive elements are keyboard accessible, but a drag-and-drop file upload area and a custom date picker widget can only be operated with a mouse."
+  },
+  "plain_meaning": "Every function a user can perform with a mouse, touch, or pointer must also be performable using only the keyboard. The intent is that users who cannot use a pointing device -- including screen reader users, switch users, and keyboard-only users -- can still reach and operate every interactive element. The only exception is functionality that genuinely depends on the path of motion itself (e.g. freehand drawing), not just start and end points.",
+  "scope_applies_to": [
+    "Native interactive controls (links, buttons, form fields, selects, checkboxes, radios)",
+    "Custom widgets built from non-interactive elements that act as controls (divs/spans with click handlers, ARIA widgets)",
+    "Drag-and-drop interfaces, sliders, custom date pickers, color pickers, and reorderable lists",
+    "Hover-triggered menus, tooltips, and disclosures that expose content or actions",
+    "Embedded media players, interactive maps, and third-party widgets embedded into the page",
+    "Scrollable regions that must be reachable and scrollable by keyboard",
+    "Any control that performs an action on click, tap, or pointer gesture"
+  ],
+  "scope_does_not_apply_to": [
+    "The ORDER in which keyboard focus moves through the page (that is SC 2.4.3 Focus Order)",
+    "Whether focus is visually indicated when it lands on an element (that is SC 2.4.7 Focus Visible)",
+    "Whether focus can be moved away from a component once it enters (that is SC 2.1.2 No Keyboard Trap)",
+    "Single-character keyboard shortcuts that collide with assistive tech input (that is SC 2.1.4)",
+    "Functions whose underlying purpose depends on continuous path input, such as freehand drawing or handwriting recognition",
+    "Purely decorative or non-interactive content with no action attached",
+    "The speed or timing required between keystrokes (the criterion explicitly excludes timing-dependent input)"
+  ],
+  "borderline_calibration": [
+    "If a control can be reached and activated by keyboard using ANY standard key (Tab to focus, Enter/Space/arrow to operate), it passes -- even if the interaction differs from the mouse experience.",
+    "Do not fail an element merely because it is not in the tab walk -- confirm it is actually interactive first. Static text styled to look like a link is a different problem.",
+    "Drag-and-drop must have a keyboard alternative, but that alternative can be a different UI (e.g. move-up/move-down buttons). It does not have to replicate the drag gesture.",
+    "Hover-only menus fail only if there is no keyboard way to reveal the same content/actions.",
+    "If the AI cannot confirm from the tab walk that an element is unreachable, mark NE rather than guessing."
+  ]
+}

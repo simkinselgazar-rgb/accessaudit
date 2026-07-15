@@ -1,0 +1,64 @@
+{
+  "criterion_id": "2.4.12",
+  "criterion_name": "Focus Not Obscured (Enhanced)",
+  "visual_checks": [
+    "Tab through all interactive elements and verify the focused element is fully visible at all times",
+    "Check if sticky headers, footers, or navigation bars cover any part of a focused element",
+    "Look for cookie banners, chat widgets, or floating action buttons that overlap focused elements",
+    "Verify that modal dialogs and overlays do not allow focus to reach elements hidden behind them",
+    "Check if scrollable containers properly scroll focused elements fully into view",
+    "Look for absolutely or fixed-positioned elements that may partially overlap focusable elements"
+  ],
+  "pass_conditions": [
+    "No part of any focused element is hidden or obscured by author-created content",
+    "Sticky headers and footers do not overlap any portion of focused elements",
+    "Cookie banners, chat widgets, and floating buttons do not cover any part of focused elements",
+    "Focus within scrollable regions scrolls the element completely into the visible area",
+    "When focus moves to an element behind a dialog, the dialog is dismissed or focus is trapped within the dialog"
+  ],
+  "fail_conditions": [
+    "A sticky header or footer partially covers a focused element",
+    "A cookie consent banner overlaps part of a focused interactive element",
+    "A chat widget or floating action button obscures a portion of a focused element",
+    "Focus moves behind a modal overlay where the focused element is partially or fully hidden",
+    "A focused element is partially scrolled out of view within a scrollable container"
+  ],
+  "na_conditions": [
+    "Page has no interactive elements that can receive keyboard focus"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Keyboard focus behavior could not be triggered or observed in the testing environment"
+  ],
+  "common_mistakes": [
+    "Sticky navigation bars that obscure the top of focused elements just below them",
+    "Cookie banners that persist at the bottom of the viewport covering focused footer links",
+    "Chat widget bubbles positioned over interactive elements in the lower-right corner",
+    "Fixed-position 'back to top' buttons that overlap focused elements",
+    "Dropdown menus or tooltips from other elements that partially cover a newly focused element"
+  ],
+  "examples": {
+    "pass": "Tabbing through the page keeps every focused element fully visible — the sticky header accounts for scroll offset so elements beneath it are scrolled fully past it before receiving focus",
+    "fail": "A sticky header covers the top 20% of a focused text input field when the user tabs into a form section just below the header — part of the focused element is hidden by author content",
+    "partial": "Most focused elements are fully visible, but a persistent cookie banner at the bottom of the viewport partially obscures two footer links when they receive focus"
+  },
+  "plain_meaning": "The stricter AAA version of focus-not-obscured: when a component receives keyboard focus, NO part of it may be hidden by author-created content. Even partial occlusion by a sticky overlay fails this SC.",
+  "scope_applies_to": [
+    "Focused components that must remain fully visible",
+    "Sticky headers, footers, chat widgets, and cookie banners that could clip any portion of a focused element",
+    "Any author overlay interaction with focus position"
+  ],
+  "scope_does_not_apply_to": [
+    "User-agent-created UI",
+    "Pages with no sticky or overlay content",
+    "Cases where only entire obscuring is possible and handled under 2.4.11",
+    "Focus visibility styling (that is SC 2.4.7 / 2.4.13)"
+  ],
+  "borderline_calibration": [
+    "Any partial overlap with author content that clips the focused element is a failure under this stricter SC.",
+    "Satisfying 2.4.11 is NOT enough to satisfy 2.4.12.",
+    "Rely on concrete screenshot evidence, not speculation.",
+    "Not applicable if the page has no overlay content that could obscure focus."
+  ]
+}

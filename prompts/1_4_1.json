@@ -1,0 +1,77 @@
+{
+  "criterion_id": "1.4.1",
+  "criterion_name": "Use of Color",
+  "visual_checks": [
+    "Look for links within text — are they distinguished from surrounding text by something other than color alone (underline, bold, icon)?",
+    "Check form validation: are errors indicated only by changing the field border to red, or is there also text/icon?",
+    "Look at charts and graphs — do they use only color to differentiate data series, or also patterns/labels?",
+    "Check status indicators: are states like 'active/inactive', 'online/offline', 'pass/fail' conveyed by color alone?",
+    "Look at navigation — is the current page indicated only by color change in the nav, or also by other visual means?",
+    "Check required field indicators — is 'required' conveyed only by color (red asterisk) without a text label?"
+  ],
+  "pass_conditions": [
+    "Color is not the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element",
+    "Links in text are distinguished by underline, font weight, or other non-color indicator in addition to color",
+    "Form errors use text messages and/or icons in addition to color changes",
+    "Charts use patterns, labels, or other visual distinctions beyond color",
+    "Status indicators use icons, text labels, or patterns in addition to color"
+  ],
+  "fail_conditions": [
+    "Links within body text are distinguished from normal text only by color (no underline or other indicator)",
+    "Form field errors indicated only by changing border/background color with no error message or icon",
+    "Charts or graphs differentiate data series solely by color with no patterns or direct labels",
+    "Required fields marked only with a red asterisk where the asterisk meaning is conveyed only by its color",
+    "Status indicators (online/offline, pass/fail) using only green/red dots with no text or icon supplement"
+  ],
+  "na_conditions": [
+    "Page uses no color coding to convey information",
+    "Page is entirely plain text with no interactive elements, charts, or status indicators"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots are grayscale or too low quality to assess color usage",
+    "Cannot determine color-only distinctions from DOM data alone without visual comparison"
+  ],
+  "common_mistakes": [
+    "Links in body text styled with a different color but no underline — color-blind users cannot distinguish them",
+    "Pie charts or bar graphs using only color to represent different categories",
+    "Calendar availability shown as green (available) and red (booked) with no text labels",
+    "Tab navigation where the active tab is indicated only by a color change",
+    "Traffic-light status indicators (red/yellow/green) without accompanying text"
+  ],
+  "examples": {
+    "pass": "Error fields have a red border AND a text message 'This field is required' AND an error icon next to the field, providing multiple non-color cues",
+    "fail": "A data visualization chart uses six different colors to represent sales regions with no labels, patterns, or legend text directly on the chart — users who cannot distinguish colors cannot read the chart",
+    "partial": "Most links are underlined but three inline links in the footer are styled with color only and no underline or other visual distinction"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging contrast/color of elements that are not visible to sighted users. Bootstrap '.visually-hidden' / '.sr-only' (and the older '.screen-reader-text', '.visuallyhidden') are CSS utility classes that clip the element to a 1px box and remove it from the visual layout while leaving it in the accessibility tree. The element is intentionally only readable by screen readers -- it is not rendered to the screen at all -- so visual rules like color contrast, font size, and luminance ratios DO NOT APPLY. Before flagging text or a control for contrast, check whether the element (or any ancestor) carries one of these utility classes or an equivalent clip:rect(0,0,0,0)/position:absolute/width:1px/height:1px pattern. If it does, do NOT report a contrast finding -- there is no rendered pixel to measure."
+  ],
+  "plain_meaning": "Color must not be the sole visual channel for conveying meaning, indicating an action, prompting a response, or distinguishing one element from another. Sighted users who cannot perceive color (colorblindness, monochrome displays, print) must still be able to identify the same information through an additional visual cue such as text, shape, underline, icon, or pattern. The rule is about redundant encoding, not about contrast ratios.",
+  "scope_applies_to": [
+    "In-text hyperlinks distinguished from surrounding body text",
+    "Form field error states and required-field indicators",
+    "Charts, graphs, and data visualizations using color-coded series or categories",
+    "Status indicators (available/busy, pass/fail, valid/invalid) shown with color swatches or dots",
+    "Map legends, schedules, and diagrams that key meaning to color",
+    "Instructions that refer to content by color (\"click the red button\")",
+    "Selected/active states in tabs, toggles, and navigation when marked only by a color change"
+  ],
+  "scope_does_not_apply_to": [
+    "Elements removed from the accessibility tree (aria-hidden, display:none, visibility:hidden, hidden attribute)",
+    "Visually-hidden / sr-only clipped text (has no visible color presentation to compare)",
+    "Pure contrast ratios of text or UI against background (that belongs to SC 1.4.3 and 1.4.11)",
+    "Focus indicator visibility (that belongs to SC 2.4.7)",
+    "Content that becomes visible only on hover or focus (that belongs to SC 1.4.13)",
+    "Decorative color choices that carry no informational meaning",
+    "Color differences accompanied by any additional non-color cue (underline, icon, shape, text label, position, pattern)"
+  ],
+  "borderline_calibration": [
+    "If ANY non-color cue accompanies the color distinction (underline, bold, icon, shape, text, pattern), the criterion is MET. Do not flag.",
+    "In-text links are a classic failure pattern: a color-only link in a paragraph is a hard failure unless it is underlined or otherwise marked.",
+    "Required-field asterisks count as a non-color cue even when the asterisk is red.",
+    "Chart series differentiated only by hue are a failure; adding data labels, patterns, or direct labeling resolves it.",
+    "Do not flag color choices that are merely aesthetic and carry no information (brand colors, section backgrounds).",
+    "When unsure, ask: if this were rendered in grayscale, would a user still understand the distinction? If no, it fails."
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "criterion_id": "3.2.4",
+  "criterion_name": "Consistent Identification",
+  "visual_checks": [
+    "Look at components that perform the same function across multiple pages — are they labelled and identified in the same way each time? For example, is a search field always labelled 'Search' rather than 'Search' on one page and 'Find' on another?",
+    "Check icons used for the same function — does the same icon represent the same action throughout the site (e.g., a magnifying glass always means search, a shopping cart always means view cart)?",
+    "Compare button labels for repeated actions — is a 'Submit' button on one form called 'Send' on another form that performs the same action?",
+    "Look at download links, print buttons, social sharing icons, and other repeated functional components — are they consistently labelled and visually represented?",
+    "Check alt text for functional images and icons across pages — does the same icon have the same alt text each time it appears?"
+  ],
+  "pass_conditions": [
+    "Components that have the same functionality across multiple pages are identified consistently (same label, same icon, same alt text)",
+    "Search functionality is labelled identically wherever it appears (e.g., always 'Search', not 'Search' in one place and 'Find' in another)",
+    "Action buttons for equivalent functions use the same text label across the site (e.g., 'Add to Cart' is used consistently, not alternating with 'Buy Now' for the same action)",
+    "Icons serving the same function have consistent alt text and visual appearance across pages",
+    "Functional images (like logos that link to the homepage) have the same alt text on every page"
+  ],
+  "fail_conditions": [
+    "A search feature is labelled 'Search' on the homepage but 'Look Up' on interior pages — same function, different identification",
+    "A print icon has alt='Print this page' on one page and alt='Printer' on another page",
+    "Submit buttons on equivalent forms use different labels: 'Submit' on one, 'Go' on another, 'Send' on a third",
+    "A checkmark icon means 'Confirm' on one page but 'Complete' on another, creating inconsistent identification for the same function",
+    "The site logo links to the homepage but has different alt text on different pages (e.g., 'Home' vs 'Company Logo' vs 'Back to start')"
+  ],
+  "na_conditions": [
+    "The page is a single standalone page with no repeated functional components appearing on other pages",
+    "Only one page from the site was tested, making cross-page comparison of component identification impossible"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Only one page was captured, so consistent identification across pages cannot be evaluated",
+    "Alt text and labels for repeated components could not be determined from the available DOM data"
+  ],
+  "common_mistakes": [
+    "Using 'Search' and 'Find' interchangeably for the same search function on different pages",
+    "A 'Login' link in the header but 'Sign In' on the login page itself for the same action",
+    "Social media icons with different alt text on different pages (e.g., alt='Facebook' vs alt='Visit us on Facebook' vs alt='FB')",
+    "A contact form submit button labelled 'Send Message' but a newsletter form submit button labelled 'Submit' when both perform the same conceptual action of submitting a form",
+    "Inconsistent labelling of navigation toggles (e.g., 'Menu' on some pages, hamburger icon with alt='Navigation' on others)"
+  ],
+  "examples": {
+    "pass": "The search input is labelled 'Search' with a magnifying glass icon (alt='Search') in the header on every page of the site — the label, icon, and alt text are identical everywhere",
+    "fail": "The main search box is labelled 'Search' on the homepage, 'Find Products' on the catalog page, and 'Look Up' on the support page — all three perform the same site-wide search but are identified differently",
+    "partial": "Most repeated components are consistently identified, but the 'Contact Us' link in the footer is labelled 'Get in Touch' on two pages while 'Contact Us' on all others"
+  },
+  "plain_meaning": "Components that perform the same function across different pages of a site must be identified consistently. If a search button is called 'Search' on one page, it should not be called 'Find' on another. The focus is on the ACCESSIBLE LABEL and identification, not the visual styling.",
+  "scope_applies_to": [
+    "Accessible names of buttons, links, and icons that repeat across pages with the same function",
+    "Icon-only controls whose alt text or aria-label identifies their purpose",
+    "Repeated form controls performing the same role across pages",
+    "Navigation labels for equivalent destinations",
+    "Any control whose function is identical across pages"
+  ],
+  "scope_does_not_apply_to": [
+    "Visual styling, color, or pixel-level appearance (consistency here means identification, not style)",
+    "Controls whose function is genuinely different even if they look similar",
+    "One-off page-specific controls",
+    "Ordering of repeated components (that is SC 3.2.3)",
+    "A single-page review where no cross-page comparison is possible"
+  ],
+  "borderline_calibration": [
+    "Flag only when two controls with the same function have materially different accessible names across pages.",
+    "Minor wording differences that still convey the same function (for example 'Submit' vs 'Submit Form') are usually acceptable.",
+    "Do not flag different visual treatments when the accessible name is consistent.",
+    "Single-page reviews with nothing to compare across are Not Applicable or Not Enough Evidence."
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "criterion_id": "2.5.7",
+  "criterion_name": "Dragging Movements",
+  "visual_checks": [
+    "Identify all drag-and-drop interactions on the page — sortable lists, reorderable items, draggable cards, file upload drop zones, slider thumbs, and movable panels",
+    "Check whether each dragging interaction has a single-pointer alternative that does not require dragging, such as buttons to move items up/down, click-to-select then click-to-place, or arrow controls",
+    "Look at range sliders and verify they can be operated by clicking on the track at the desired position or via increment/decrement buttons, not only by dragging the thumb",
+    "Examine Kanban boards, sortable tables, and drag-to-reorder interfaces for alternative controls like move buttons, position dropdowns, or context menus",
+    "Check color pickers, crop tools, and resizable panels for non-drag alternatives such as numeric inputs or preset options"
+  ],
+  "pass_conditions": [
+    "Every drag-and-drop interaction provides a single-pointer, non-dragging alternative such as click-based controls, buttons, or select menus",
+    "Sortable lists provide move-up and move-down buttons or a position selector for each item as an alternative to drag reordering",
+    "Slider controls can be operated by clicking or tapping on the desired position on the track, not only by dragging the thumb",
+    "File upload areas that support drag-and-drop also provide a 'Browse' or 'Choose file' button for single-click selection",
+    "Movable or resizable panels provide alternative controls such as position presets, snap-to buttons, or numeric width/height inputs"
+  ],
+  "fail_conditions": [
+    "A sortable list can only be reordered by dragging items with no buttons, menu, or other single-pointer alternative",
+    "A slider can only be operated by dragging the thumb — clicking on the track does nothing and no increment/decrement buttons are provided",
+    "A Kanban board requires dragging cards between columns with no alternative click-based workflow to move cards",
+    "A file upload zone only accepts drag-and-drop with no browse button or alternative upload method",
+    "A color picker requires dragging a selector across a gradient with no text input for color values and no preset swatches"
+  ],
+  "na_conditions": [
+    "Page contains no drag-and-drop interactions, draggable elements, or slider controls that require a dragging movement"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Drag-and-drop behavior could not be fully evaluated because it requires real pointer interaction beyond what static analysis can detect"
+  ],
+  "common_mistakes": [
+    "Providing only keyboard alternatives (arrow keys) but no single-pointer non-drag alternative — this criterion requires a pointer-based alternative that does not require dragging",
+    "Assuming that HTML5 native drag-and-drop is accessible by default — it still requires a non-drag alternative",
+    "Implementing a slider with only a draggable thumb and no click-on-track support or increment/decrement buttons",
+    "Overlooking drag interactions in third-party libraries such as sortable.js, react-dnd, or chart editors that lack built-in non-drag alternatives",
+    "File upload areas that only accept drag-and-drop without a standard file input button"
+  ],
+  "examples": {
+    "pass": "A task list allows drag-to-reorder but each item also has 'Move up' and 'Move down' buttons that reorder with a single click",
+    "fail": "A Kanban board requires dragging cards between columns — users who cannot perform a sustained drag gesture have no way to move tasks between statuses",
+    "partial": "Most drag interactions provide button alternatives, but a resizable sidebar panel can only be resized by dragging its edge with no alternative resize controls"
+  },
+  "plain_meaning": "Any function that uses a dragging movement must also be operable with a single pointer without dragging, unless dragging is essential or the dragging behavior is determined by the user agent and not modified by the author. Users who cannot perform a sustained drag must have a non-drag alternative such as tap-to-select, buttons, or click-to-place.",
+  "scope_applies_to": [
+    "Drag-and-drop reorderable lists",
+    "Sliders and range controls operated by dragging",
+    "Custom drag interactions for file uploads, sorting, rearranging",
+    "Map panning implemented by author scripts",
+    "Any author-implemented dragging that performs functionality"
+  ],
+  "scope_does_not_apply_to": [
+    "Essential dragging where the drag path itself is the function (drawing, signatures, freehand art)",
+    "User-agent-implemented dragging the author has not modified (native scrollbars)",
+    "Simple click/tap interactions with no drag at all",
+    "Keyboard operability (that is SC 2.1.1)"
+  ],
+  "borderline_calibration": [
+    "If a non-drag alternative exists (buttons to move items up/down, numeric input for a slider, click-to-place), it passes.",
+    "Essential drag (actual drawing) is exempt.",
+    "Sliders with keyboard support still need a single-pointer non-drag alternative for this specific SC; keyboard does not count.",
+    "Only flag when dragging is genuinely the only pointer way to complete the task."
+  ]
+}

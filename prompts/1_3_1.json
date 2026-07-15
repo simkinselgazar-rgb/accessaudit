@@ -1,0 +1,92 @@
+{
+  "criterion_id": "1.3.1",
+  "criterion_name": "Info and Relationships",
+  "visual_checks": [
+    "Look at headings on the page — are they visually styled as headings? Check if the HTML uses proper heading tags (h1-h6) or just bold/large text",
+    "Identify lists on the page — are they marked up as <ul>, <ol>, or <dl>, or just formatted with dashes and line breaks?",
+    "Look at data tables — do they have proper <th> elements, scope attributes, and caption/summary?",
+    "Examine forms — are labels visually associated with their inputs? Check for <label> elements properly linked via for/id",
+    "Look for groups of related form fields — are they wrapped in <fieldset> with <legend>?",
+    "Check if content regions have landmark roles (header, nav, main, footer, aside)",
+    "Look for visual emphasis (bold, italic) — is it conveyed using <strong>/<em> or just CSS styling?",
+    "Identify any content that uses visual positioning alone to convey relationships (e.g., indentation for hierarchy)"
+  ],
+  "pass_conditions": [
+    "Headings are marked up with proper heading elements (h1-h6) and follow a logical hierarchy",
+    "Lists are marked up with appropriate list elements (ul, ol, dl)",
+    "Data tables have headers identified with <th> and associated with data cells using scope or headers attributes",
+    "Form inputs have programmatically associated labels via <label for='id'> or aria-labelledby",
+    "Related form controls are grouped with <fieldset> and <legend>",
+    "Page regions use HTML5 landmarks or ARIA landmark roles appropriately",
+    "Visual relationships (required fields, groupings, emphasis) are programmatically determinable"
+  ],
+  "fail_conditions": [
+    "Headings are styled visually (large, bold text) but not marked up with heading elements",
+    "Lists are created using <br> tags or manual numbering instead of list markup",
+    "Data tables lack <th> elements or have no programmatic association between headers and cells",
+    "Form inputs have no associated label (visible text near the field but no <label> or aria-label)",
+    "Radio buttons or checkboxes in a group have no <fieldset>/<legend> to convey the group question",
+    "Required fields indicated only with visual color/asterisk with no programmatic indication",
+    "Layout tables are used with <th> or other structural markup that implies data relationships"
+  ],
+  "na_conditions": [
+    "Page is extremely simple with only plain text paragraphs and no headings, lists, tables, or forms"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Page DOM could not be captured to verify programmatic structure",
+    "Screenshots could not be compared with DOM structure"
+  ],
+  "common_mistakes": [
+    "Using <div> or <span> with CSS to create visual headings instead of semantic heading elements",
+    "Skipping heading levels (e.g., h1 to h3 with no h2) creating a broken hierarchy",
+    "Using a <table> for data but only using <td> elements with no <th> headers",
+    "Placeholder text used as the only label for a form field (disappears on focus)",
+    "Visually grouped content (e.g., address fields) with no programmatic grouping",
+    "Using CSS ::before to inject required asterisks that are not in the accessibility tree"
+  ],
+  "examples": {
+    "pass": "A form has each input with a <label for='email'>Email Address</label> linked to <input id='email'>, required fields have aria-required='true', and radio button groups use <fieldset>/<legend>",
+    "fail": "A page has large bold text that visually serves as section headings but uses <div class='heading'> instead of <h2>, making the structure invisible to screen readers",
+    "partial": "Most headings use proper heading tags but two sections use <p class='section-title'> styled to look like headings, and one data table has <th> elements but missing scope attributes"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging a section as 'missing semantic structure' when it uses ARIA roles (role=navigation, role=main, role=banner, role=contentinfo) to provide the structure. ARIA landmark roles ARE valid programmatic structure. Only flag when neither a native landmark element nor a role attribute is present.",
+    "FALSE POSITIVE: flagging tables for 'missing header association' when the table uses <th scope='col'> / <th scope='row'> / headers/id association correctly. Walk the scope and headers attributes before flagging.",
+    "FALSE POSITIVE: flagging lists for 'not a real list' when the elements are inside <ul>, <ol>, or have role='list' / role='listitem'. Only flag pseudo-lists that use <div> or <span> without ARIA roles.",
+    "FALSE POSITIVE: flagging headings for 'not hierarchically structured' when the page uses aria-level on elements with role='heading' -- aria-level is valid programmatic level and must be honored.",
+    "FALSE POSITIVE: claiming aria-describedby references a non-existent ID without verifying. Search the FULL DOM for the ID before flagging — IDs may be in distant parts of the document (footer, modals, cookie consent).",
+    "FALSE POSITIVE: claiming the main landmark is prematurely closed when no meaningful content falls outside it. Empty wrapper divs between </main> and <footer> are normal HTML structure, not a landmark error.",
+    "FALSE POSITIVE: flagging aria-hidden on inactive carousel slides. Standard carousel implementations (TinySlider, Slick, Swiper) hide off-screen slides with aria-hidden=true and tabindex=-1. This is correct ARIA usage — the active slide is exposed, inactive slides are hidden. Only flag if the ACTIVE visible slide has aria-hidden=true."
+  ],
+  "plain_meaning": "Anything the visual design communicates about structure, grouping, or relationships -- headings, lists, tables, form field labels, section boundaries, emphasis -- must also be exposed in code (or in plain text) so that assistive technology can convey the same information. The intent is that a screen reader user can perceive the same document structure a sighted user sees, not just the words. It is not enough to look like a heading; it must be marked up as a heading. It is not enough for a label to sit next to an input; the label must be programmatically associated with that input.",
+  "scope_applies_to": [
+    "Headings (visual headings must use heading elements or role=heading with a level)",
+    "Lists (visually bulleted or numbered sequences must use <ul>/<ol>/<li> or list roles)",
+    "Data tables (row and column relationships must be expressed via <table>, <th>, scope, headers)",
+    "Form controls with visible labels (the label must be programmatically associated via <label for>, aria-labelledby, or wrapping)",
+    "Grouped form controls (radio/checkbox groups should use fieldset/legend or role=group with a name)",
+    "Landmarks and regions (header, nav, main, aside, footer, or ARIA landmark roles)",
+    "Emphasis and strong that carries meaning (should use <em>/<strong>, not just CSS)",
+    "Reading order relationships where one block visually relates to another (adjacency, caption-to-figure, etc.)"
+  ],
+  "scope_does_not_apply_to": [
+    "Missing text alternatives on images -- that belongs to SC 1.1.1",
+    "Color used as the only means of conveying information -- that belongs to SC 1.4.1",
+    "Insufficient text contrast -- that belongs to SC 1.4.3",
+    "Visible focus indicators -- that belongs to SC 2.4.7",
+    "Missing accessible name on a form control (no visible label AND no programmatic label) -- that is SC 4.1.2 / 3.3.2 territory; 1.3.1 applies when the visible label is present but not programmatically linked",
+    "Meaningful sequence (left-right / top-bottom reading order) -- that belongs to SC 1.3.2",
+    "Instructions relying on shape/location/color -- that belongs to SC 1.3.3",
+    "Decorative elements correctly hidden from the accessibility tree (aria-hidden, empty alt, etc.)",
+    "Purely visual styling with no structural meaning"
+  ],
+  "borderline_calibration": [
+    "A visual heading styled with CSS but marked up as a <div> or <p> is a hard failure at medium+.",
+    "A visible label sitting next to an input but not associated via <label for>, aria-labelledby, or wrapping is a 1.3.1 failure -- distinct from SC 4.1.2 where there is no label at all.",
+    "A data table using only <td> with no <th> and no headers/scope is a hard failure when the data has row/column relationships. A purely layout table with no data relationships is not a failure (though layout tables are discouraged).",
+    "Using role=heading without aria-level is a failure; with aria-level it passes structurally even if the level is questionable.",
+    "When in doubt between 1.3.1 and 4.1.2 for a control without an accessible name: if there is a VISIBLE label that is not linked, it is 1.3.1; if there is no label at all, it is 4.1.2 / 3.3.2.",
+    "The absence of navigation landmarks (missing header/main/nav/footer) is scoped to SC 2.4.1 (Bypass Blocks), not 1.3.1. If relationships between content regions are otherwise programmatically exposed (headings, sections with accessible names), do not flag missing landmarks under 1.3.1 at all — leave that finding for 2.4.1."
+  ]
+}

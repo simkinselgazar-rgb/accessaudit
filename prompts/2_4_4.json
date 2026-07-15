@@ -1,0 +1,79 @@
+{
+  "criterion_id": "2.4.4",
+  "criterion_name": "Link Purpose (In Context)",
+  "visual_checks": [
+    "MEANING VERIFICATION: For each link, read the link text AND look at where it appears on the page. A link saying 'Read more' under a heading 'Latest News' is clear IN CONTEXT — but the same 'Read more' with no heading above it is ambiguous. Judge meaning in context, not just the text alone.",
+    "Read each link text visible on the page — can you determine where each link goes from its text alone or from the surrounding context?",
+    "Look for vague or ambiguous link text such as 'Click here', 'Read more', 'More', 'Learn more', 'Here', or 'Link' that does not describe the destination",
+    "For repeated 'Read more' or 'Learn more' links, check if each one has a unique accessible name via aria-label, aria-labelledby, or surrounding context (e.g., a parent heading or list item)",
+    "Check if image links have alt text that describes the link destination, not just the image content",
+    "Look for links that are only distinguishable by their URL or programmatic context, not by meaningful text",
+    "Examine if links that open in a new window or download a file indicate this behavior in their text or accessible name"
+  ],
+  "pass_conditions": [
+    "Each link's purpose can be determined from the link text alone",
+    "Where link text is ambiguous (e.g., 'Read more'), the purpose can be determined from the programmatically associated context — the enclosing sentence, paragraph, list item, table cell, or heading",
+    "Image-only links have alt text that describes the link destination (e.g., alt='Company annual report PDF')",
+    "Links with identical visible text but different destinations have unique accessible names via aria-label or aria-labelledby",
+    "Links that open new windows or download files indicate this in the link text or accessible name"
+  ],
+  "fail_conditions": [
+    "Links have generic text like 'Click here', 'Here', 'More', or 'Read more' with no programmatic context to clarify the destination",
+    "Multiple links with identical text (e.g., five 'Read more' links) that go to different destinations and have no distinguishing accessible name or surrounding context",
+    "Image links have missing alt text or alt text that describes the image rather than the link destination (e.g., alt='thumbnail' for a link to a product page)",
+    "Link text is a raw URL that does not describe the destination purpose (e.g., 'https://example.com/page?id=47392')",
+    "The only link text is an icon (arrow, chevron) with no accessible name"
+  ],
+  "na_conditions": [
+    "Page contains no links or interactive link-like elements"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Page DOM could not be captured to verify link accessible names and aria attributes",
+    "Surrounding context elements could not be programmatically determined"
+  ],
+  "common_mistakes": [
+    "Using 'Click here' or 'Read more' as link text without aria-label or programmatic context to distinguish links",
+    "Wrapping an entire paragraph in an <a> tag, making the link text excessively long and hard to scan",
+    "Image links with alt='' (empty alt), making the link completely invisible to screen readers",
+    "Providing link purpose only through visual cues like color or position, not through text or programmatic context",
+    "Adjacent image and text links to the same destination not combined into a single <a> element, creating duplicate links",
+    "Using the link URL as the visible link text instead of a human-readable description"
+  ],
+  "examples": {
+    "pass": "A news page has articles each with a heading and a 'Read full article' link — each link uses aria-label='Read full article: [Article Title]' to provide unique, descriptive purpose for screen readers",
+    "fail": "A page has five 'Click here' links in a row — the link text does not describe the destination, and the links are not within any sentence or context that clarifies their purpose",
+    "partial": "Most links have descriptive text like 'View product details' and 'Download annual report', but three 'Learn more' links at the bottom of the page have no aria-label and no surrounding context to distinguish them"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE (CRITICAL — wrapped image): flagging a link as 'empty' or 'purpose cannot be determined' when the link wraps an <img> with non-empty alt. The image's alt is the link's accessible name AND the link's purpose source per WCAG 2.4.4. Concrete examples that MUST NOT be flagged: <a href='/'><img alt='University Home'></a> — purpose 'University Home', COMPLIANT. <a href='https://uasystem.edu/'><img alt='University System'></a> — purpose 'University System', COMPLIANT. ALWAYS read the link's child elements in dom.html before reporting it as empty/purposeless.",
+    "FALSE POSITIVE: flagging a link as 'missing accessible name' when the link's accessible name IS present via ANY of these: non-empty link text content, aria-label attribute, aria-labelledby pointing at another element, title attribute, or an inner <img> with non-empty alt. Walk every source before flagging.",
+    "FALSE POSITIVE: flagging a link whose accessible name is an inner <svg><title>...</title></svg>. The SVG title IS the link's accessible name and screen readers announce it. Do NOT flag these.",
+    "FALSE POSITIVE: flagging a link whose child icon <svg> is aria-hidden='true' but whose parent <a> has a valid aria-label or text content -- the parent link has a name and the icon is correctly hidden, the link is compliant.",
+    "FALSE POSITIVE: flagging a link as 'purpose unclear' when the surrounding visible context (the paragraph, the list item, the card heading above it) makes the link's destination clear to a sighted user AND that context is also in the accessible name or nearby in reading order. WCAG 2.4.4 allows context from the same paragraph, list item, table cell, or sentence."
+  ],
+  "plain_meaning": "For every link on the page, a user must be able to figure out where the link will take them or what it does, using either the link text alone or the link text combined with its surrounding programmatic context. Programmatic context includes things like the sentence, paragraph, list item, table cell, or list that contains the link, plus accessible name mechanisms like aria-label and aria-labelledby. The rule is satisfied as long as a screen reader user can determine the link purpose from these sources; exact uniqueness or perfect wording is not required.",
+  "scope_applies_to": [
+    "Anchor elements and any element with role=link that functions as a hyperlink",
+    "Link text content, including text inside nested inline elements",
+    "Accessible names provided via aria-label, aria-labelledby, or title",
+    "Alt text on images that are the sole content of a link",
+    "Programmatic context: enclosing sentence, paragraph, list item, table cell, or heading that precedes the link",
+    "Ambiguous generic link phrases like 'click here', 'read more', 'learn more' when context does not disambiguate them"
+  ],
+  "scope_does_not_apply_to": [
+    "Buttons and other non-link controls (their naming falls under SC 4.1.2 and SC 3.3.2)",
+    "Links where the purpose is legitimately ambiguous to all users in general",
+    "Decorative or purely presentational elements that are not actually links",
+    "Links whose only issue is insufficient color contrast (that is SC 1.4.1 / 1.4.3)",
+    "Whether the link is keyboard reachable (that is SC 2.1.1)",
+    "Visual styling of link underlines or hover state"
+  ],
+  "borderline_calibration": [
+    "If the accessible name OR any programmatic context clarifies the destination, it passes; do not require the link text in isolation to be self-describing.",
+    "'Read more' style links pass if the same paragraph, list item, or heading makes the destination clear.",
+    "Image-only links pass when the image has an alt value that conveys the destination.",
+    "Do not flag a link merely because two different links share the same text if their destinations and contexts are the same.",
+    "If the only problem is that the name does not exist at all, that is SC 4.1.2, not this SC."
+  ]
+}

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ result.criterion_id }} {{ result.criterion_name }} - WCAG Trusted Tester</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;">Skip to main content</a>
+  <header class="app-header">
+    <div class="container">
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="/" class="header-brand">
+          <img src="/static/icon.svg" alt="WCAG Trusted Tester" width="36" height="36" style="border-radius:4px;">
+          <div class="brand-text">
+            <h1>WCAG Trusted Tester</h1>
+            <span class="brand-tool">WCAG Testing Tool</span>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="header-link">Dashboard</a>
+          <a href="/#form-heading" class="header-link">New Review</a>
+          <a href="/settings" class="header-link">Settings</a>
+        </div>
+      </nav>
+      <p class="subtitle">Section 508 &amp; WCAG Conformance Testing</p>
+    </div>
+  </header>
+
+  <main class="container" id="main-content">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Home</a>
+      <span class="sep" aria-hidden="true">&rsaquo;</span>
+      <a href="/review/{{ review_id }}/report">Report</a>
+      <span class="sep" aria-hidden="true">&rsaquo;</span>
+      <span aria-current="page">{{ result.criterion_id }}</span>
+    </nav>
+
+    <section class="card">
+      <h2 class="card-title">{{ result.criterion_id }} {{ result.criterion_name }}</h2>
+
+      <!-- Quad Verdict Boxes -->
+      <div class="verdict-row" style="flex-wrap:wrap;">
+        <div class="verdict-box">
+          <div class="verdict-label">Programmatic</div>
+          <div class="verdict-value">
+            {% set pc = result.programmatic_conformance %}
+            <span class="{% if pc == 'Supports' %}conf-supports{% elif pc == 'Partially Supports' %}conf-partially-supports{% elif pc == 'Does Not Support' %}conf-does-not-support{% elif pc == 'Not Applicable' %}conf-not-applicable{% else %}conf-not-evaluated{% endif %}">
+              {{ pc }}
+            </span>
+          </div>
+          <div class="verdict-meta">
+            {{ ((result.programmatic_confidence or 0) * 100) | round(0) }}% conf
+            &middot; {{ result.programmatic_findings_count | default(0) }} finding{{ 's' if (result.programmatic_findings_count | default(0)) != 1 else '' }}
+          </div>
+        </div>
+
+        <div class="verdict-box">
+          <div class="verdict-label">Visual AI</div>
+          <div class="verdict-value">
+            {% set ac = result.ai_conformance | default('Not Evaluated') %}
+            <span class="{% if ac == 'Supports' %}conf-supports{% elif ac == 'Partially Supports' %}conf-partially-supports{% elif ac == 'Does Not Support' %}conf-does-not-support{% elif ac == 'Not Applicable' %}conf-not-applicable{% else %}conf-not-evaluated{% endif %}">
+              {{ ac }}
+            </span>
+          </div>
+          <div class="verdict-meta">
+            {{ ((result.ai_confidence or 0) * 100) | round(0) }}% conf
+            &middot; {{ result.ai_findings_count | default(0) }} finding{{ 's' if (result.ai_findings_count | default(0)) != 1 else '' }}
+          </div>
+        </div>
+
+        <div class="verdict-box">
+          <div class="verdict-label">Code AI</div>
+          <div class="verdict-value">
+            {% set cc = result.code_ai_conformance | default('Not Evaluated') %}
+            <span class="{% if cc == 'Supports' %}conf-supports{% elif cc == 'Partially Supports' %}conf-partially-supports{% elif cc == 'Does Not Support' %}conf-does-not-support{% elif cc == 'Not Applicable' %}conf-not-applicable{% else %}conf-not-evaluated{% endif %}">
+              {{ cc }}
+            </span>
+          </div>
+          <div class="verdict-meta">
+            {{ ((result.code_ai_confidence or 0) * 100) | round(0) }}% conf
+            &middot; {{ result.code_ai_findings_count | default(0) }} finding{{ 's' if (result.code_ai_findings_count | default(0)) != 1 else '' }}
+          </div>
+        </div>
+
+        <div class="verdict-box">
+          <div class="verdict-label">AT Simulation</div>
+          <div class="verdict-value">
+            {% set atc = result.at_sim_conformance | default('Not Evaluated') %}
+            <span class="{% if atc == 'Supports' %}conf-supports{% elif atc == 'Partially Supports' %}conf-partially-supports{% elif atc == 'Does Not Support' %}conf-does-not-support{% elif atc == 'Not Applicable' %}conf-not-applicable{% else %}conf-not-evaluated{% endif %}">
+              {{ atc }}
+            </span>
+          </div>
+          <div class="verdict-meta">
+            {{ ((result.at_sim_confidence or 0) * 100) | round(0) }}% conf
+            &middot; {{ result.at_sim_findings_count | default(0) }} finding{{ 's' if (result.at_sim_findings_count | default(0)) != 1 else '' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Final Conformance -->
+      <div class="final-conformance">
+        {% set cl = result.conformance_level %}
+        <span class="conf-level {% if cl == 'Supports' %}conf-supports{% elif cl == 'Partially Supports' %}conf-partially-supports{% elif cl == 'Does Not Support' %}conf-does-not-support{% elif cl == 'Not Applicable' %}conf-not-applicable{% else %}conf-not-evaluated{% endif %}">
+          {{ cl }}
+        </span>
+        <span class="meta-item">
+          <strong>Confidence:</strong> {{ ((result.confidence or 0) * 100) | round(1) }}%
+        </span>
+        <span class="meta-item">
+          <strong>Duration:</strong> {{ (result.duration or 0) | round(1) }}s
+        </span>
+        {% if result.ict_baseline %}
+        <span class="meta-item">
+          <strong>ICT Baseline:</strong> {{ result.ict_baseline }}
+        </span>
+        {% endif %}
+        <span class="meta-item">
+          <strong>Level:</strong> {{ result.level }}
+        </span>
+        {% if result.verification_status and result.verification_status != 'not_verified' %}
+        <span class="meta-item">
+          <strong>Verification:</strong> {{ result.verification_status }}
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Normative Text -->
+      {% if normative_text %}
+      <div class="normative-text">
+        {{ normative_text }}
+      </div>
+      {% endif %}
+
+      <!-- Confidence Reasoning -->
+      {% if result.confidence_reasoning %}
+      <div class="confidence-reasoning">
+        <strong>Confidence Reasoning:</strong> {{ result.confidence_reasoning }}
+      </div>
+      {% endif %}
+
+      <!-- Summary -->
+      {% if result.summary %}
+      <div class="confidence-reasoning mb-2">
+        <strong>Summary:</strong> {{ result.summary }}
+      </div>
+      {% endif %}
+
+      <!-- Error -->
+      {% if result.error %}
+      <div class="alert alert-error">
+        <strong>Error:</strong> {{ result.error }}
+      </div>
+      {% endif %}
+
+    </section>
+
+    <!-- Findings -->
+    {% if result.findings and result.findings | length > 0 %}
+    <section class="findings-section card" aria-labelledby="findings-heading">
+      <h3 id="findings-heading" class="card-title">Findings ({{ result.findings | length }})</h3>
+
+      <!-- Filter controls (client-side) -->
+      <div class="findings-filters" style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0 1rem 0;align-items:center;">
+        <label for="finding-search" style="font-size:.85rem;font-weight:500;">Search:</label>
+        <input type="search" id="finding-search" placeholder="text in any finding field"
+               oninput="filterFindings()" style="flex:1;min-width:180px;padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;">
+        <label for="severity-filter" style="font-size:.85rem;font-weight:500;">Severity:</label>
+        <select id="severity-filter" onchange="filterFindings()" style="padding:.35rem .5rem;">
+          <option value="">All</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+          <option value="info">Info</option>
+        </select>
+        <label for="source-filter" style="font-size:.85rem;font-weight:500;">Source:</label>
+        <select id="source-filter" onchange="filterFindings()" style="padding:.35rem .5rem;">
+          <option value="">All</option>
+          <option value="programmatic">Programmatic</option>
+          <option value="ai">Visual AI</option>
+          <option value="code_ai">Code AI</option>
+          <option value="at_sim">AT Sim</option>
+          <option value="judge">Judge</option>
+        </select>
+        <span id="finding-count" style="font-size:.8rem;color:#666;margin-left:auto;"></span>
+      </div>
+
+      {% for finding in result.findings %}
+      <div class="finding-card severity-{{ finding.severity }}" id="finding-{{ finding.id }}">
+        <div class="finding-header">
+          <span class="finding-id">{{ finding.id }}</span>
+          <span class="source-badge {{ finding.source }}">{{ finding.source }}</span>
+          {% if finding.decision and finding.decision != 'undecided' %}
+          <span class="decision-badge {{ finding.decision }}">{{ finding.decision }}</span>
+          {% endif %}
+        </div>
+
+        {% if finding.element %}
+        <div class="finding-element">
+          <strong>Location:</strong> {{ finding.element }}
+          {% if finding.css_selector %}
+          <br><strong>Selector:</strong> <code>{{ finding.css_selector }}</code>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="finding-detail"><strong>Issue:</strong> {{ finding.issue }}</div>
+        {% if finding.evidence %}
+        <div class="finding-detail" style="background:#f5f5f5;padding:.4rem .6rem;border-radius:4px;font-size:.85rem;margin:.3rem 0;">
+          <strong>Evidence:</strong> {{ finding.evidence }}
+        </div>
+        {% endif %}
+        <div class="finding-detail"><strong>Impact:</strong> {{ finding.impact }}</div>
+        <div class="finding-detail"><strong>Recommendation:</strong> {{ finding.recommendation }}</div>
+        <div class="finding-severity {{ finding.severity }}">Severity: {{ finding.severity }}</div>
+        {% if finding.screenshot_path %}
+        <div class="finding-screenshot" style="margin:.5rem 0;">
+          <img src="/review/{{ review_id }}/captures/file/{{ finding.screenshot_path | replace('\\', '/') }}"
+               alt="Screenshot showing the accessibility issue"
+               style="max-width:100%;border:1px solid #ddd;border-radius:4px;">
+        </div>
+        {% endif %}
+
+        {% if finding.decision_reason %}
+        <div class="finding-detail mt-1"><strong>Decision Reason:</strong> {{ finding.decision_reason }}</div>
+        {% endif %}
+
+        <!-- Decision Buttons -->
+        <div class="decision-buttons">
+          <button class="decision-btn accept {% if finding.decision == 'accepted' %}active{% endif %}"
+                  onclick="setDecision('{{ review_id }}', '{{ result.criterion_id }}', '{{ finding.id }}', 'accepted', this)"
+                  aria-label="Accept finding as true positive">
+            Accept (True Positive)
+          </button>
+          <button class="decision-btn reject {% if finding.decision == 'rejected' %}active{% endif %}"
+                  onclick="setDecision('{{ review_id }}', '{{ result.criterion_id }}', '{{ finding.id }}', 'rejected', this)"
+                  aria-label="Reject finding as false positive">
+            Reject (False Positive)
+          </button>
+          <button class="decision-btn reset"
+                  onclick="setDecision('{{ review_id }}', '{{ result.criterion_id }}', '{{ finding.id }}', 'undecided', this)"
+                  aria-label="Reset finding decision">
+            Reset
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- TT Sub-tests -->
+    {% if result.tt_results and result.tt_results | length > 0 %}
+    <section class="card" aria-labelledby="tt-heading">
+      <h3 id="tt-heading" class="card-title">Trusted Tester Sub-tests</h3>
+      <div style="overflow-x:auto;">
+        <table class="tt-table">
+          <thead>
+            <tr>
+              <th scope="col">Test ID</th>
+              <th scope="col">Name</th>
+              <th scope="col">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tt in result.tt_results %}
+            <tr>
+              <td>{{ tt.tt_id }}</td>
+              <td>{{ tt.name }}</td>
+              <td>
+                {% if tt.result == 'PASS' %}
+                  <span class="tt-result-pass">PASS</span>
+                {% elif tt.result == 'FAIL' %}
+                  <span class="tt-result-fail">FAIL</span>
+                {% elif tt.result == 'DNA' %}
+                  <span class="tt-result-dna">DNA</span>
+                {% else %}
+                  <span class="tt-result-not-tested">NOT TESTED</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Programmatic Check Data -->
+    {% if programmatic_data %}
+    <section class="card" aria-labelledby="prog-data-heading">
+      <h3 id="prog-data-heading" class="card-title">Programmatic Check Data</h3>
+      <pre class="code-block">{{ programmatic_data | tojson(indent=2) if programmatic_data is mapping else programmatic_data }}</pre>
+    </section>
+    {% endif %}
+
+    <!-- Visual AI Prompt -->
+    {% if ai_prompt %}
+    <section class="card">
+      <details>
+        <summary>Visual AI Prompt (sent to vision model with screenshots)</summary>
+        <div class="details-content">
+          <pre class="code-block" style="margin-bottom:0;">{{ ai_prompt }}</pre>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <!-- Visual AI Response -->
+    {% if ai_response %}
+    <section class="card">
+      <details>
+        <summary>Visual AI Response</summary>
+        <div class="details-content">
+          <pre class="code-block" style="margin-bottom:0;">{{ ai_response }}</pre>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <!-- Code AI Prompt -->
+    {% if code_ai_prompt %}
+    <section class="card">
+      <details>
+        <summary>Code AI Prompt (sent to text model with HTML/JS source)</summary>
+        <div class="details-content">
+          <pre class="code-block" style="margin-bottom:0;">{{ code_ai_prompt }}</pre>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <!-- Code AI Response -->
+    {% if code_ai_response %}
+    <section class="card">
+      <details>
+        <summary>Code AI Response</summary>
+        <div class="details-content">
+          <pre class="code-block" style="margin-bottom:0;">{{ code_ai_response }}</pre>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <!-- AT Simulation Data -->
+    {% if at_sim_data %}
+    <section class="card">
+      <details>
+        <summary>AT Simulation (screen reader walkthrough)</summary>
+        <div class="details-content">
+          <pre class="code-block" style="margin-bottom:0;">{{ at_sim_data }}</pre>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <!-- Judge DOM Context -->
+    {% if judge_dom_context %}
+    <section class="card">
+      <details>
+        <summary>Judge DOM Context (deterministic ground-truth block the judge received)</summary>
+        <div class="details-content">
+          <pre class="code-block" style="margin-bottom:0;max-height:400px;overflow:auto;">{{ judge_dom_context }}</pre>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <!-- Judge AI Response -->
+    {% if judge_response %}
+    <section class="card">
+      <details open>
+        <summary>Judge AI Decision (final arbiter — reviews all sources)</summary>
+        <div class="details-content">
+          <pre class="code-block" style="margin-bottom:0;">{{ judge_response }}</pre>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <!-- Evidence panel — every supporting capture relevant to this SC -->
+    <section class="card" style="margin-top:1rem;" aria-labelledby="evidence-heading">
+      <h3 id="evidence-heading" class="card-title">Supporting Evidence</h3>
+      {% if evidence and evidence | length > 0 %}
+      <ul style="list-style:none;padding:0;margin:.5rem 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem;">
+        {% for item in evidence %}
+        <li class="evidence-item evidence-{{ item.kind }}" style="border:1px solid #ddd;border-radius:6px;padding:.5rem;background:#fafafa;">
+          <div style="font-size:.8rem;font-weight:500;color:#444;margin-bottom:.35rem;">{{ item.label }}</div>
+          {% if item.kind == 'image' %}
+          <a href="/review/{{ review_id }}/captures/file/{{ item.path }}" target="_blank" rel="noopener">
+            <img src="/review/{{ review_id }}/captures/file/{{ item.path }}"
+                 alt="{{ item.label }}"
+                 style="width:100%;height:auto;border:1px solid #ccc;border-radius:4px;display:block;">
+          </a>
+          {% elif item.kind == 'video' %}
+          <video controls preload="metadata"
+                 style="width:100%;height:auto;border:1px solid #ccc;border-radius:4px;display:block;">
+            <source src="/review/{{ review_id }}/captures/file/{{ item.path }}">
+            Your browser does not support the video tag.
+            <a href="/review/{{ review_id }}/captures/file/{{ item.path }}">Download video</a>
+          </video>
+          {% else %}
+          <a href="/review/{{ review_id }}/captures/file/{{ item.path }}" target="_blank" rel="noopener"
+             style="display:inline-block;padding:.3rem .6rem;background:#fff;border:1px solid #ccc;border-radius:4px;font-size:.8rem;text-decoration:none;">
+            View {{ item.kind }} ({{ item.path.rsplit('/', 1)[-1] }})
+          </a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p style="font-size:.85rem;color:#666;">No criterion-specific evidence captured.</p>
+      {% endif %}
+      <p style="font-size:.85rem;margin-top:.75rem;">
+        <a href="/review/{{ review_id }}/captures">Browse all captured artifacts &rarr;</a>
+        &nbsp;|&nbsp;
+        <a href="/review/{{ review_id }}/download/evidence.zip">Download all evidence as ZIP</a>
+      </p>
+    </section>
+
+    <div class="mt-2 mb-3">
+      <a href="/review/{{ review_id }}/report">&larr; Back to Report</a>
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="container" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <img src="/static/icon.svg" alt="" width="20" height="20" style="height:20px;width:20px;border-radius:3px;">
+      <span>WCAG Trusted Tester v2.0.0</span>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

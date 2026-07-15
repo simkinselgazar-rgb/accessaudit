@@ -1,0 +1,92 @@
+{
+  "criterion_id": "1.1.1",
+  "criterion_name": "Non-text Content",
+  "plain_meaning": "Every piece of content that conveys information but is not text -- images, icons, SVG graphics, canvas drawings, audio clips, video clips, CAPTCHAs -- must come with a text alternative that serves the same purpose. A screen reader user should get an equivalent understanding of what the sighted user gets from the non-text content. The alternative does not need to be exhaustive; it needs to serve the same functional purpose.",
+  "scope_applies_to": [
+    "Content images that convey information (photos, diagrams, charts, screenshots, infographics, illustrations)",
+    "Functional images that act as controls or links (image buttons, logo-links, icon-only links, image maps)",
+    "SVG graphics that are visible to assistive technology and carry meaning",
+    "Canvas elements that render meaningful content",
+    "<input type=\"image\"> form controls",
+    "CSS background images when they convey content (not pure decoration)",
+    "CAPTCHAs (which must offer alternative modalities)",
+    "Audio-only content and video-only (silent) content (alternatives are also covered by SC 1.2.1 but a text description is expected here too when the non-text media is meaningful)"
+  ],
+  "scope_does_not_apply_to": [
+    "Elements removed from the accessibility tree (aria-hidden=\"true\" on the element or any ancestor, hidden attribute, display:none, visibility:hidden, inside <template>)",
+    "Images correctly marked decorative with alt=\"\" (empty alt IS a valid text alternative for decoration)",
+    "SVG or <img> elements that already have an accessible name via alt, aria-label, aria-labelledby, or a child <title> element",
+    "Icons nested inside a <button> or <a> whose parent already has an accessible name (the parent's name covers the child icon)",
+    "Form controls missing a label (that failure belongs to SC 3.3.2 / SC 4.1.2, not here)",
+    "Link text that is unclear in context (that belongs to SC 2.4.4)",
+    "Video captions, audio descriptions, transcripts, synchronized media (those belong to SC 1.2.x)",
+    "Color-only distinctions (that belongs to SC 1.4.1)",
+    "Background images that are purely visual styling with no information value"
+  ],
+  "borderline_calibration": [
+    "Alt text that is a short descriptive sentence ('Two students work on laptops') is SUFFICIENT. Do NOT flag it for 'insufficient detail' unless the image clearly carries information the alt omits (e.g. a chart with numbers the alt doesn't mention).",
+    "Alt text starting with 'image of' or 'picture of' is redundant and a best-practice note, not a WCAG 1.1.1 failure. Flag at severity info, not medium or high.",
+    "If an element has ANY accessible name via any W3C-standard mechanism (alt, aria-label, aria-labelledby, SVG <title>, parent element's accessible name), do NOT flag it as 'missing accessible name'. Name quality is a separate conversation.",
+    "Meaningful content image with alt=\"\" (empty) is a hard failure IF the image conveys information. Meaningful content image with NO alt attribute at all is always a hard failure.",
+    "Filename-style alt ('DSC_0042.jpg', 'header-bg.png', 'photo1') is a hard failure.",
+    "When in doubt about whether an image is decorative or informational: if the page loses meaning without it, it is informational and needs alt text. If removing it changes nothing a user needs to know, it is decorative and alt=\"\" is correct."
+  ],
+  "visual_checks": [
+    "CRITICAL — MEANING VERIFICATION: For each image, compare what you SEE in the screenshot against the alt text in the programmatic data. Does the alt text ACCURATELY describe the visual content? An image showing a sunset over mountains with alt='company logo' is WRONG even though alt text exists.",
+    "Look at each image: does it convey meaningful information or is it decorative?",
+    "Check if alt text describes what the image ACTUALLY SHOWS, not just that alt text exists. alt='image' or alt='photo.jpg' on a photo of a building is a failure.",
+    "For each image with alt text, ask yourself: if a blind user heard ONLY the alt text, would they understand what sighted users see? If not, the alt text is inadequate.",
+    "Look for images containing text that could be rendered as HTML",
+    "Identify any CAPTCHA elements and check if alternative modalities are offered",
+    "Look for icons, logos, and graphical buttons — do they have text alternatives?",
+    "Check for CSS background images that appear to convey information rather than decoration",
+    "Look for SVG graphics and canvas elements that display meaningful content"
+  ],
+  "pass_conditions": [
+    "All meaningful images have descriptive alt text that conveys equivalent information",
+    "Decorative images have alt=\"\" or role=\"presentation\"",
+    "CAPTCHAs have alternative forms (audio CAPTCHA, text-based alternative)",
+    "Form image buttons have alt text describing the button action",
+    "SVG elements used as images have role='img' and an accessible name via aria-label or aria-labelledby",
+    "SVG/icon elements marked aria-hidden=\"true\" are correctly hidden from assistive technology and are EXEMPT from text-alternative requirements (this is the standard FontAwesome and Bootstrap-icon pattern and is correct usage)",
+    "Canvas elements have fallback text content or are labelled with aria-label"
+  ],
+  "fail_conditions": [
+    "Images missing alt attribute entirely (no text alternative provided)",
+    "Meaningful images with empty or absent alt text",
+    "Images with alt text that does not describe the image content (e.g., filename, 'image', 'photo')",
+    "No alternative CAPTCHA modalities provided",
+    "Image map areas (<area>) missing alt text",
+    "SVG graphics conveying meaning without accessible names AND without aria-hidden=\"true\" (an SVG that is aria-hidden is NOT a failure regardless of role attribute)",
+    "CSS background images conveying information with no text alternative in the DOM"
+  ],
+  "na_conditions": [
+    "Page contains no images, background images, SVGs, canvas elements, image maps, or embedded media"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Images failed to load so their content cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Images that look decorative but actually convey information (e.g., an icon that means 'download')",
+    "Alt text that describes the image technically but misses its PURPOSE (e.g., 'photo' instead of what the photo shows)",
+    "Background images in CSS that convey information without a text alternative",
+    "Meaningful SVG graphics without role='img' and aria-label (only flag when the SVG is NOT aria-hidden -- aria-hidden SVGs are intentionally hidden from AT and are correct)",
+    "Using title attribute instead of alt attribute on images",
+    "Alt text that begins with 'image of' or 'picture of' redundantly"
+  ],
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging FontAwesome / Bootstrap icons that have role='img' and aria-hidden='true'. These are standard decorative icon patterns where the visible text label sits next to the icon. The icon is intentionally hidden from screen readers because the adjacent text already conveys the meaning. Do NOT report these.",
+    "FALSE POSITIVE: flagging every <svg> with role='img'. Check aria-hidden first -- if aria-hidden='true' (on the SVG or any ancestor), it is exempt.",
+    "FALSE POSITIVE: flagging an image inside a <button> that already has accessible text. The button's accessible name covers the icon.",
+    "FALSE POSITIVE: flagging an inline <svg> that contains a <title> child element as having no accessible name. The W3C-standard pattern '<svg role=\"img\"><title>Alert</title>...</svg>' provides an accessible name via the title element -- screen readers announce the title text. The title element IS the accessible name. Do NOT report these as missing text alternative.",
+    "FALSE POSITIVE: flagging an <svg> that uses 'aria-labelledby' pointing to a child <title> element (pattern: '<svg aria-labelledby=\"Icon-foo-:R1:\"><title id=\"Icon-foo-:R1:\">Close dialog</title>'). The aria-labelledby reference IS the accessible name. This is the modern React/Radix/Material-UI icon pattern. Do NOT report these.",
+    "FALSE POSITIVE: flagging an <img> or <svg> as 'decorative but has an accessible name' when the element has a real accessible name (alt attribute, aria-label, aria-labelledby, or <title> child). If it has a name, it is NOT decorative -- do not cite it as both."
+  ],
+  "examples": {
+    "pass": "An image of the town hall has alt='Richlands Town Hall, a two-story brick building with white columns at the entrance on Main Street'",
+    "fail": "An image of the town hall has no alt attribute — screen readers will announce the filename 'DSC_0042.jpg' or nothing",
+    "partial": "Most images have alt text but 3 out of 20 images have filename-like alt text ('header-bg.png') instead of descriptions"
+  }
+}

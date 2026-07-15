@@ -1,0 +1,67 @@
+{
+  "criterion_id": "3.3.5",
+  "criterion_name": "Help",
+  "visual_checks": [
+    "Look for context-sensitive help text, tooltips, or instructions adjacent to form fields",
+    "Check if a help link, FAQ, or support page is accessible from the current page",
+    "Look for input-specific guidance such as expected formats, examples, or constraints",
+    "Check if error messages include helpful suggestions for correcting the error",
+    "Look for a help icon, question mark button, or expandable help section near complex inputs",
+    "Verify that help content is available before and during form completion, not only after errors"
+  ],
+  "pass_conditions": [
+    "Context-sensitive help is provided adjacent to form fields that need explanation",
+    "Help text describes the expected input format with examples (e.g., 'Date format: MM/DD/YYYY')",
+    "A help link or support mechanism is available from the page for users who need assistance",
+    "Tooltips or expandable sections provide additional guidance for complex form fields",
+    "Error messages provide specific corrective suggestions rather than generic error statements"
+  ],
+  "fail_conditions": [
+    "Form fields that require specific formats have no help text or examples",
+    "No context-sensitive help, tooltips, or guidance is available for complex inputs",
+    "The page has no link to help documentation, FAQ, or support resources",
+    "Error messages say only 'invalid input' without explaining what is expected",
+    "Help information exists but is not accessible from the context where the user needs it"
+  ],
+  "na_conditions": [
+    "Page contains no forms, inputs, or interactive elements where users might need help"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Form interactions could not be tested to evaluate help availability"
+  ],
+  "common_mistakes": [
+    "Providing format help only in placeholder text that disappears when the user starts typing",
+    "Help text that is visually present but not programmatically associated with the form field",
+    "Complex multi-step forms with no help available until after submission fails",
+    "Error messages that repeat the validation rule without showing an example of valid input",
+    "Hiding help behind an icon that is not keyboard accessible or has no accessible label"
+  ],
+  "examples": {
+    "pass": "A registration form displays help text below each field (e.g., 'Password must be 8+ characters with one number and one symbol') and a '?' icon next to complex fields opens a tooltip with additional guidance — a 'Need help?' link is also available in the page footer",
+    "fail": "A tax filing form has fields for income codes, deduction categories, and filing status with no explanatory help text, no examples, no tooltips, and no link to documentation — users must guess the expected input",
+    "partial": "Some form fields have helpful description text and format examples, but several complex fields (like tax identification number and routing number) lack any guidance, and error messages are generic rather than corrective"
+  },
+  "plain_meaning": "Context-sensitive help must be available for the content or forms the user is currently interacting with. This can be inline instructions, help icons that open explanation, tooltip help, or a linked help page specifically about the current task. The help has to be relevant to what the user is doing.",
+  "scope_applies_to": [
+    "Forms and processes where field-level or task-level help is offered",
+    "Help icons or links specific to the current input",
+    "Instructions accompanying complex controls",
+    "Wizard steps with contextual guidance",
+    "In-page explanations of what the user should do next"
+  ],
+  "scope_does_not_apply_to": [
+    "General site help or FAQ unrelated to the current task",
+    "Simple pages without user input",
+    "Error messages (SC 3.3.1 and 3.3.3)",
+    "Labels themselves (SC 3.3.2)",
+    "Style or visual presentation of help content"
+  ],
+  "borderline_calibration": [
+    "This is Level AAA and frequently Not Applicable.",
+    "Any context-relevant help mechanism anywhere in the current task flow satisfies.",
+    "Do not require help on every single field, only that context-sensitive help is available where it would matter.",
+    "Prefer Not Applicable on simple content pages."
+  ]
+}

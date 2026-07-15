@@ -1,0 +1,67 @@
+{
+  "criterion_id": "2.4.9",
+  "criterion_name": "Link Purpose (Link Only)",
+  "visual_checks": [
+    "Read each link's text in isolation — can you determine where it goes without surrounding context?",
+    "Look for generic link text such as 'click here', 'read more', 'learn more', 'more', or 'here'",
+    "Check if links that go to different destinations have distinct, descriptive text",
+    "Look for links whose purpose relies on surrounding paragraph text or headings rather than the link text itself",
+    "Check whether image links have alt text that describes the link destination",
+    "Identify links that use URLs as their visible text instead of descriptive labels"
+  ],
+  "pass_conditions": [
+    "Every link's purpose can be determined from the link text alone without needing surrounding context",
+    "No links use generic text like 'click here', 'read more', or 'more' without additional descriptive text within the link",
+    "Image links have alt text that describes the link's destination or function",
+    "Links going to different destinations have distinct and descriptive link text",
+    "Links that open files indicate the file type and action (e.g., 'Download annual report (PDF)')"
+  ],
+  "fail_conditions": [
+    "Links use generic text like 'click here', 'read more', or 'learn more' that requires context to understand",
+    "Multiple links with the same text go to different destinations",
+    "Image links lack alt text describing the destination, making the link purpose unknown",
+    "Link text is a raw URL that does not convey the purpose of the link",
+    "The link purpose can only be understood from the surrounding paragraph or heading, not the link text itself"
+  ],
+  "na_conditions": [
+    "Page contains no links or interactive anchor elements"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Link destinations could not be verified to confirm whether link text accurately describes them"
+  ],
+  "common_mistakes": [
+    "Using 'Read more' for multiple article teasers without including the article title in the link",
+    "Links that say 'Download' without specifying what is being downloaded",
+    "Navigation links that use abbreviations or jargon not understandable out of context",
+    "Links that combine an image and text but the image alt text duplicates the visible text instead of being empty",
+    "Relying on aria-describedby to provide context rather than making the link text itself descriptive"
+  ],
+  "examples": {
+    "pass": "Each article teaser has a link that reads 'Read full article: Accessible Design Patterns for Mobile Apps' so the purpose is clear from the link text alone",
+    "fail": "Three article teasers each end with a link that says only 'Read more' — users navigating by links cannot distinguish which article each link leads to",
+    "partial": "Most links have descriptive text but the footer contains several 'Learn more' links for different topics that require surrounding context to differentiate"
+  },
+  "plain_meaning": "This stricter AAA version of link purpose requires that at least one mechanism lets users understand the destination of each link from the LINK TEXT ALONE, without needing surrounding context. The accessible name of the link by itself must convey purpose. Links whose purpose is genuinely ambiguous to all users are exempt.",
+  "scope_applies_to": [
+    "The accessible name of links taken in isolation, without surrounding context",
+    "aria-label and aria-labelledby values used to name a link",
+    "Alt text on images that are the sole content of a link",
+    "Generic link phrases like 'click here', 'read more', 'more' that do not identify a destination",
+    "Repeated link text that points to different destinations"
+  ],
+  "scope_does_not_apply_to": [
+    "Buttons and non-link controls",
+    "Links whose purpose is legitimately ambiguous to users in general",
+    "The regular SC 2.4.4 context-based analysis (that is the Level A version)",
+    "Visual link styling or underlining",
+    "Decorative images"
+  ],
+  "borderline_calibration": [
+    "This is stricter than 2.4.4: surrounding paragraph context does NOT rescue a vague link here.",
+    "A mechanism elsewhere on the page that provides the full purpose can satisfy this SC even when the inline text is short.",
+    "Only flag when the link text alone, via any accessible-name mechanism, fails to convey destination.",
+    "Do not flag a link whose naming is already solid at 2.4.4 level without re-examining isolation."
+  ]
+}

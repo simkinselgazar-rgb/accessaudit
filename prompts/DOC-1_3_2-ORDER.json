@@ -1,0 +1,53 @@
+{
+  "criterion_id": "DOC-1.3.2-ORDER",
+  "criterion_name": "Reading Order (Documents)",
+  "visual_checks": [
+    "CRITICAL — ORDER COMPARISON: Compare the visual reading order of the document (how a sighted person would read it top-to-bottom, left-to-right) against the order of elements in the tag tree. They must match.",
+    "For multi-column layouts, verify that the tag order reads the first column completely before moving to the second column, not alternating between columns line by line.",
+    "Check the reading order of pages with sidebars, pull quotes, or callout boxes — do they appear in the tag order at a logical point relative to the surrounding text?",
+    "In PDFs, examine the tag tree order: drag through the content in the Order panel or Tags panel to see if the sequence matches the visual layout.",
+    "In PPTX, check the reading order of each slide's elements: title, content, images, text boxes — are they ordered logically for a screen reader?",
+    "Look for footnotes, figure captions, and marginal notes — do they appear in the reading order at the correct position relative to their reference?",
+    "Check whether headers and footers appear between content elements in the reading order (they generally should be artifacts or at consistent positions).",
+    "Verify that content spanning multiple pages reads in the correct sequence, especially for documents with complex layouts."
+  ],
+  "pass_conditions": [
+    "The tag tree order matches the visual reading order of the document from beginning to end",
+    "Multi-column content reads column by column (left column fully, then right column) rather than line by line across columns",
+    "Sidebars, callout boxes, and pull quotes appear in the reading order at a logical position relative to the body text they relate to",
+    "In PPTX, slide element reading order follows the logical sequence: title first, then main content, then supplementary elements",
+    "Footnotes and captions are positioned near their references in the reading order",
+    "The reading order of every page has been verified, not just the first page"
+  ],
+  "fail_conditions": [
+    "Tags are out of visual sequence — content that appears first visually is read last by a screen reader, or vice versa",
+    "Multi-column layouts read across columns (mixing left and right column text) instead of down each column sequentially",
+    "Sidebars or callout boxes interrupt the flow of body text mid-sentence or mid-paragraph in the reading order",
+    "In PPTX, slide elements read in an unexpected order (e.g., a text box at the bottom of the slide reads before the title)",
+    "Content from headers/footers is interspersed between body content tags, disrupting the flow",
+    "A table of contents or index reads in a garbled order that does not match the visual page layout",
+    "Floating text boxes or shapes are at the end of the reading order regardless of their visual position on the page"
+  ],
+  "na_conditions": [
+    "Document has a simple single-column layout with no sidebars, callouts, multi-column sections, or floating elements where reading order ambiguity could arise",
+    "Document is a plain text file with inherently linear content"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Document could not be opened or its reading order could not be compared against visual layout",
+    "The tag tree order cannot be determined from the available information"
+  ],
+  "common_mistakes": [
+    "Converting a multi-column newsletter or brochure to PDF where the auto-tagger reads across columns instead of down each column",
+    "Adding text boxes in PowerPoint after the initial slide creation — new elements are appended to the end of the reading order regardless of their visual position",
+    "Moving or resizing elements visually in a PDF without updating the tag order to match the new layout",
+    "Sidebar content reading before or after the entire main text of a page instead of at the logical point where it relates to the main text",
+    "Footnotes tagged at the very end of the document instead of near their reference points on the page",
+    "Reordering slides in PPTX without checking whether the element reading order within each slide is still correct"
+  ],
+  "examples": {
+    "pass": "A two-column PDF newsletter has the tag tree ordered so that the left column's article reads completely (headline, paragraphs 1-4), then the right column's article reads completely (headline, paragraphs 1-3). A screen reader presents each article as a coherent block.",
+    "fail": "A two-column PDF brochure has the tag tree reading left-column line 1, right-column line 1, left-column line 2, right-column line 2, and so on. A screen reader user hears interleaved text from two different articles, making neither coherent.",
+    "partial": "A PPTX presentation has correct reading order on most slides, but slides 5, 8, and 12 have text boxes that were added later and read after the slide's main content despite being visually positioned at the top of the slide."
+  }
+}

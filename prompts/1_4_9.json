@@ -1,0 +1,69 @@
+{
+  "criterion_id": "1.4.9",
+  "criterion_name": "Images of Text (No Exception)",
+  "visual_checks": [
+    "Look for any images that contain text (screenshots, banners, headings rendered as images, button images with text)",
+    "Check if the text within images could instead be rendered as styled HTML/CSS text",
+    "Identify images of text that are purely decorative or serve as visual ornamentation",
+    "Look for essential images of text where the specific visual presentation is critical (e.g., a logo or brand wordmark)",
+    "Check for text baked into infographics, charts, or diagrams that could be rendered as accessible text",
+    "Verify whether images of text can be visually customized by the user (font, size, color)"
+  ],
+  "pass_conditions": [
+    "No images of text are used, except where the image is purely decorative or the specific presentation is essential (e.g., logotypes)",
+    "All informational text is rendered as actual HTML/CSS text rather than as images",
+    "Where images of text are essential, text alternatives convey the same information",
+    "Logotypes and brand wordmarks are the only instances of images of text on the page"
+  ],
+  "fail_conditions": [
+    "Text is rendered as images for headings, buttons, or banners when HTML/CSS text could achieve the same presentation",
+    "Navigation items or menu labels use images of text instead of styled HTML text",
+    "Promotional banners or hero sections contain text as images without an essential visual reason",
+    "Images of text are used for body content, paragraphs, or descriptions",
+    "Charts or infographics contain text that is not available as accessible text"
+  ],
+  "na_conditions": [
+    "Page contains no images of text at all",
+    "All images of text on the page are logotypes or brand wordmarks where the presentation is essential"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Images failed to load so their text content cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Using images for stylized headings when CSS web fonts could achieve the same appearance",
+    "Navigation menus built with image-based text labels instead of styled HTML links",
+    "Banner images with promotional text baked in rather than overlaid as HTML text",
+    "Assuming that providing alt text on images of text satisfies this criterion (it does not; the text should be real text)",
+    "Using images of text for call-to-action buttons instead of styled HTML button elements",
+    "Infographic text that could be represented as an accessible HTML table or list with CSS styling"
+  ],
+  "examples": {
+    "pass": "All headings, navigation labels, and button text are rendered as HTML text styled with CSS web fonts; the only image of text on the page is the company logo",
+    "fail": "The page hero section, navigation menu, and section headings all use images of text instead of HTML text, even though the same visual style could be achieved with CSS",
+    "partial": "Most text is rendered as HTML but the page includes several promotional banners with text baked into images that could be rendered as styled HTML overlays"
+  },
+  "plain_meaning": "A stricter version of 1.4.5: images of text are allowed only for pure decoration or when a specific visual presentation is essential to the meaning. Logotypes remain exempt, but general style preferences are not an excuse.",
+  "scope_applies_to": [
+    "Any informational text rendered as an image",
+    "Banners, hero text, and marketing graphics containing text",
+    "Button and navigation labels rendered as images",
+    "Graphics containing quotes or announcements as baked-in text"
+  ],
+  "scope_does_not_apply_to": [
+    "Logotypes and brand marks",
+    "Images where the particular visual presentation is essential (font specimen, historical manuscript, signature)",
+    "Purely decorative images with no text meaning",
+    "Elements removed from the accessibility tree (aria-hidden, display:none)",
+    "Real text rendered via web fonts or SVG <text> (not images of text)",
+    "Captions and other media text (different SCs)"
+  ],
+  "borderline_calibration": [
+    "Level AAA; apply only during AAA evaluation.",
+    "SVG <text> and web-font-rendered text are real text, not images of text.",
+    "No exception exists for preferred-font reasoning under AAA.",
+    "Logotypes remain exempt under AAA.",
+    "When the image is decorative with no informational text, do not flag."
+  ]
+}

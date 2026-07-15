@@ -1,0 +1,40 @@
+{
+  "criterion_id": "DOC-2.4.2-TITLE",
+  "criterion_name": "Document Title",
+  "visual_checks": [
+    "Open the document properties and check whether a title has been set",
+    "Verify the title is descriptive of the document content, not a filename or generic placeholder",
+    "Compare the title in document properties to the actual content of the document to confirm relevance",
+    "Check the title bar or properties panel for the presence and quality of the title metadata"
+  ],
+  "pass_conditions": [
+    "Document properties include a non-empty title field",
+    "The title meaningfully describes the document content or purpose",
+    "The title is distinct from the filename and provides useful context for assistive technology users"
+  ],
+  "fail_conditions": [
+    "Document title field is empty or missing entirely",
+    "Document title is the filename (e.g., 'report_final_v3.pdf', 'Document1.docx')",
+    "Document title is a generic placeholder such as 'Untitled', 'Title', or 'Microsoft Word - Document1'",
+    "Document title does not describe the actual content of the document",
+    "Document title contains only the application name (e.g., 'Microsoft PowerPoint Presentation')"
+  ],
+  "na_conditions": [
+    "The content is not a standalone document (e.g., it is a web page evaluated under standard 2.4.2)"
+  ],
+  "ne_conditions": [
+    "Document properties could not be accessed or extracted for evaluation",
+    "The document format does not support a title metadata field"
+  ],
+  "common_mistakes": [
+    "Leaving the default application-generated title in place (e.g., 'Presentation1')",
+    "Using the filename as the title instead of writing a descriptive title",
+    "Setting a title that was accurate for an earlier version but no longer matches updated content",
+    "Forgetting to update the title after using Save As to create a new document from an existing one"
+  ],
+  "examples": {
+    "pass": "A PDF's document properties show the title 'City of Richlands 2025 Annual Budget Report', which accurately describes the content",
+    "fail": "A PDF's document properties show the title 'scan_20240315_final.pdf' which is just the filename and does not describe the content",
+    "partial": "The document has a title set in properties but it reads 'Draft' which is vague and does not adequately describe the document's purpose or content"
+  }
+}

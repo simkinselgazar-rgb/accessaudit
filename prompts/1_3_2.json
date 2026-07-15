@@ -1,0 +1,69 @@
+{
+  "criterion_id": "1.3.2",
+  "criterion_name": "Meaningful Sequence",
+  "visual_checks": [
+    "Compare the visual reading order of the page to the DOM order — do they match?",
+    "Look for multi-column layouts: does the DOM order follow the intended reading sequence (left-to-right, top-to-bottom for LTR languages)?",
+    "Check for content positioned with CSS (float, flexbox order, grid placement, absolute positioning) that may differ from DOM order",
+    "Look for sidebars, callout boxes, or pull quotes — where do they appear in the DOM relative to the main content?",
+    "Check if tabbing through the page follows a logical sequence that matches the visual layout"
+  ],
+  "pass_conditions": [
+    "The DOM order of content matches the meaningful visual reading sequence",
+    "When CSS is disabled, the content still reads in a logical and meaningful order",
+    "Multi-column layouts have DOM order matching the intended left-to-right, top-to-bottom reading order",
+    "CSS flexbox 'order' property or grid placement does not create a reading sequence that differs from the DOM order in a way that changes meaning",
+    "Tabindex is not used to create an order different from the DOM sequence (or is used correctly)"
+  ],
+  "fail_conditions": [
+    "CSS positioning causes visual order to differ from DOM order in a way that changes meaning",
+    "Content in the DOM appears in an order that does not make sense when read linearly (e.g., answer before question)",
+    "Using CSS flexbox 'order' or grid properties to rearrange content so screen reader order differs from visual order",
+    "Important content placed out of sequence in the DOM and repositioned visually with CSS",
+    "Right-to-left content in a left-to-right page without proper dir attributes"
+  ],
+  "na_conditions": [
+    "Page has simple single-column layout with no CSS reordering of content",
+    "The sequence of content is not meaningful (e.g., a gallery where image order does not matter)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot compare DOM order to visual order without both screenshot and DOM data",
+    "Page layout is too complex to determine intended reading sequence"
+  ],
+  "common_mistakes": [
+    "Using CSS flexbox order or grid to visually reorder navigation items while DOM order stays different",
+    "Placing sidebar content before main content in DOM for SEO but visually showing it on the right",
+    "Using tabindex values greater than 0 to force a tab order different from DOM order",
+    "Floating elements that cause DOM order to differ from the visual reading flow",
+    "Mobile-responsive layouts that reorder content differently at different breakpoints without updating DOM order"
+  ],
+  "examples": {
+    "pass": "A two-column layout has the main content first in the DOM followed by the sidebar, matching the visual left-to-right reading order, and linearizes correctly when CSS is disabled",
+    "fail": "A product page has the price and 'Buy' button placed before the product description in the DOM but visually positioned below it using CSS, so screen readers encounter the price before knowing what product it is for",
+    "partial": "Most content follows logical DOM order but a promotional banner is placed at the end of the DOM and positioned at the top of the page with CSS, causing screen reader users to miss it"
+  },
+  "plain_meaning": "When the order in which content is read matters for understanding, that order must be available programmatically -- meaning the DOM order (or an explicit tabindex/reading sequence) matches the logical reading order. The intent is that a screen reader reading linearly, or a user tabbing through content, encounters things in an order that still makes sense. CSS can reposition elements visually, but if the underlying source order scrambles the meaning, the criterion fails.",
+  "scope_applies_to": [
+    "Multi-column layouts where columns should be read in a specific order",
+    "Content using CSS flex/grid with order properties that reorder elements away from DOM order",
+    "Absolutely positioned elements whose visual position implies a reading order different from source",
+    "Form flows where the sequence of fields is meaningful",
+    "Narrative content where reading sequence affects comprehension"
+  ],
+  "scope_does_not_apply_to": [
+    "Structural relationships within a block (headings, lists, labels) -- that belongs to SC 1.3.1",
+    "Keyboard focus order specifically -- that belongs to SC 2.4.3",
+    "Instructions relying on visual location alone -- that belongs to SC 1.3.3",
+    "Content where reading order does not affect meaning (a grid of independent cards, a tag cloud)",
+    "Decorative elements hidden from the accessibility tree",
+    "Text alternatives on images -- that belongs to SC 1.1.1",
+    "Color-only distinctions -- that belongs to SC 1.4.1"
+  ],
+  "borderline_calibration": [
+    "Independent tiles/cards with no narrative relationship between them do not require a specific order; do not flag.",
+    "If the DOM order produces a sensible reading when linearized, the criterion passes even if CSS reorders visually for sighted users -- unless the visual order is the one that carries meaning.",
+    "1.3.2 is about programmatic reading sequence; 2.4.3 is about keyboard focus order. Route focus-order issues to 2.4.3.",
+    "Scrambled reading order in narrative content is a hard failure at medium+."
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "criterion_id": "2.5.6",
+  "criterion_name": "Concurrent Input Mechanisms",
+  "visual_checks": [
+    "Check if the page appears to be designed exclusively for one input type (e.g., touch-only or mouse-only)",
+    "Look for any messaging suggesting a specific input method is required",
+    "Check if all functionality works with both mouse/touch and keyboard"
+  ],
+  "pass_conditions": [
+    "Content does not restrict or prevent use of any available input modality",
+    "Users can switch freely between touch, mouse, keyboard, and other inputs",
+    "No JavaScript detection of input type that restricts other modalities"
+  ],
+  "fail_conditions": [
+    "Content restricts input to touch-only on devices that also support keyboard/mouse",
+    "JavaScript detects touch capability and disables mouse or keyboard handlers",
+    "Content uses pointer-events: none to block specific input types inappropriately"
+  ],
+  "na_conditions": [
+    "Page has no interactive content"
+  ],
+  "common_mistakes": [
+    "Mobile-first designs that disable mouse events when touch is detected",
+    "Gesture-only controls with no keyboard/mouse alternative",
+    "Using pointer-events: none on interactive elements"
+  ],
+  "plain_meaning": "Web content must not block users from using any input modality their platform supports. If a user wants to switch between touch, mouse, keyboard, or stylus mid-task, the content must accommodate that, unless restriction is essential, required for security, or required to honor user settings.",
+  "scope_applies_to": [
+    "Content that disables or blocks specific input modes",
+    "Applications that force one specific input type",
+    "Scripts that reject keyboard events in favor of touch or vice versa",
+    "Mixed-input workflows where a user may switch devices mid-task"
+  ],
+  "scope_does_not_apply_to": [
+    "Essential single-modality functions (fingerprint scan)",
+    "Security-required restrictions",
+    "Respecting explicit user-agent or OS input settings",
+    "Content that simply responds to whichever input a user chooses without blocking others"
+  ],
+  "borderline_calibration": [
+    "Only flag when content actively refuses or breaks a supported input modality.",
+    "Supporting touch AND mouse AND keyboard concurrently is the default pass state.",
+    "Do not flag essential or security-driven restrictions.",
+    "Most web pages pass this SC without specific effort."
+  ]
+}

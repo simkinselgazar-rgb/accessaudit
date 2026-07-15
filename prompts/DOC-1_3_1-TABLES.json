@@ -1,0 +1,52 @@
+{
+  "criterion_id": "DOC-1.3.1-TABLES",
+  "criterion_name": "Table Headers (Documents)",
+  "visual_checks": [
+    "CRITICAL — TABLE ROLE IDENTIFICATION: For every table in the document, determine whether it is a data table (presenting information in rows and columns where headers give context to the data) or a layout table (used only to position content visually).",
+    "For each data table, identify the header row(s) and/or header column(s). Are they visually distinct (bold, shaded, different background)?",
+    "Check whether header cells are programmatically identified: in PDFs, look for <TH> tags in the tag tree; in DOCX, check if 'Header Row' is enabled in Table Properties; in PPTX, check table style options.",
+    "Look for complex tables with merged cells, multi-level headers, or split cells — these are especially prone to accessibility failures.",
+    "Check whether tables span multiple pages and whether headers repeat on each page (important for long data tables in PDF/DOCX).",
+    "Identify any layout tables that are used to arrange content side-by-side rather than present data. These should not have header markup.",
+    "Look for nested tables (tables within tables) which create significant barriers for screen reader navigation."
+  ],
+  "pass_conditions": [
+    "All data tables have header rows and/or header columns programmatically identified using the correct mechanism for the file format",
+    "In PDFs, data table headers use <TH> tags with appropriate scope attributes, and data cells use <TD> tags within a proper <Table> > <TR> structure",
+    "In DOCX, the 'Header Row' option is checked in Table Properties and/or the first row uses a header style",
+    "Layout tables are marked as layout/decorative (artifact in PDF) so screen readers do not announce them as data tables",
+    "Complex tables with merged cells have correct header associations so each data cell can be linked to its row and column headers",
+    "Long tables that span multiple pages repeat the header row on each page"
+  ],
+  "fail_conditions": [
+    "Data tables have no header row or column identified — all cells are tagged as <TD> or data cells with no <TH> designation",
+    "Tables have a visual header row (bold, shaded) but it is not programmatically marked as a header",
+    "In PDFs, the table structure in the tag tree is missing or incorrect (e.g., no <Table>, <TR>, <TH>, <TD> tags)",
+    "Layout tables are tagged as data tables with header markup, causing screen readers to announce grid navigation for non-tabular content",
+    "Complex tables with merged cells have broken header-to-data cell associations",
+    "Tables are created using tabs or spaces to align columns visually rather than using actual table elements",
+    "Nested tables make it impossible for screen readers to determine relationships between headers and data"
+  ],
+  "na_conditions": [
+    "Document contains no tables of any kind",
+    "Document contains only decorative borders or lines that might look like table elements but are not tables"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Document could not be opened or its table structure could not be inspected",
+    "Tables are too complex to determine header associations from the available information"
+  ],
+  "common_mistakes": [
+    "Creating a visual header row with bold text and shading but not enabling the 'Header Row' property in Word or marking cells as <TH> in the PDF tag tree",
+    "Using tab characters or spaces to create the visual appearance of a table instead of inserting an actual table",
+    "Merging cells in complex ways that break the row/column relationship, making it impossible for assistive technology to associate data with headers",
+    "Not marking layout tables as artifacts/decorative, so screen readers announce 'table with 3 columns and 5 rows' for content that is not tabular",
+    "Applying table headers only to the first row when the table also has a header column on the left side",
+    "Forgetting to repeat header rows on multi-page tables so users lose context on the second and subsequent pages"
+  ],
+  "examples": {
+    "pass": "A PDF contains a budget table. The first row with 'Category', 'Q1', 'Q2', 'Q3', 'Q4' is tagged with <TH> cells with scope='column'. A screen reader navigating to cell '$5,000' announces 'Q2, Office Supplies, $5,000' providing full context.",
+    "fail": "A Word document has a 10-row table listing employee names, departments, and phone numbers. The first row is visually bold and shaded gray but 'Header Row' is not enabled. A screen reader reads each cell without announcing the column name, so the user hears '$45,000' without knowing it refers to 'Salary'.",
+    "partial": "A PDF has 4 data tables. Two have proper <TH> tags, but the other two have all cells as <TD> with no header identification despite having visually distinct header rows."
+  }
+}

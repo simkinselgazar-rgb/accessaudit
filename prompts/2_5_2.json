@@ -1,0 +1,63 @@
+{
+  "criterion_id": "2.5.2",
+  "criterion_name": "Pointer Cancellation",
+  "visual_checks": [
+    "Click and hold (mouse-down) on buttons, links, and interactive controls without releasing — does the action fire on the down-event before you release?",
+    "Check if dragging the pointer off an element after pressing down cancels the action when you release outside the target",
+    "Look for custom click/tap handlers on interactive elements that may fire on pointerdown or mousedown instead of click or pointerup",
+    "Identify any drag-and-drop interactions — these legitimately use the down-event but must allow reversal or abort",
+    "Test toggle buttons, dropdown menus, and modal triggers to see if they activate on press rather than on release"
+  ],
+  "pass_conditions": [
+    "Interactive elements fire their action on the up-event (mouseup, pointerup, click) rather than on the down-event",
+    "If the down-event is used to trigger functionality, a mechanism exists to abort (e.g., moving the pointer off the target before releasing) or to undo the action after completion",
+    "Drag-and-drop operations allow the user to cancel by releasing outside a valid drop zone, returning the item to its original position",
+    "Native HTML buttons, links, and form controls are used, which inherently fire on click (up-event) by default"
+  ],
+  "fail_conditions": [
+    "A button or link fires its action immediately on mousedown or pointerdown with no way to cancel by moving the pointer away",
+    "A custom interactive element triggers navigation or a destructive action on the down-event with no undo mechanism",
+    "A dropdown menu opens and immediately selects an item on the down-event without allowing the user to move away to cancel",
+    "A drag-and-drop operation commits the move with no way to abort mid-drag or undo after release"
+  ],
+  "na_conditions": [
+    "Page contains no interactive elements that respond to pointer input (no buttons, links, or custom click targets)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Down-event versus up-event behavior cannot be determined from static analysis alone and requires interactive pointer testing"
+  ],
+  "common_mistakes": [
+    "Using mousedown or pointerdown event handlers for actions instead of the click event, which fires on release",
+    "Custom JavaScript widgets that fire actions on touchstart for perceived responsiveness, bypassing cancellation",
+    "Assuming that all browsers or frameworks handle pointer cancellation automatically — custom handlers can override default behavior",
+    "Drag-and-drop implementations that commit changes as soon as the user starts dragging, with no way to abort or undo",
+    "Overlooking third-party UI libraries that bind actions to down-events internally"
+  ],
+  "examples": {
+    "pass": "A 'Delete' button activates on the click event (pointer release); if the user presses down but drags the pointer away before releasing, the action does not fire",
+    "fail": "A navigation link fires immediately on mousedown — the user accidentally touches it and cannot prevent navigation by sliding their finger away before lifting",
+    "partial": "Most buttons correctly use click events, but a custom 'quick action' toolbar fires actions on pointerdown with no abort or undo mechanism"
+  },
+  "plain_meaning": "For any function operated by a single pointer, the platform must give users a way to prevent accidental activation. This means at least one of: the function does not activate on the initial down-event; there is a way to abort or undo; the up-event reverses any down-event outcome; or the down-event activation is essential. Most UIs satisfy this simply by acting on the up-event (click) rather than the down-event.",
+  "scope_applies_to": [
+    "Buttons, links, and controls that activate on pointer interaction",
+    "Down-event versus up-event activation behavior",
+    "Drag-and-drop operations with abort/undo capabilities",
+    "Custom controls implemented with pointer event listeners"
+  ],
+  "scope_does_not_apply_to": [
+    "Essential down-event interactions (piano keys, real-time games, pressing a key in a typing test)",
+    "Keyboard activation (that is SC 2.1.1)",
+    "Gesture-based activation covered by SC 2.5.1",
+    "Controls whose behavior is determined by the user agent"
+  ],
+  "borderline_calibration": [
+    "Default click activation on up-event satisfies this SC automatically.",
+    "Only flag when the control demonstrably acts on pointerdown with no abort/undo path.",
+    "Essential down-event behavior is exempt.",
+    "Do not flag common mouseup-based click handlers.",
+    "Static screenshots CANNOT determine whether pointer events fire on down-event or up-event. If the programmatic check found no mousedown/touchstart handlers in the script content, the SC likely passes. Do NOT flag elements based on visual appearance alone — pointer cancellation is a code-level concern."
+  ]
+}

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report - WCAG Trusted Tester</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;">Skip to main content</a>
+  <header class="app-header">
+    <div class="container">
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="/" class="header-brand">
+          <img src="/static/icon.svg" alt="WCAG Trusted Tester" width="36" height="36" style="border-radius:4px;">
+          <div class="brand-text">
+            <h1>WCAG Trusted Tester</h1>
+            <span class="brand-tool">WCAG Testing Tool</span>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="header-link">Dashboard</a>
+          <a href="/#form-heading" class="header-link">New Review</a>
+          <a href="/settings" class="header-link">Settings</a>
+        </div>
+      </nav>
+      <p class="subtitle">Section 508 &amp; WCAG Conformance Testing</p>
+    </div>
+  </header>
+
+  <main class="container" id="main-content">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Home</a>
+      <span class="sep" aria-hidden="true">&rsaquo;</span>
+      <span aria-current="page">Report</span>
+    </nav>
+
+    <section class="card">
+      <h2 class="card-title">Accessibility Conformance Report</h2>
+
+      <!-- Source Info -->
+      <div class="report-header">
+        <span class="source-label">
+          {% if meta.source_url %}
+            <a href="{{ meta.source_url }}" target="_blank" rel="noopener">{{ meta.source_url }}</a>
+          {% elif meta.source_file %}
+            {{ meta.source_file }}
+          {% else %}
+            Unknown source
+          {% endif %}
+        </span>
+        <span class="badge badge-{{ meta.status }}">{{ meta.status }}</span>
+      </div>
+
+      <!-- Meta Info -->
+      <div style="font-size:.88rem;color:#616161;margin-bottom:1rem;">
+        {% if meta.created_at %}
+          <span><strong>Created:</strong> {{ meta.created_at }}</span> &middot;
+        {% endif %}
+        <span><strong>WCAG:</strong> {{ meta.wcag_version }}</span> &middot;
+        <span><strong>Format:</strong> {{ meta.report_format }}</span> &middot;
+        <span><strong>Level:</strong> {{ meta.coverage_level }}</span>
+        {% if meta.review_type == 'site' %}
+          &middot; <span><strong>Type:</strong> Site Crawl</span>
+          {% if meta.pages_tested %}
+            &middot; <span><strong>Pages:</strong> {{ meta.pages_tested }}</span>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      <!-- Links to full report or progress -->
+      {% if meta.status == 'complete' %}
+        <div class="alert alert-success">
+          The full HTML report is available.
+          <a href="/review/{{ meta.review_id }}/report" style="font-weight:600;">View Full HTML Report</a>
+        </div>
+
+        <!-- Internal exports -->
+        <div class="export-links mb-2">
+          <strong style="font-size:.85rem;color:#555;">Internal:</strong>
+          <a href="/review/{{ meta.review_id }}/export/pdf" onclick="return handleExport(event, this)">PDF</a>
+          <a href="/review/{{ meta.review_id }}/export/docx" onclick="return handleExport(event, this)">DOCX</a>
+          <a href="/review/{{ meta.review_id }}/export/xlsx" onclick="return handleExport(event, this)">XLSX</a>
+          <a href="/review/{{ meta.review_id }}/export/internal" target="_blank"
+             style="background:#fff3e0;color:#e65100;border-color:#ffcc80;">JSON Summary</a>
+        </div>
+        <!-- Client exports (no confidence, AI, or source info) -->
+        <div class="export-links mb-2">
+          <strong style="font-size:.85rem;color:#555;">Client Delivery:</strong>
+          <a href="/review/{{ meta.review_id }}/export/pdf/client" onclick="return handleExport(event, this)"
+             style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;">PDF</a>
+          <a href="/review/{{ meta.review_id }}/export/docx/client" onclick="return handleExport(event, this)"
+             style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;">DOCX</a>
+          <a href="/review/{{ meta.review_id }}/export/xlsx/client" onclick="return handleExport(event, this)"
+             style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;">XLSX</a>
+        </div>
+        <div class="export-links mb-2">
+          <a href="/review/{{ meta.review_id }}/captures">View Captures</a>
+          <a href="/?rerun={{ meta.review_id }}"
+             style="background:#fffde7;color:#C5922E;border-color:#C5922E;">Rerun with Same Settings</a>
+        </div>
+        <script>
+        function handleExport(e, link) {
+          e.preventDefault();
+          var origText = link.textContent;
+          link.textContent = 'Generating...';
+          link.style.pointerEvents = 'none';
+          fetch(link.href)
+            .then(function(r) {
+              if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'Export failed'); });
+              return r.blob().then(function(blob) { return {blob: blob, r: r}; });
+            })
+            .then(function(data) {
+              var a = document.createElement('a');
+              a.href = URL.createObjectURL(data.blob);
+              var disp = data.r.headers.get('content-disposition') || '';
+              var match = disp.match(/filename="?([^"]+)"?/);
+              a.download = match ? match[1] : 'report' + link.href.split('/export/')[1];
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              link.textContent = origText;
+              link.style.pointerEvents = '';
+            })
+            .catch(function(err) {
+              alert('Export failed: ' + err.message);
+              link.textContent = origText;
+              link.style.pointerEvents = '';
+            });
+          return false;
+        }
+        </script>
+
+        <!-- Summary cards -->
+        {% if meta.supports is defined %}
+        <div class="summary-cards mb-2">
+          <div class="summary-card supports">
+            <div class="count">{{ meta.supports }}</div>
+            <div class="label">Supports</div>
+          </div>
+          <div class="summary-card partially">
+            <div class="count">{{ meta.partially_supports }}</div>
+            <div class="label">Partially Supports</div>
+          </div>
+          <div class="summary-card does-not">
+            <div class="count">{{ meta.does_not_support }}</div>
+            <div class="label">Does Not Support</div>
+          </div>
+          <div class="summary-card na">
+            <div class="count">{{ meta.not_applicable }}</div>
+            <div class="label">Not Applicable</div>
+          </div>
+          <div class="summary-card ne">
+            <div class="count">{{ meta.not_evaluated }}</div>
+            <div class="label">Not Evaluated</div>
+          </div>
+        </div>
+        {% endif %}
+
+      {% elif meta.status == 'error' %}
+        <div class="alert alert-error">
+          This review encountered an error.
+          {% if meta.error %}
+            {{ meta.error }}
+          {% endif %}
+          <br>
+          <a href="/review/{{ meta.review_id }}/progress">View progress details</a>
+        </div>
+      {% else %}
+        <div class="alert alert-info">
+          This review is still in progress.
+          <a href="/review/{{ meta.review_id }}/progress" style="font-weight:600;">View live progress</a>
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- Results Table -->
+    {% if results and results | length > 0 %}
+    <section class="card" aria-labelledby="results-heading">
+      <h3 id="results-heading" class="card-title">Test Results</h3>
+      <div style="overflow-x:auto;">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th scope="col">Criteria</th>
+              <th scope="col">Level</th>
+              <th scope="col">Conformance Level</th>
+              <th scope="col">Confidence</th>
+              <th scope="col">Findings</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in results %}
+            <tr>
+              <td>
+                <strong>{{ r.criterion_id }}</strong>
+                <br>
+                <span style="font-size:.82rem;color:#616161;">{{ r.criterion_name }}</span>
+              </td>
+              <td><span class="badge" style="font-size:.75rem;">{{ r.level | default('A') }}</span></td>
+              <td>
+                {% set cl = r.conformance_level %}
+                <span class="{% if cl == 'Supports' %}conf-supports{% elif cl == 'Partially Supports' %}conf-partially-supports{% elif cl == 'Does Not Support' %}conf-does-not-support{% elif cl == 'Not Applicable' %}conf-not-applicable{% else %}conf-not-evaluated{% endif %}">
+                  {{ cl }}
+                </span>
+              </td>
+              <td>{{ ((r.confidence or 0) * 100) | round(1) }}%</td>
+              <td>{{ r.findings | length if r.findings else 0 }}</td>
+              <td>
+                <a href="/review/{{ meta.review_id }}/test/{{ r.criterion_id }}">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="mt-2 mb-3">
+      <a href="/">&larr; Back to Home</a>
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="container" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <img src="/static/icon.svg" alt="" width="20" height="20" style="height:20px;width:20px;border-radius:3px;">
+      <span>WCAG Trusted Tester v2.0.0</span>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

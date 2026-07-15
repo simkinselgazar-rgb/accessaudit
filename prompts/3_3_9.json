@@ -1,0 +1,68 @@
+{
+  "criterion_id": "3.3.9",
+  "criterion_name": "Accessible Authentication (Enhanced)",
+  "visual_checks": [
+    "Check if the login or authentication process requires memorizing or transcribing information",
+    "Look for CAPTCHAs that require cognitive function tests such as puzzles, math problems, or pattern recognition",
+    "Check if password entry supports paste functionality and password managers",
+    "Look for authentication steps that require recognizing or manipulating objects (e.g., image-based challenges)",
+    "Verify that authentication does not require recalling specific information like a username without autofill support",
+    "Check for any cognitive function test at any step of the authentication process"
+  ],
+  "pass_conditions": [
+    "Authentication does not require any cognitive function test at any step",
+    "Password fields support paste and autofill from password managers",
+    "Alternative authentication methods are available that do not require cognitive function tests (e.g., passkeys, email magic links, biometric authentication)",
+    "No CAPTCHAs, puzzles, or cognitive challenges are used at any point in authentication",
+    "Users can authenticate using assistive technology without performing memory, transcription, or recognition tasks"
+  ],
+  "fail_conditions": [
+    "A CAPTCHA or puzzle must be solved to authenticate, even if an alternative CAPTCHA type is offered",
+    "Users must transcribe or retype a code from one device or context to another",
+    "Password fields block paste functionality, preventing password manager use",
+    "Authentication requires recognizing previously chosen images or patterns (cognitive recognition test)",
+    "Any step of the authentication process requires a cognitive function test with no non-cognitive alternative"
+  ],
+  "na_conditions": [
+    "Page has no authentication, login, or account verification process"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "The full authentication flow could not be tested from the current page"
+  ],
+  "common_mistakes": [
+    "Image-based CAPTCHAs that require identifying objects (e.g., 'select all traffic lights') with no non-cognitive alternative",
+    "Blocking paste in password or verification code fields, defeating password managers",
+    "Requiring users to retype a code from an email or SMS without allowing paste",
+    "Security questions that require recalling personal information from memory",
+    "Two-factor authentication that requires manually transcribing a code rather than supporting autofill or push-based approval"
+  ],
+  "examples": {
+    "pass": "A login page supports username and password autofill from password managers, offers a passkey or magic link option, and has no CAPTCHA or cognitive challenge at any step of the authentication process",
+    "fail": "A login page requires solving a visual CAPTCHA puzzle (drag a piece to complete an image) and the password field has autocomplete='off' and blocks paste — users must both transcribe their password from memory and solve a cognitive test",
+    "partial": "The primary login supports password manager autofill and has no CAPTCHA, but the account recovery flow requires solving an image recognition CAPTCHA with no non-cognitive alternative"
+  },
+  "plain_meaning": "Same rule as SC 3.3.8 but stricter: object recognition and personal content are NO LONGER valid exceptions. Authentication must not require any cognitive function test unless an alternative method or an assistive mechanism (like password-manager support) is available.",
+  "scope_applies_to": [
+    "All the same authentication flows covered by SC 3.3.8",
+    "CAPTCHAs and puzzles at login",
+    "Memorized password and PIN requirements",
+    "Security questions requiring recall",
+    "Any cognitive challenge in the authentication path"
+  ],
+  "scope_does_not_apply_to": [
+    "Non-authentication user inputs",
+    "Biometric or hardware-token authentication",
+    "Magic-link email flows without additional cognitive steps",
+    "Flows where an alternative non-cognitive path is offered",
+    "Situations covered entirely by password-manager support"
+  ],
+  "borderline_calibration": [
+    "This is Level AAA and stricter than 3.3.8.",
+    "Object-recognition CAPTCHAs DO NOT satisfy this SC (unlike 3.3.8).",
+    "Personal content recognition also does not satisfy.",
+    "Only Alternative method or Mechanism (password-manager support etc.) satisfies.",
+    "Prefer Not Applicable outside AAA reviews."
+  ]
+}

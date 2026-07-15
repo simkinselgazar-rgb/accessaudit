@@ -1,0 +1,55 @@
+{
+  "criterion_id": "DOC-1.3.1-HEADINGS",
+  "criterion_name": "Heading Structure (Documents)",
+  "visual_checks": [
+    "CRITICAL — VISUAL-TO-STRUCTURE COMPARISON: Look at the document and identify every piece of text that visually appears to be a heading (larger font, bold, different color, separated from body text). Then verify each one is tagged or styled as a proper heading, not just visually formatted.",
+    "Scan for text that is bold and/or larger than surrounding body text — does it use a built-in heading style (Heading 1, Heading 2, etc.) or is it just manually formatted?",
+    "Check the heading hierarchy: does the document start with H1, then use H2 for subsections, H3 for sub-subsections, and so on without skipping levels?",
+    "In PDFs, check the tag tree: are headings tagged as <H1>, <H2>, <H3>, etc., or are they tagged as <P> with bold formatting?",
+    "In DOCX, check whether heading styles from the Styles gallery are used, not manual formatting (bold + larger font size on Normal style).",
+    "In PPTX, check that slide titles use the built-in Title placeholder, not a generic text box with large bold text.",
+    "Verify there are no empty headings (heading tags or styles applied to blank lines or spaces).",
+    "Look for the document title — it should be the highest-level heading (H1) or set as the document title in properties."
+  ],
+  "pass_conditions": [
+    "All text that visually functions as a heading uses the appropriate built-in heading style or tag (H1-H6)",
+    "Heading levels follow a logical hierarchy without skipping levels (e.g., H1 followed by H2, not H1 followed by H3)",
+    "The document has at least one top-level heading (H1) that identifies the document or main topic",
+    "In PDFs, headings are tagged with the correct <H1>-<H6> tags in the tag tree",
+    "In DOCX files, Heading 1 through Heading 6 styles from the Styles gallery are used consistently",
+    "In PPTX files, slide titles use the built-in Title placeholder",
+    "No empty heading tags or styles are present"
+  ],
+  "fail_conditions": [
+    "Text that visually looks like a heading (bold, large, separated) is not tagged or styled as a heading — it uses body/normal/paragraph formatting with manual bold and font size changes",
+    "Heading levels are skipped (e.g., H1 jumps directly to H3 with no H2 in between)",
+    "The document has no headings at all despite having multiple sections or topics",
+    "All headings are the same level (e.g., everything is H2) despite a clear visual hierarchy of sections and subsections",
+    "In PDFs, text that looks like headings is tagged as <P> instead of <H1>-<H6>",
+    "In PPTX, slide titles are in generic text boxes rather than the Title placeholder",
+    "Heading styles are applied to non-heading content (e.g., body paragraphs styled as Heading 2 to make them bold)",
+    "Empty headings exist (heading style applied to blank lines)"
+  ],
+  "na_conditions": [
+    "Document is a single short paragraph with no sections, subsections, or content that would logically require headings",
+    "Document is a simple form or single-page certificate with no hierarchical structure"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Document could not be opened or its heading structure could not be inspected",
+    "Document format does not support heading styles or tags"
+  ],
+  "common_mistakes": [
+    "Making text bold and large to look like a heading without applying a heading style — this is the most common document accessibility failure",
+    "Using Heading 1 for the title, then jumping to Heading 3 for subsections because the author preferred the visual style of Heading 3",
+    "Applying heading styles for visual effect on text that is not actually a heading (e.g., styling a quote as Heading 3 because it looks good)",
+    "Using all caps and bold on Normal-styled text instead of applying a heading style",
+    "In PPTX, deleting the Title placeholder and replacing it with a text box — the slide then has no programmatic title",
+    "Starting every page or section with H1 instead of using H1 once for the document title and H2 for top-level sections"
+  ],
+  "examples": {
+    "pass": "A Word document uses Heading 1 for the document title, Heading 2 for each major section, and Heading 3 for subsections. The navigation pane shows the full heading outline matching the visual structure.",
+    "fail": "A Word document has text that looks like headings — bold, 16pt, with space above — but every paragraph uses the Normal style. The navigation pane is empty because no heading styles are applied. A screen reader user cannot jump between sections.",
+    "partial": "A PDF has some headings properly tagged as <H1> and <H2>, but three section headings on pages 5-7 are tagged as <P> with bold text, breaking the navigable heading structure."
+  }
+}

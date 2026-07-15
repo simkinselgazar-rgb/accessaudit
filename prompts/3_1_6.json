@@ -1,0 +1,67 @@
+{
+  "criterion_id": "3.1.6",
+  "criterion_name": "Pronunciation",
+  "visual_checks": [
+    "Look for words that are ambiguous in meaning without knowing their pronunciation (e.g., homographs like 'lead', 'bow', 'tear')",
+    "Check if pronunciation guides, phonetic spellings, or audio clips are provided for ambiguous words",
+    "Look for proper nouns, foreign words, or technical terms whose pronunciation affects understanding",
+    "Check if the page links to a pronunciation guide or glossary with phonetic information",
+    "Look for ruby annotation (used in East Asian languages) or similar inline pronunciation aids",
+    "Identify words where meaning changes based on stress or pronunciation that could cause confusion"
+  ],
+  "pass_conditions": [
+    "Ambiguous words have pronunciation information provided inline, via links, or through audio clips",
+    "A pronunciation glossary is available and linked for words whose meaning depends on pronunciation",
+    "Phonetic spelling or IPA notation is provided for words that could be misinterpreted",
+    "Audio pronunciations are available for key ambiguous terms",
+    "Ruby annotations or similar mechanisms are used for languages where pronunciation guides reading"
+  ],
+  "fail_conditions": [
+    "Homographs are used in contexts where pronunciation determines meaning with no pronunciation aid",
+    "Foreign words or proper nouns critical to understanding are presented without pronunciation guidance",
+    "No mechanism exists to determine the correct pronunciation of ambiguous words on the page",
+    "Words whose meaning changes with pronunciation are used with no contextual or explicit disambiguation"
+  ],
+  "na_conditions": [
+    "Page content contains no words whose meaning is ambiguous without knowing the pronunciation",
+    "All words on the page have only one pronunciation regardless of context"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Ambiguous pronunciation words could not be reliably identified in the content"
+  ],
+  "common_mistakes": [
+    "Using homographs like 'lead' (to guide vs. a metal) without providing context or pronunciation cues",
+    "Foreign language terms embedded in content without pronunciation aids for the target audience",
+    "Assuming all readers will know the intended pronunciation from context alone",
+    "Providing pronunciation in a glossary that is not linked from the pages using the ambiguous words",
+    "Technical terms from other languages used in academic content without phonetic guidance"
+  ],
+  "examples": {
+    "pass": "A language arts page discussing the word 'bass' provides inline phonetic notation — 'bass (/baes/, a type of fish)' and 'bass (/beIs/, a low musical tone)' — to distinguish the two meanings",
+    "fail": "A music education page uses the word 'bow' multiple times where it could mean a violin bow (/boʊ/) or a bow of the head (/baʊ/), with no pronunciation guide or contextual clarification",
+    "partial": "Some ambiguous words have inline pronunciation guides but several homographs later in the content lack any pronunciation mechanism, relying solely on surrounding context"
+  },
+  "plain_meaning": "Where the meaning of a word depends on how it is pronounced (for example heteronyms, tonal distinctions, or foreign proper names whose reading is unclear), some mechanism must be available to identify the intended pronunciation. This can be inline phonetic markup, ruby annotations, a linked pronunciation guide, or an audio sample.",
+  "scope_applies_to": [
+    "Heteronyms whose meaning differs by pronunciation",
+    "Tonal-language content where tone changes meaning",
+    "Proper names or terms whose pronunciation is essential to meaning",
+    "Educational content where pronunciation is part of the lesson",
+    "Ruby annotations, phonetic spellings, or linked audio pronunciations"
+  ],
+  "scope_does_not_apply_to": [
+    "Words whose meaning is unambiguous from context alone",
+    "General language-identification issues (SC 3.1.1 / 3.1.2)",
+    "Ordinary unusual words that do not depend on pronunciation for meaning",
+    "Styling, fonts, or visual presentation of text",
+    "Captions and subtitles for media"
+  ],
+  "borderline_calibration": [
+    "This SC is Level AAA and is Not Applicable for most content.",
+    "Only flag when a pronunciation ambiguity is concretely present in the text AND no mechanism is offered.",
+    "A single linked pronunciation guide or audio is enough.",
+    "When unsure whether context disambiguates, prefer Not Applicable."
+  ]
+}

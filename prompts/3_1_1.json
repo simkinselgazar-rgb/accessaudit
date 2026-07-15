@@ -1,0 +1,69 @@
+{
+  "criterion_id": "3.1.1",
+  "criterion_name": "Language of Page",
+  "visual_checks": [
+    "Look at the page content — what human language is the visible text written in? Is it English, Spanish, French, etc.?",
+    "Check the programmatic data for the <html> element — does it have a lang attribute? Does the lang value match the actual language of the page content?",
+    "If the page appears to be in English, verify the lang attribute is 'en' or 'en-US' (not 'fr', 'de', or missing entirely)",
+    "Look for pages that contain mixed languages — identify which language is the PRIMARY language used for the majority of the content",
+    "Check if the lang attribute uses a valid BCP 47 language tag (e.g., 'en', 'fr', 'es', 'zh-Hans') rather than an invented or misspelled value"
+  ],
+  "pass_conditions": [
+    "The <html> element has a lang attribute that correctly identifies the default human language of the page",
+    "The lang value is a valid BCP 47 language tag (e.g., 'en', 'fr', 'es-MX', 'zh-Hans')",
+    "The lang value matches the primary language actually used in the page content",
+    "For multilingual pages, the lang attribute reflects the dominant language of the page"
+  ],
+  "fail_conditions": [
+    "The <html> element has no lang attribute at all",
+    "The lang attribute is present but empty (lang='')",
+    "The lang attribute specifies the wrong language (e.g., lang='fr' on an English page)",
+    "The lang attribute uses an invalid or non-existent language code (e.g., lang='english', lang='xx')",
+    "The lang attribute is placed on the <body> element instead of the <html> element"
+  ],
+  "na_conditions": [
+    "Page contains no human-readable text content (e.g., a page that is solely a media player with no text)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "The page DOM could not be captured to inspect the <html> element's lang attribute",
+    "The page language cannot be confidently determined from the available content"
+  ],
+  "common_mistakes": [
+    "Omitting the lang attribute entirely from the <html> element — screen readers will guess the language, often incorrectly",
+    "Using an incorrect language code (e.g., 'en' on a page written entirely in German)",
+    "Using 'en' as a default when the page content is actually in another language",
+    "Using a region subtag that does not exist (e.g., 'en-UK' instead of the correct 'en-GB')",
+    "Placing the lang attribute on <body> instead of <html>, which does not satisfy this criterion",
+    "Using the full language name instead of the code (e.g., lang='English' instead of lang='en')"
+  ],
+  "examples": {
+    "pass": "An English-language page has <html lang='en'> — screen readers know to use English pronunciation rules",
+    "fail": "A Spanish-language page has <html> with no lang attribute — screen readers default to the user's system language and mispronounce all the Spanish text",
+    "partial": "The page has <html lang='en'> but the actual page content is a mix of English and French with French being dominant — the lang should be 'fr' with English passages marked up with lang='en'"
+  },
+  "plain_meaning": "Every web page must declare its primary (default) human language in a way that software can read. In HTML this means a valid lang attribute on the root html element (for example lang=\"en\"). The point is so that screen readers, translation tools, and browsers can pronounce, interpret, and present the content using the correct language profile. It applies to the overall page language, not to every phrase on the page.",
+  "scope_applies_to": [
+    "The root html element of every HTML page",
+    "The default human language declaration for the page as a whole",
+    "Pages served as any HTML document, including single-page apps once the root has rendered",
+    "XML-based web content where the equivalent xml:lang is required",
+    "Iframes hosting their own documents (each iframed document needs its own lang)",
+    "PDF and other non-HTML documents that have an equivalent language-metadata mechanism"
+  ],
+  "scope_does_not_apply_to": [
+    "Inline language switches inside the page (that is SC 3.1.2)",
+    "Accessible name quality or translation accuracy of any text",
+    "Font, script, or directionality issues",
+    "Declaring a regional dialect precisely (a valid primary subtag is enough)",
+    "Content inserted after page load where the root lang is already correct",
+    "Images of text or captions (their language concerns belong elsewhere)"
+  ],
+  "borderline_calibration": [
+    "A present, valid primary language subtag on the html element is a PASS, even if the subtag is broad (for example lang=\"en\" instead of lang=\"en-US\").",
+    "Missing lang attribute entirely is a FAIL.",
+    "Empty lang=\"\" or an invalid subtag (for example lang=\"english\") is a FAIL.",
+    "If the declared language obviously does not match the visible content language (for example lang=\"en\" on an entirely Spanish page), FAIL.",
+    "Do not flag minor region-code omissions if the primary language is correct."
+  ]
+}

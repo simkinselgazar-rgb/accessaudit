@@ -1,0 +1,67 @@
+{
+  "criterion_id": "3.1.4",
+  "criterion_name": "Abbreviations",
+  "visual_checks": [
+    "Scan the page for abbreviations, acronyms, and initialisms",
+    "Check if the first occurrence of each abbreviation is expanded (e.g., 'World Wide Web Consortium (W3C)')",
+    "Look for abbr elements with title attributes that provide the expanded form",
+    "Check if a glossary or abbreviation list is provided and linked from the page",
+    "Look for abbreviations that are used without ever being expanded or defined",
+    "Identify abbreviations that could have multiple meanings in different contexts"
+  ],
+  "pass_conditions": [
+    "Every abbreviation is expanded on first use in the content (e.g., 'HyperText Markup Language (HTML)')",
+    "The abbr element with a title attribute is used to provide the expanded form of abbreviations",
+    "A glossary or abbreviation list is available and linked that covers all abbreviations on the page",
+    "Abbreviations with multiple possible meanings are clarified in context",
+    "At least one mechanism is provided to identify the expanded form of every abbreviation"
+  ],
+  "fail_conditions": [
+    "Abbreviations are used without ever providing their expanded form",
+    "The expanded form is provided only deep within the site and not accessible from the current page",
+    "abbr elements are used but lack title attributes with the expansion",
+    "Common abbreviations in the domain are assumed to be universally known without expansion",
+    "No mechanism exists to determine what an abbreviation stands for"
+  ],
+  "na_conditions": [
+    "Page contains no abbreviations, acronyms, or initialisms"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Abbreviations could not be reliably identified in the page content"
+  ],
+  "common_mistakes": [
+    "Expanding an abbreviation only on the homepage but not on subpages where it also appears",
+    "Using abbr elements without title attributes, providing no actual expansion",
+    "Assuming common abbreviations like 'FAQ' or 'PDF' need no expansion for all audiences",
+    "Providing expansions in a glossary that is not linked or discoverable from the current page",
+    "Expanding abbreviations in body text but not in navigation, headings, or form labels"
+  ],
+  "examples": {
+    "pass": "The page expands 'WCAG' as 'Web Content Accessibility Guidelines (WCAG)' on first use, and all subsequent instances use the abbr element with title='Web Content Accessibility Guidelines'",
+    "fail": "The page uses 'ARIA', 'WCAG', 'AT', and 'DOM' repeatedly without ever expanding them or providing a linked glossary — users unfamiliar with these abbreviations cannot determine their meaning",
+    "partial": "Most abbreviations are expanded on first use, but three abbreviations introduced in a sidebar widget are never expanded and no abbr elements are used for them"
+  },
+  "plain_meaning": "Abbreviations and acronyms used in the content must have some mechanism available that reveals their expanded form or intended meaning. This can be the first-occurrence expansion, an abbr element with a title, a glossary, or any other available mechanism.",
+  "scope_applies_to": [
+    "Abbreviations whose expansion affects understanding",
+    "Acronyms and initialisms used in the content",
+    "Shortened forms of organization or program names",
+    "Domain-specific abbreviations in technical or academic content",
+    "First and subsequent occurrences of abbreviations in running text"
+  ],
+  "scope_does_not_apply_to": [
+    "Abbreviations whose meaning is universally known in the content's context",
+    "Units of measurement that are standard (for example kg, cm)",
+    "Proper names that are formally abbreviated (for example a company whose legal name is the abbreviation)",
+    "Words with internal capitalization that are not abbreviations",
+    "Pronunciation of the abbreviation (that is SC 3.1.6)"
+  ],
+  "borderline_calibration": [
+    "Any one mechanism is enough: abbr title, inline expansion at first use, or a glossary.",
+    "Do not require every subsequent occurrence to be re-expanded once a mechanism is available.",
+    "PASS when the expansion is present in the same paragraph or nearby.",
+    "FAIL only when abbreviations are genuinely used AND no expansion mechanism of any kind is offered."
+  ]
+}

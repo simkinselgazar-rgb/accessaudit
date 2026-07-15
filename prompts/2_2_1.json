@@ -1,0 +1,81 @@
+{
+  "criterion_id": "2.2.1",
+  "criterion_name": "Timing Adjustable",
+  "visual_checks": [
+    "Look for session timeout warnings, countdown timers, or 'your session will expire' notifications visible on the page or in the screenshot sequence",
+    "Check for auto-advancing content such as rotating carousels with a visible timer, news tickers, or slideshow countdowns",
+    "Look for timed form submissions — indicators like 'You have X minutes to complete this form' or countdown displays",
+    "Identify auto-refreshing content areas or pages with meta refresh indicators",
+    "Look for auction-style or real-time bidding interfaces with time-limited actions",
+    "Check for any visible mechanism to extend, adjust, or turn off time limits (e.g., 'Need more time?' link, timeout settings, pause button on auto-advancing content)",
+    "Look for login pages or authenticated areas that might enforce session timeouts",
+    "Check for timed assessments, quizzes, or surveys with visible timer elements"
+  ],
+  "pass_conditions": [
+    "No time limits are imposed on user interaction with the page content",
+    "Time limits that exist provide a mechanism to turn off the time limit before it starts",
+    "Time limits that exist allow the user to adjust the duration to at least 10 times the default",
+    "Time limits that exist warn the user at least 20 seconds before expiration and allow extending with a simple action (e.g., pressing a key or clicking a button), and this extension can be done at least 10 times",
+    "The time limit is part of a real-time event (live auction, live broadcast) where no alternative to the time limit is possible",
+    "The time limit is essential (timed exam where timing is a core requirement) and no alternative exists",
+    "The time limit exceeds 20 hours"
+  ],
+  "fail_conditions": [
+    "A session timeout occurs with no prior warning and no option to extend",
+    "A countdown timer enforces a time limit with no mechanism to turn it off, adjust it, or extend it",
+    "Auto-advancing content (carousel, slideshow, rotating banner) moves on a timer with no pause, stop, or speed adjustment control",
+    "A form has a time limit that causes data loss when exceeded, with no warning or extension option",
+    "The page auto-refreshes or redirects after a set period with no way to prevent or delay the refresh",
+    "A session timeout warning appears but provides fewer than 20 seconds to respond, or extension is limited to fewer than 10 times"
+  ],
+  "na_conditions": [
+    "Page has no time-limited interactions — content is static with no timers, auto-refresh, auto-advance, or session timeout mechanisms"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots and tab walk data cannot reveal server-side session timeouts or JavaScript timers not yet triggered during the test",
+    "The testing window was too short to observe time-limited behavior that may occur after a longer period"
+  ],
+  "common_mistakes": [
+    "Session timeouts that silently redirect to a login page without warning, losing unsaved form data",
+    "Carousel or slideshow auto-rotation with no visible pause control",
+    "Meta refresh tags that reload the page on a timer with no user control",
+    "Form submission deadlines that provide a timer but no extension mechanism",
+    "Timeout warnings that appear for only a few seconds and dismiss automatically before the user can respond",
+    "Auto-updating content (stock tickers, sports scores) that refreshes the entire page rather than just the dynamic region",
+    "Session extension dialogs that are not keyboard accessible, effectively trapping keyboard users when the timeout occurs"
+  ],
+  "examples": {
+    "pass": "A banking site displays a warning 60 seconds before session timeout: 'Your session will expire in 60 seconds. Press any key or click Continue to stay logged in.' The user can extend the session up to 10 times by clicking Continue.",
+    "fail": "An online exam has a 30-minute timer displayed at the top. When time expires, the form is submitted automatically with no prior warning and no option to extend the time. A user with a motor disability who needs extra time cannot complete the exam.",
+    "partial": "A session timeout warning appears, but it auto-dismisses after only 10 seconds without user action, and the user is then immediately logged out. The warning exists but does not provide adequate time to respond."
+  },
+  "plain_meaning": "Whenever the page sets a time limit, the user must be able to turn it off, adjust it to at least 10x the default, or extend it with a simple action after a warning. The intent is that users who need more time (reading, motor, cognitive) are not locked out by arbitrary deadlines.",
+  "scope_applies_to": [
+    "Session timeouts that log the user out or discard data",
+    "Form-submission deadlines imposed by the page",
+    "Carousels or auto-advancing content that removes readable content after a time",
+    "Timed quizzes, surveys, or interactive tests set by the content",
+    "Any countdown that, when it expires, changes or removes content or functionality"
+  ],
+  "scope_does_not_apply_to": [
+    "Real-time events where timing is essential (live auctions, live broadcasts)",
+    "Timing that is essential to the activity and cannot be changed without invalidating it",
+    "Time limits longer than 20 hours",
+    "Moving or auto-updating visual content (that is SC 2.2.2)",
+    "Session expiration solely for security, when extending would invalidate the security (user must still be warned -- see 2.2.5/2.2.6)",
+    "Timing between individual keystrokes (that is SC 2.1.1)"
+  ],
+  "borderline_calibration": [
+    "If no time limit exists on the page, this SC is N/A.",
+    "A session timeout with a warning and an Extend Session button satisfies the extend option.",
+    "Essential timing (live auction bidding) is exempt -- do not flag.",
+    "A carousel that auto-advances is evaluated under 2.2.2, not here, unless it imposes a true deadline that blocks user action.",
+    "Script-level detection of timeout keywords is a weak signal — many third-party scripts (analytics, consent managers, ad platforms) contain \"session\" and \"timeout\" in their code without implementing user-facing time limits. Require visual or behavioral evidence before flagging."
+  ],
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging a session timeout based solely on detecting timeout-related keywords (\"session\", \"expire\", \"auto-logout\") in JavaScript source code. Many sites include analytics, cookie-consent, or third-party scripts that contain these keywords without implementing actual session timeouts that affect user interaction. Only flag a timeout if you can see evidence of it firing — a warning dialog, a redirect, a countdown, or observable timing behavior. Script keyword detection alone is insufficient evidence.",
+    "FALSE POSITIVE: claiming a carousel auto-advances under 2.2.1 when the carousel behavior belongs to SC 2.2.2 (Pause, Stop, Hide). Only flag carousel timing under 2.2.1 if the carousel imposes a deadline that blocks user action or causes data loss when time expires.",
+    "GROUND TRUTH: if the programmatic data reports a \"session timeout mechanism detected\" but the screenshots and video show no timeout warnings, no countdown, and no redirect, set conformance_level to Not Evaluated with insufficient_evidence_reason explaining that the timeout could not be verified from the available evidence. Do NOT fabricate a failure based on unverified script detection."
+  ]
+}

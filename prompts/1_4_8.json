@@ -1,0 +1,79 @@
+{
+  "criterion_id": "1.4.8",
+  "criterion_name": "Visual Presentation",
+  "visual_checks": [
+    "Check if the user can select foreground and background colors for blocks of text",
+    "Verify that text blocks are no wider than 80 characters (or 40 characters for CJK scripts)",
+    "Check that text is not fully justified (aligned to both left and right margins)",
+    "Verify that line spacing (leading) is at least 1.5 times the font size within paragraphs",
+    "Check that paragraph spacing is at least 1.5 times the line spacing",
+    "Look for a mechanism to resize text up to 200% without requiring horizontal scrolling to read a line of text"
+  ],
+  "pass_conditions": [
+    "A mechanism is provided for users to select foreground and background colors of text blocks",
+    "Text block widths do not exceed 80 characters (40 for CJK scripts)",
+    "Text is not fully justified (text is left-aligned, right-aligned, or centered rather than justified on both sides)",
+    "Line spacing within paragraphs is at least 1.5 times the font size",
+    "Spacing between paragraphs is at least 1.5 times the line spacing",
+    "Text can be resized up to 200% without the user needing to scroll horizontally to read a full line"
+  ],
+  "fail_conditions": [
+    "No mechanism exists for users to change foreground and background text colors",
+    "Text blocks exceed 80 characters in width (40 for CJK), creating overly long lines",
+    "Text is fully justified, causing uneven spacing between words",
+    "Line spacing is less than 1.5 times the font size, making text dense and hard to track",
+    "Paragraph spacing is less than 1.5 times the line spacing",
+    "Resizing text to 200% requires horizontal scrolling to read a complete line"
+  ],
+  "na_conditions": [
+    "Page contains no blocks of text (e.g., pages with only images or interactive controls)",
+    "Page content is not primarily text-based"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Page styles failed to load so visual presentation cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Using text-align: justify on paragraphs, creating rivers of white space that make reading difficult",
+    "Fixed-width layouts that cause horizontal scrolling when text is resized to 200%",
+    "No user-facing mechanism to change foreground and background colors (relying solely on browser settings is insufficient)",
+    "Line height set to exactly 1.0 or less, creating densely packed text",
+    "Paragraph margins set to zero, making paragraphs visually indistinguishable",
+    "Content containers wider than 80 characters at default text size, creating long reading lines"
+  ],
+  "examples": {
+    "pass": "A page uses max-width to limit text blocks to 80 characters, sets line-height: 1.5 and paragraph margins to 1.5x the line height, avoids text-align: justify, and provides a style switcher for users to customize text and background colors",
+    "fail": "A page has full-width text blocks exceeding 120 characters per line, uses text-align: justify, has line-height: 1.2, and offers no mechanism for users to change text or background colors",
+    "partial": "Text blocks are correctly limited in width and line spacing is adequate, but the page uses text-align: justify on some sections and provides no color customization mechanism"
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging contrast/color of elements that are not visible to sighted users. Bootstrap '.visually-hidden' / '.sr-only' (and the older '.screen-reader-text', '.visuallyhidden') are CSS utility classes that clip the element to a 1px box and remove it from the visual layout while leaving it in the accessibility tree. The element is intentionally only readable by screen readers -- it is not rendered to the screen at all -- so visual rules like color contrast, font size, and luminance ratios DO NOT APPLY. Before flagging text or a control for contrast, check whether the element (or any ancestor) carries one of these utility classes or an equivalent clip:rect(0,0,0,0)/position:absolute/width:1px/height:1px pattern. If it does, do NOT report a contrast finding -- there is no rendered pixel to measure.",
+    "Do NOT flag the absence of an on-page mechanism (a color picker, a spacing/line-length control) as a failure. SC 1.4.8's mechanism requirement is satisfied by the user agent and user stylesheets whenever the content does not actively PREVENT them. A page fails this part only if it locks presentation against user override (e.g. !important inline color/spacing locks). 'The page has no built-in customization widget' is NOT a 1.4.8 failure.",
+    "SC 1.4.8 applies ONLY to blocks of text -- multi-sentence prose paragraphs. Navigation menus, calendars, news headlines, link lists, buttons, card snippets, and short UI strings are NOT blocks of text. If the page has no substantial prose paragraphs, this criterion is Not Applicable -- do not assemble a Does Not Support verdict out of non-prose UI elements.",
+    "Do NOT let contradictory per-batch reasoning net into a failure. If your evaluation of different page regions concludes Not Applicable for the prose-bearing parts, the criterion verdict is Not Applicable -- a verdict is not a vote count across UI fragments."
+  ],
+  "plain_meaning": "For blocks of text (multi-sentence prose), a mechanism must let users achieve user-friendly presentation: selectable foreground/background colors, line length at most 80 characters, no full justification, line spacing at least 1.5, paragraph spacing at least 1.5x line spacing, and the ability to resize text to 200% without requiring horizontal scrolling. The mechanism may be a built-in page feature or a user-agent/user-stylesheet capability the content does not prevent.",
+  "scope_applies_to": [
+    "Blocks of body copy, articles, documentation, and long-form prose",
+    "Multi-paragraph content in main content regions",
+    "Long descriptive passages in help, policy, and explanation pages",
+    "Any rendered prose where reading continuity matters"
+  ],
+  "scope_does_not_apply_to": [
+    "Short labels, menu items, button text, and isolated UI strings (not blocks of text)",
+    "Visually-hidden / sr-only text (no rendered block to style)",
+    "Elements removed from the accessibility tree (aria-hidden, display:none)",
+    "Captions in video, headings, and image captions",
+    "Code samples and preformatted blocks where layout is essential",
+    "Tabular data (has its own layout constraints)",
+    "Contrast ratios of individual text (that is SC 1.4.3 / 1.4.6)"
+  ],
+  "borderline_calibration": [
+    "Level AAA; apply only during AAA evaluation.",
+    "Full justification (text-align: justify) on blocks of text is a failure.",
+    "Line length longer than 80 characters is a failure for prose blocks unless a mechanism exists to narrow it.",
+    "Line-height below 1.5 on prose blocks is a failure.",
+    "Do NOT evaluate isolated UI strings or menu items as blocks of text."
+  ]
+}

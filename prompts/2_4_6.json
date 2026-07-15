@@ -1,0 +1,70 @@
+{
+  "criterion_id": "2.4.6",
+  "criterion_name": "Headings and Labels",
+  "visual_checks": [
+    "Read each heading on the page — does it clearly describe the content of the section it introduces?",
+    "Look for headings that are vague or generic (e.g., 'Section 1', 'Details', 'Info') that do not help users understand the topic",
+    "Examine form labels — does each label clearly describe what input is expected (e.g., 'Email address' vs just 'Input')?",
+    "Check if groups of related form fields have descriptive group labels (fieldset/legend) that clarify the relationship",
+    "Look for duplicate headings at the same level that could confuse users about which section they are in",
+    "Verify that headings and labels are sufficiently descriptive to distinguish different sections or fields from each other"
+  ],
+  "pass_conditions": [
+    "All headings are descriptive and clearly convey the topic or purpose of their section",
+    "Form labels clearly describe the expected input and are specific enough to distinguish one field from another",
+    "Headings at the same level are unique or differentiated so users can distinguish sections",
+    "Group labels (fieldset/legend) for related fields describe the group purpose (e.g., 'Shipping Address' for a set of address fields)",
+    "Labels for similar fields are differentiated (e.g., 'Billing ZIP Code' vs 'Shipping ZIP Code' rather than two fields both labeled 'ZIP Code')"
+  ],
+  "fail_conditions": [
+    "Headings are vague or non-descriptive (e.g., 'Untitled', 'Section', 'Click Here', 'More')",
+    "Form labels are missing, generic (e.g., 'Field 1', 'Enter text'), or do not describe the expected input",
+    "Multiple identical headings are used for different content sections (e.g., three sections all headed 'Details')",
+    "Form fields have identical labels with no way to distinguish them (e.g., two 'Name' fields for billing and shipping with no group label)",
+    "Headings do not match the content of the section they introduce"
+  ],
+  "na_conditions": [
+    "Page contains no headings and no form labels (purely plain text content with no structure or interactive fields)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Page DOM could not be captured to verify heading and label elements",
+    "Screenshots could not be captured to verify visual heading and label presentation"
+  ],
+  "common_mistakes": [
+    "Using generic heading text like 'Overview' or 'Details' on multiple pages without page-specific context",
+    "Form labels that use technical jargon or abbreviations users may not understand (e.g., 'DOB' instead of 'Date of Birth')",
+    "Address form sections with identical field labels (City, State, ZIP) for both billing and shipping with no group label to distinguish them",
+    "Headings that describe formatting rather than content (e.g., 'Important' or 'Note' without indicating the topic)",
+    "Placeholder text used as the only descriptive label (it disappears on input and is not a reliable label)",
+    "Labels that describe the field type instead of its purpose (e.g., 'Text field' or 'Dropdown' instead of 'Country')"
+  ],
+  "examples": {
+    "pass": "A form has clearly labeled fields — 'First Name', 'Last Name', 'Email Address', 'Phone Number' — and address fields are grouped under a 'Shipping Address' legend, with page sections headed by descriptive headings like 'Order Summary' and 'Payment Method'",
+    "fail": "A page has three sections all with the heading 'Information', form fields labeled only as 'Field 1', 'Field 2', 'Field 3', and a group of radio buttons with no legend explaining what the options represent",
+    "partial": "Most headings are descriptive ('Product Features', 'Customer Reviews') but two sections both have the heading 'Details', and a multi-part form has two 'Email' fields with no group labels to indicate one is for the account holder and one is for an emergency contact"
+  },
+  "plain_meaning": "When headings and form labels exist, their text must describe the topic of the section they introduce or the purpose of the control they label. This is about the quality of the wording, not whether headings or labels exist at all. A user skimming headings or hearing labels read aloud should be able to understand what each section or control is for.",
+  "scope_applies_to": [
+    "Text content of heading elements and elements with role=heading",
+    "Text content of visible form labels associated with controls",
+    "Accessible names of form controls when used as their label",
+    "Section headings that introduce blocks of content",
+    "Group labels for fieldsets and related control groupings"
+  ],
+  "scope_does_not_apply_to": [
+    "Whether headings exist at all for content sections (that relates to SC 1.3.1)",
+    "Whether heading levels form a correct hierarchy (that is SC 1.3.1)",
+    "Whether form controls have any label at all (that is SC 3.3.2 and SC 4.1.2)",
+    "Visual styling, size, or color of headings and labels",
+    "Link text quality (that is SC 2.4.4 / 2.4.9)",
+    "Placeholder text used as a visual hint"
+  ],
+  "borderline_calibration": [
+    "Headings and labels only need to be descriptive enough to convey topic or purpose; they need not be unique or maximally verbose.",
+    "A short label like 'Email' is descriptive for an email field; do not demand 'Your email address here'.",
+    "Only flag generic or misleading wording like 'Section 1', 'Field', 'Info' when it genuinely fails to indicate topic or purpose.",
+    "If the element has no heading or no label at all, that belongs to a different SC.",
+    "Judge by the text that reaches assistive technology, not by visual decoration."
+  ]
+}

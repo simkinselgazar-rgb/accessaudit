@@ -1,0 +1,70 @@
+{
+  "criterion_id": "1.4.7",
+  "criterion_name": "Low or No Background Audio",
+  "visual_checks": [
+    "Look for prerecorded audio content that primarily contains speech (podcasts, narration, voice-over)",
+    "Listen for background music, ambient sounds, or noise behind the speech",
+    "Check if background audio levels are noticeably quieter than the foreground speech (at least 20dB lower)",
+    "Look for an option to turn off background audio independently of the foreground speech",
+    "Check if the audio content is purely musical with no speech (this criterion would not apply)",
+    "Verify that background sounds do not include repeating tones or patterns that could interfere with speech comprehension"
+  ],
+  "pass_conditions": [
+    "Background sounds in prerecorded speech audio are at least 20dB lower than the foreground speech content",
+    "An option is available to turn off background audio independently",
+    "The audio contains no background sounds at all (speech only)",
+    "Background audio is limited to occasional brief sounds (1-2 seconds) that do not interfere with speech comprehension"
+  ],
+  "fail_conditions": [
+    "Prerecorded speech audio has background music or sounds that are not at least 20dB below the speech level",
+    "Background audio competes with foreground speech, making it difficult to distinguish words",
+    "No option to disable background sounds independently of the speech",
+    "Continuous background music or ambient noise runs throughout the speech at levels close to the speech volume"
+  ],
+  "na_conditions": [
+    "Page contains no prerecorded audio content with speech",
+    "Audio content is purely musical with no speech (e.g., a music player)",
+    "Audio content consists only of a musical or audio logo lasting a few seconds",
+    "The audio is live rather than prerecorded"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Audio content could not be loaded or played for evaluation"
+  ],
+  "common_mistakes": [
+    "Adding background music to narration or podcasts at levels that compete with speech",
+    "Background ambient sounds (office noise, nature sounds) that are too loud relative to the speaker",
+    "No mechanism to mute or lower background audio independently from the main speech",
+    "Audio mixing where background levels are acceptable in quiet sections but too loud during softer speech passages",
+    "Assuming that providing captions eliminates the need to manage background audio levels"
+  ],
+  "examples": {
+    "pass": "A podcast episode features narration with no background music, and brief sound effects are at least 20dB below the speech level",
+    "fail": "A training video narration plays over continuous background music that is only 10dB below the speech level, making it hard for users with hearing difficulties to distinguish words",
+    "partial": "Most of the audio narration has appropriately low background levels, but the introduction and outro sections have background music nearly as loud as the speech"
+  },
+  "plain_meaning": "For prerecorded audio that is primarily foreground speech (not music, not CAPTCHAs, not audio logos), background noise should be low enough that a user with mild hearing loss can clearly distinguish the speech. Satisfied by having no background, allowing the user to turn off background, or keeping background audio at least 20 dB quieter than the speech.",
+  "scope_applies_to": [
+    "Prerecorded narration, interviews, and lectures",
+    "Podcasts where speech is the primary content",
+    "Audio segments of videos where speech dominates and background is present",
+    "Corporate or educational recordings with speech over music beds"
+  ],
+  "scope_does_not_apply_to": [
+    "Live audio content",
+    "Audio CAPTCHAs",
+    "Audio logos or brand sound marks",
+    "Musical performances, singing, rapping, or vocalizations that are primarily musical expression",
+    "Content with no background audio at all (trivially passes)",
+    "Video captions and audio description (those belong to SC 1.2.x)",
+    "Elements removed from the accessibility tree"
+  ],
+  "borderline_calibration": [
+    "This is Level AAA; apply only during AAA evaluation.",
+    "If the content has no background audio behind the speech, it PASSES.",
+    "Background music at conversational levels under speech is a failure unless a mechanism to disable it exists or the 20 dB gap is maintained.",
+    "Musical content (songs) is exempt entirely.",
+    "When unsure, note the exemption categories before flagging."
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "criterion_id": "3.3.7",
+  "criterion_name": "Redundant Entry",
+  "visual_checks": [
+    "Look for multi-step forms or processes where the user may need to re-enter information they already provided",
+    "Check checkout flows — is the billing address pre-populated from the shipping address with a 'Same as shipping' option?",
+    "Look for forms that ask for the same information in different sections (e.g., name in a contact section and again in a payment section)",
+    "Check if previously entered data is auto-populated when the user returns to a previous step",
+    "Look for account registration flows that ask the user to re-enter their email or other information",
+    "Check multi-page forms to see if information from page 1 needs to be re-entered on page 2"
+  ],
+  "pass_conditions": [
+    "Information previously entered by or provided to the user that is required to be entered again in the same process is either auto-populated or available for the user to select",
+    "Multi-step forms carry forward previously entered data so the user does not need to re-type it",
+    "Checkout flows offer a 'Same as shipping address' checkbox or auto-populate billing from shipping",
+    "When a user returns to a previous step, their previously entered data is preserved in the form fields",
+    "Confirmation pages pre-fill fields from previously entered data for review purposes"
+  ],
+  "fail_conditions": [
+    "Users must re-enter their name, email, address, or other personal information that they already provided earlier in the same process",
+    "A multi-step form clears previously entered data when the user navigates between steps",
+    "Shipping and billing address forms require full re-entry of the address even when they are the same",
+    "Re-entering a previous step of a form clears the data entered in that step, requiring the user to type it again",
+    "A confirmation step shows entered data but if the user goes back to edit, all other fields are cleared"
+  ],
+  "na_conditions": [
+    "The form is a single-step process with no repeated information requests",
+    "Information must be re-entered for security purposes (e.g., re-entering password for confirmation is exempt only if security requires it)",
+    "Previously entered information is no longer valid and must be provided fresh",
+    "The process does not ask for the same information more than once"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Multi-step form flow could not be completed to verify data persistence across steps",
+    "Cannot test data auto-population from static screenshots of a single step",
+    "The full form process requires authentication or prior data that was not available during testing"
+  ],
+  "common_mistakes": [
+    "Checkout flows that require full re-entry of billing address even when identical to shipping address",
+    "Multi-step application forms where going back to a previous step clears previously entered data",
+    "Confirmation pages that require the user to re-enter their email address to 'verify' it",
+    "Profile update forms that clear all fields when the user changes one field, requiring re-entry of all data",
+    "Survey or questionnaire forms that lose data when navigating between sections",
+    "Booking flows that ask for passenger details multiple times (once for the flight, again for the hotel)"
+  ],
+  "examples": {
+    "pass": "A checkout form has a 'Billing address same as shipping' checkbox that, when checked, auto-fills all billing address fields from the shipping address entered on the previous page. The user can uncheck to enter a different billing address.",
+    "fail": "A multi-step insurance application asks for the applicant's full name and date of birth on Step 1 (Personal Info), then asks for the exact same name and date of birth again on Step 3 (Beneficiary Info) with no auto-population, forcing the user to retype identical information.",
+    "partial": "A hotel booking flow auto-populates the guest name from the account profile on the first page, but the payment page requires re-entry of the billing name and address even when they match the profile data already provided."
+  },
+  "plain_meaning": "Information the user already entered or provided earlier in the same process must not be required to be entered again manually. It must either be auto-filled or made selectable (from a list, a previous-value option, etc.). Exceptions: when re-entry is essential, when re-entry is essential to security, or when the earlier information is no longer valid.",
+  "scope_applies_to": [
+    "Multi-step checkout and sign-up flows",
+    "Wizards that collect information across steps",
+    "Forms that ask for shipping and billing addresses in sequence",
+    "Any process that repeats a question already answered",
+    "Profile data already on file being requested again in a task"
+  ],
+  "scope_does_not_apply_to": [
+    "Single-step forms that do not repeat questions",
+    "Security-essential re-entry (for example confirming a password)",
+    "Essential re-entry required by the nature of the task (for example confirming an email)",
+    "Cases where the previous value has become invalid",
+    "New information not previously entered in the same process"
+  ],
+  "borderline_calibration": [
+    "Auto-populate OR select-from-prior both satisfy.",
+    "Confirming a password or typing an email twice is the classic exempt case, PASS.",
+    "Only flag when the same information is clearly required to be retyped with no auto-fill and no selection mechanism.",
+    "Prefer Not Enough Evidence when multi-step flows were not captured end-to-end."
+  ]
+}

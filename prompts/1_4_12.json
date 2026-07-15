@@ -1,0 +1,73 @@
+{
+  "criterion_id": "1.4.12",
+  "criterion_name": "Text Spacing",
+  "visual_checks": [
+    "Check if content remains visible and functional when these text spacing overrides are applied: line height 1.5x font size, paragraph spacing 2x font size, letter spacing 0.12x font size, word spacing 0.16x font size",
+    "Look for text that gets clipped or hidden when spacing is increased",
+    "Check for containers with fixed heights that cause text overflow when spacing changes",
+    "Look for overlapping text when letter or word spacing is increased",
+    "Verify that buttons, navigation items, and form labels still display correctly with increased spacing"
+  ],
+  "pass_conditions": [
+    "No loss of content or functionality when all four text spacing properties are modified to the specified values",
+    "Text containers expand to accommodate increased spacing (no overflow:hidden clipping)",
+    "All text remains readable and no text overlaps other content",
+    "Interactive elements (buttons, links, form controls) remain functional with increased text spacing",
+    "No horizontal scrollbar is introduced by text spacing changes alone"
+  ],
+  "fail_conditions": [
+    "Text is clipped or hidden when line-height is set to 1.5 times the font size",
+    "Text overflows its container and is hidden behind other elements when spacing is increased",
+    "Button labels or navigation items become truncated with increased letter-spacing",
+    "Text overlaps other text or UI elements when paragraph or word spacing is increased",
+    "Fixed-height containers with overflow:hidden clip text when spacing properties are changed"
+  ],
+  "na_conditions": [
+    "Content is rendered in a format that does not support text spacing modifications (e.g., PDF, images of text)",
+    "Page uses technologies where text spacing CSS properties do not apply (e.g., canvas-rendered text)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot test text spacing modifications from static screenshots without injecting CSS",
+    "Text spacing test bookmarklet or tool could not be applied"
+  ],
+  "common_mistakes": [
+    "Fixed-height card layouts with overflow:hidden that clip text when line-height increases",
+    "Button text that overflows the button boundary when letter-spacing is increased",
+    "Navigation items with fixed widths that truncate text with ellipsis when spacing increases",
+    "Tooltip or popover text that gets clipped in a fixed-size container",
+    "Absolutely positioned text elements that overlap other content when spacing changes",
+    "Text set with CSS line-height using px values that override the spacing test"
+  ],
+  "examples": {
+    "pass": "After applying the text spacing overrides, all content remains visible — text containers grow to accommodate larger line-height and paragraph spacing, navigation items wrap properly, and no content is lost or overlapped",
+    "fail": "A card component has height:200px and overflow:hidden — when line-height is increased to 1.5x, the last two lines of text are clipped off and invisible to the user",
+    "partial": "Most text adapts well to spacing changes but fixed-height navigation dropdown items clip their labels and one notification badge overlaps adjacent text"
+  },
+  "plain_meaning": "Users must be able to override text spacing without losing content or functionality. Specifically, setting line height to 1.5x, paragraph spacing to 2x, letter spacing to 0.12x, and word spacing to 0.16x (via user stylesheet or tool) must not cause text to be clipped, truncated, or overlap. The content must absorb these adjustments gracefully.",
+  "scope_applies_to": [
+    "Body text, headings, labels, and button/link text rendered in the page",
+    "Text in menus, navigation, and form controls",
+    "Text inside modals, popovers, and expandable regions",
+    "Text in components with fixed-height containers that might clip at larger spacing",
+    "Text in cards, tiles, and layout boxes"
+  ],
+  "scope_does_not_apply_to": [
+    "Visually-hidden / sr-only text clipped to a 1px box (no rendered text flow exists to be affected by spacing adjustments)",
+    "Elements removed from the accessibility tree (aria-hidden, display:none, visibility:hidden, hidden attribute)",
+    "Text baked into images (images of text are not implemented in a markup language that supports the style properties)",
+    "Captions in video content",
+    "Canvas-rendered text",
+    "Content inside third-party embeds whose styles the author cannot control",
+    "Content in technologies that do not support the named style properties (PDF, native apps)",
+    "Contrast ratios (those are SC 1.4.3 / 1.4.6 / 1.4.11)"
+  ],
+  "borderline_calibration": [
+    "Text that reflows gracefully at the four adjusted values PASSES, even if the layout looks looser.",
+    "Clipping or overlap that only affects visually-hidden sr-only content is NOT a failure.",
+    "Fixed-height containers that cause text to be cut off when line-height is set to 1.5 are a failure.",
+    "Text that wraps onto additional lines but remains visible and operable is PASS, not fail.",
+    "Do NOT flag text in images or canvas; they are out of scope.",
+    "When in doubt, apply the four spacing rules via a user stylesheet and look for actual lost content or broken functionality."
+  ]
+}

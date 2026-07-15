@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accessibility Conformance Report (ACR) — {{ meta.product_name or meta.company_name or "Web Page" }}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.55; }
+    h1 { font-size: 1.8rem; border-bottom: 2px solid #1a1a1a; padding-bottom: 0.5rem; }
+    h2 { font-size: 1.35rem; margin-top: 2.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+    h3 { font-size: 1.1rem; margin-top: 1.75rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+    th { background: #f3f4f6; font-weight: 600; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .summary-card { border: 1px solid #ccc; border-radius: 6px; padding: 1rem; text-align: center; }
+    .summary-card .count { font-size: 2rem; font-weight: 700; display: block; }
+    .supports { color: #047857; }
+    .partially { color: #b45309; }
+    .does-not { color: #b91c1c; }
+    .na { color: #6b7280; }
+    .finding { border-left: 4px solid #b91c1c; background: #fef2f2; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+    .finding.medium { border-left-color: #b45309; background: #fffbeb; }
+    .finding.low { border-left-color: #2563eb; background: #eff6ff; }
+    .finding.info { border-left-color: #6b7280; background: #f3f4f6; }
+    .finding .label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .finding code { background: rgba(0,0,0,0.06); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
+    .meta-row { display: flex; gap: 1rem; margin: 0.25rem 0; }
+    .meta-row strong { min-width: 160px; display: inline-block; }
+    ul.systemic { padding-left: 1.5rem; }
+    pre.remark { white-space: pre-wrap; background: #f9fafb; padding: 0.75rem; border-radius: 4px; font-family: inherit; font-size: 0.95em; margin: 0.5rem 0; }
+    .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ccc; color: #6b7280; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <h1>Accessibility Conformance Report (ACR)</h1>
+
+  <section>
+    <h2>Report Information</h2>
+    <div class="meta-row"><strong>Product / Page:</strong> {{ meta.product_name or meta.source_url or "—" }}</div>
+    {% if meta.source_url %}<div class="meta-row"><strong>URL:</strong> <a href="{{ meta.source_url }}">{{ meta.source_url }}</a></div>{% endif %}
+    {% if meta.company_name %}<div class="meta-row"><strong>Organization:</strong> {{ meta.company_name }}</div>{% endif %}
+    <div class="meta-row"><strong>WCAG Version:</strong> {{ meta.wcag_version or "2.2" }}</div>
+    <div class="meta-row"><strong>Coverage Level:</strong> {{ meta.coverage_level or "AA" }}</div>
+    <div class="meta-row"><strong>Report Format:</strong> {{ report_format | upper }}</div>
+    <div class="meta-row"><strong>Generated:</strong> {{ generated_at }}</div>
+    {% if meta.review_id %}<div class="meta-row"><strong>Review ID:</strong> <code>{{ meta.review_id }}</code></div>{% endif %}
+  </section>
+
+  <section>
+    <h2>Summary</h2>
+    <div class="summary-grid">
+      <div class="summary-card"><span class="count supports">{{ summary.supports or 0 }}</span> Supports</div>
+      <div class="summary-card"><span class="count partially">{{ summary.partially_supports or 0 }}</span> Partially Supports</div>
+      <div class="summary-card"><span class="count does-not">{{ summary.does_not_support or 0 }}</span> Does Not Support</div>
+      <div class="summary-card"><span class="count na">{{ summary.not_applicable or 0 }}</span> Not Applicable</div>
+      <div class="summary-card"><span class="count">{{ summary.not_evaluated or 0 }}</span> Not Evaluated</div>
+    </div>
+    {% if summary.total %}
+    <p>Total criteria evaluated: <strong>{{ summary.total }}</strong>. Total findings: <strong>{{ findings | length }}</strong>.</p>
+    {% endif %}
+  </section>
+
+  {% if meta.overall_summary and meta.overall_summary.executive_summary %}
+  <section>
+    <h2>Executive Summary</h2>
+    <pre class="remark">{{ meta.overall_summary.executive_summary }}</pre>
+  </section>
+  {% endif %}
+
+  {% if meta.overall_summary and meta.overall_summary.systemic_issues %}
+  <section>
+    <h2>Systemic Issues</h2>
+    <ul class="systemic">
+      {% for issue in meta.overall_summary.systemic_issues %}
+        <li>{{ issue }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>WCAG Conformance Table</h2>
+    {% for level_key, level_label in [("level_a", "Level A"), ("level_aa", "Level AA"), ("level_aaa", "Level AAA")] %}
+      {% set level_results = {'level_a': level_a, 'level_aa': level_aa, 'level_aaa': level_aaa}[level_key] %}
+      {% if level_results %}
+      <h3>{{ level_label }}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 70px;">SC</th>
+            <th>Criterion</th>
+            <th style="width: 150px;">Conformance</th>
+            <th style="width: 80px;">Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in level_results %}
+          <tr>
+            <td><code>{{ r.criterion_id }}</code></td>
+            <td>{{ r.criterion_name }}</td>
+            <td>
+              {% set cl = r.conformance_level if r.conformance_level is string else r.conformance_level.value %}
+              {% if cl == 'Supports' %}<span class="supports">{{ cl }}</span>
+              {% elif cl == 'Partially Supports' %}<span class="partially">{{ cl }}</span>
+              {% elif cl == 'Does Not Support' %}<span class="does-not">{{ cl }}</span>
+              {% else %}<span class="na">{{ cl }}</span>{% endif %}
+            </td>
+            <td>{{ (r.findings or []) | length }}</td>
+          </tr>
+          {% if r.summary %}
+          <tr>
+            <td></td>
+            <td colspan="3"><pre class="remark">{{ r.summary }}</pre></td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    {% endfor %}
+  </section>
+
+  {% if findings %}
+  <section>
+    <h2>All Findings ({{ findings | length }})</h2>
+    {% for f in findings %}
+      {% set sev = f.severity if f.severity is string else (f.severity.value if f.severity else 'medium') %}
+      <div class="finding {{ sev }}">
+        <div class="label">
+          {% if f.criterion_id %}SC {{ f.criterion_id }} — {% endif %}{{ sev | upper }}{% if f.source %} — {{ f.source }}{% endif %}
+        </div>
+        <div><strong>Element:</strong> {{ f.element or "—" }}{% if f.css_selector %} <code>{{ f.css_selector }}</code>{% endif %}</div>
+        {% if f.location %}<div><strong>Location:</strong> {{ f.location }}</div>{% endif %}
+        <div><strong>Issue:</strong> {{ f.issue }}</div>
+        {% if f.impact %}<div><strong>Impact:</strong> {{ f.impact }}</div>{% endif %}
+        {% if f.recommendation %}<div><strong>Conformance requirement:</strong> {{ f.recommendation }}</div>{% endif %}
+        {% if f.evidence %}<div><strong>Evidence:</strong> {{ f.evidence }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if fpc_table %}
+  <section>
+    <h2>Functional Performance Criteria (508 § 1194.31)</h2>
+    <table>
+      <thead>
+        <tr><th>Criterion</th><th>Conformance</th><th>Remarks</th></tr>
+      </thead>
+      <tbody>
+        {% for row in fpc_table %}
+        <tr>
+          <td>{{ row.name or row.criterion }}</td>
+          <td>{{ row.conformance_level }}</td>
+          <td><pre class="remark">{{ row.remarks or "" }}</pre></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  <div class="footer">
+    Report generated by WCAG Trusted Tester v4 at {{ generated_at }}.
+    {% if client_mode %}This is a client-facing report — internal source attribution and confidence scores have been removed.{% endif %}
+  </div>
+</body>
+</html>

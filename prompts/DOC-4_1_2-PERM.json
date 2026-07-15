@@ -1,0 +1,45 @@
+{
+  "criterion_id": "DOC-4.1.2-PERM",
+  "criterion_name": "PDF Accessibility Permission",
+  "visual_checks": [
+    "Check the PDF security settings for content copying and text extraction permissions",
+    "Look at the document restriction summary to see if accessibility permissions are enabled",
+    "Verify that the 'Content Copying for Accessibility' or equivalent permission is allowed",
+    "Check if any security encryption or password protection blocks assistive technology access",
+    "Review the full permissions panel to identify any restrictions that could impact screen reader access"
+  ],
+  "pass_conditions": [
+    "PDF security settings allow content extraction for accessibility purposes",
+    "The 'Content Copying for Accessibility' permission (or equivalent) is enabled",
+    "Assistive technologies such as screen readers can access the full text content of the document",
+    "If the PDF is password-protected, the accessibility permission is still explicitly enabled",
+    "No security settings prevent text-to-speech or braille output from accessing document content"
+  ],
+  "fail_conditions": [
+    "Content copying is disabled and the accessibility permission is also not set, blocking assistive technology",
+    "Text extraction is blocked by the PDF security settings",
+    "The accessibility permission flag is not set, preventing screen readers from accessing content",
+    "Security encryption prevents assistive technology from reading the document structure and text",
+    "The document requires a password to open and no accessible alternative is provided"
+  ],
+  "na_conditions": [
+    "The document is not a PDF",
+    "The PDF has no security restrictions applied"
+  ],
+  "ne_conditions": [
+    "The PDF security settings could not be read or extracted for evaluation",
+    "The document's permission flags could not be determined from the available data"
+  ],
+  "common_mistakes": [
+    "Applying content protection to prevent copying without enabling the separate accessibility permission",
+    "Using a PDF security tool that disables all content extraction including for assistive technology",
+    "Assuming that DRM or encryption will not affect screen readers when it actually blocks text access",
+    "Setting permissions in the PDF creation tool that inadvertently restrict accessibility",
+    "Not testing the secured PDF with a screen reader to verify that content is still accessible after applying security"
+  ],
+  "examples": {
+    "pass": "A PDF has content copying restricted but the 'Content Copying for Accessibility' permission is explicitly enabled, allowing screen readers to access all text",
+    "fail": "A PDF has security settings that block both content copying and content extraction for accessibility, causing screen readers to encounter a completely blank document",
+    "partial": "The PDF allows text extraction for accessibility but the security settings trigger a warning in some screen readers, creating confusion even though access is ultimately permitted"
+  }
+}

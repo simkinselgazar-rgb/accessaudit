@@ -1,0 +1,68 @@
+{
+  "criterion_id": "3.1.2",
+  "criterion_name": "Language of Parts",
+  "visual_checks": [
+    "Scan the page content for passages, phrases, or words in a language different from the page's primary language declared in the <html lang> attribute",
+    "Look for foreign-language quotes, product names, legal text, or customer testimonials in other languages",
+    "Check navigation elements and footers for language-switcher links that may contain text in other languages (e.g., 'Deutsch', 'Francais')",
+    "Look for embedded content such as blockquotes, citations, or user-generated content that appears to be in a different language",
+    "Identify proper nouns, technical terms, and loan words that have become part of the page's primary language (these are exceptions and do NOT need lang attributes)"
+  ],
+  "pass_conditions": [
+    "Every passage or phrase in a language different from the page's default language has a lang attribute on its containing element identifying the correct language",
+    "The lang attributes use valid BCP 47 language tags (e.g., lang='fr' for French, lang='de' for German)",
+    "Common loan words and proper nouns that are part of the primary language (e.g., 'rendezvous' in English text) are correctly left without a separate lang attribute",
+    "Programmatic language identification matches the actual language of each foreign-language passage"
+  ],
+  "fail_conditions": [
+    "Passages or sentences in a foreign language have no lang attribute on any ancestor element to identify the language change",
+    "A lang attribute is present but specifies the wrong language for the passage (e.g., lang='es' on a French paragraph)",
+    "Large blocks of foreign-language content (multiple sentences or paragraphs) lack language identification",
+    "Foreign-language text in interactive elements (buttons, links, form labels) is not marked with the correct lang attribute"
+  ],
+  "na_conditions": [
+    "The page contains text in only one language with no foreign-language passages, phrases, or words beyond common loan words and proper nouns",
+    "The only foreign-language text consists of proper nouns, technical terms, or words that have been absorbed into the primary language"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Page DOM could not be captured to verify lang attributes on foreign-language passages",
+    "The language of specific text passages cannot be confidently identified from the screenshots or DOM data"
+  ],
+  "common_mistakes": [
+    "Foreign-language testimonials or quotes embedded without a lang attribute on the containing element",
+    "Failing to mark up entire paragraphs of translated content with the appropriate lang attribute",
+    "Marking common English loan words (e.g., 'cafe', 'naive') with a lang attribute when they are part of everyday English",
+    "Language-switcher links showing text like 'Espanol' or 'Francais' without lang='es' or lang='fr' on those links",
+    "Using the wrong granularity — applying lang to the entire page instead of just the foreign-language passage"
+  ],
+  "examples": {
+    "pass": "An English page quotes a French phrase: <span lang='fr'>C'est la vie</span> — screen readers switch to French pronunciation for that phrase",
+    "fail": "An English page contains a full paragraph of German legal text with no lang='de' attribute — screen readers attempt to pronounce the German words using English phonetics",
+    "partial": "Most foreign-language phrases have correct lang attributes, but a Spanish customer testimonial in a sidebar lacks lang='es'"
+  },
+  "plain_meaning": "When a passage or phrase inside a page is in a different language than the page's default, that change of language must be marked in the markup (for example lang=\"fr\" on a span). This lets screen readers switch pronunciation and lets tools handle the text appropriately. Proper names, technical terms, indeterminate words, and loanwords that have entered common use in the surrounding language are explicitly exempt.",
+  "scope_applies_to": [
+    "Inline text passages, sentences, or phrases written in a language different from the page default",
+    "Block-level sections (quotations, articles) presented in a non-default language",
+    "Captions, subtitles, or transcript segments rendered in a non-default language",
+    "Attribute values rendered to users (for example title) that contain foreign-language text",
+    "Any span, p, blockquote, or similar element wrapping non-default-language content"
+  ],
+  "scope_does_not_apply_to": [
+    "The overall page language declaration (that is SC 3.1.1)",
+    "Proper names (personal names, place names, brand names)",
+    "Technical terms that have no equivalent in the surrounding language",
+    "Words of indeterminate language",
+    "Loanwords that have become part of the vernacular of the surrounding text",
+    "Single foreign words used idiomatically in the host language",
+    "Accessible name wording choices or translation quality"
+  ],
+  "borderline_calibration": [
+    "Only flag a missing inline lang when a clearly identifiable foreign-language passage of at least a phrase or sentence is present without a lang attribute on a containing element.",
+    "Do NOT flag individual foreign loanwords in otherwise native prose.",
+    "Do NOT flag proper names even when they obviously originate in another language.",
+    "If a passage is enclosed in an element with a correct lang attribute at any ancestor level above the page default, PASS.",
+    "When unsure whether a phrase is a loanword or a true language switch, err on the side of NOT flagging."
+  ]
+}

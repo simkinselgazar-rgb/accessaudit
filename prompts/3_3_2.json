@@ -1,0 +1,83 @@
+{
+  "criterion_id": "3.3.2",
+  "criterion_name": "Labels or Instructions",
+  "visual_checks": [
+    "Check every form field — does it have a visible text label that describes what input is expected?",
+    "Look for form fields that rely only on placeholder text as a label (placeholder disappears on focus)",
+    "Check if required fields are clearly indicated (asterisk with explanation, 'Required' text, or aria-required)",
+    "Look for fields with specific format requirements — are instructions provided (e.g., 'Date: MM/DD/YYYY')?",
+    "Check groups of related fields (radio buttons, checkboxes) — is there a group label explaining the question?",
+    "Verify that labels are positioned near their associated fields (above or to the left for LTR languages)",
+    "Check if instructional text for complex forms is provided before the form or at the start of each section"
+  ],
+  "pass_conditions": [
+    "All form fields have visible, descriptive labels that remain visible when the field has focus",
+    "Labels are programmatically associated with their inputs via <label for='id'>, aria-labelledby, or aria-label",
+    "Required fields are clearly identified (text label, asterisk with explanation, or aria-required='true')",
+    "Fields with specific format requirements provide instruction text (e.g., 'Phone: (555) 123-4567')",
+    "Groups of related controls (radio buttons, checkboxes) have a group label via <fieldset>/<legend> or aria-labelledby",
+    "Complex forms provide instructional text at the beginning or at section headers"
+  ],
+  "fail_conditions": [
+    "Form fields have no visible labels — only placeholder text that disappears on input",
+    "Labels exist but are not programmatically associated with their form fields",
+    "Required fields are not identified — users must guess which fields are mandatory",
+    "Fields expecting specific formats (date, phone, SSN) provide no format instructions",
+    "Groups of radio buttons or checkboxes have no group label explaining the question being answered",
+    "Labels are ambiguous or generic (e.g., multiple fields all labeled 'Enter value')",
+    "Instructions are provided only after the form field, so screen reader users encounter the field before the instructions"
+  ],
+  "na_conditions": [
+    "Page contains no forms or input fields",
+    "Page has only display content with no user input"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Form fields are dynamically rendered and were not present in the captured DOM",
+    "Cannot verify label associations without inspecting the HTML source"
+  ],
+  "common_mistakes": [
+    "Using placeholder attribute as the sole label — it disappears when the user starts typing, removing the label",
+    "Floating labels that animate from inside the field to above it — these can cause issues if the CSS animation fails or if the label is not programmatically linked",
+    "Asterisks (*) marking required fields without an explanation that * means 'required'",
+    "Date fields without format instructions — users do not know if they should enter MM/DD/YYYY or DD/MM/YYYY",
+    "Password fields without complexity requirements listed before or during input",
+    "Labels that are visually hidden and only accessible via screen reader (sighted users have no label)",
+    "Input fields adjacent to each other with labels that could apply to either field (ambiguous association)"
+  ],
+  "examples": {
+    "pass": "A registration form has visible labels above each field ('First Name', 'Last Name', 'Email Address'), each linked with <label for='...'>, required fields show '(required)' after the label text, and the password field has 'Must be at least 8 characters with one uppercase letter' below it.",
+    "fail": "A login form has two input fields with only placeholder text 'Username' and 'Password' — when the user clicks into a field, the placeholder disappears and there is no visible label to remind them what the field is for. Neither field has a <label> element.",
+    "partial": "Most form fields have proper visible labels, but the phone number field uses only a placeholder 'Phone' with no visible label and no format instructions, and the group of radio buttons for 'Preferred contact method' has no <fieldset>/<legend>."
+  },
+  "auditor_anti_patterns": [
+    "FALSE POSITIVE: flagging a form field as 'missing label' when any of these are present: a <label for='fieldId'> pointing to the field, the field is nested inside a <label>, an aria-label attribute, aria-labelledby pointing at a label element, or a title attribute. Walk every source before flagging.",
+    "FALSE POSITIVE: flagging a form field for 'missing instructions' when the instructions ARE present as visible text immediately before or after the field in the DOM (a <p>, <span>, or <div> sibling). 3.3.2 does not require aria-describedby -- visible proximate instructions count.",
+    "FALSE POSITIVE: flagging <input type='hidden'>, <input type='submit'>, or <input type='button'> for 'missing label' -- hidden inputs are not user-facing and submit/button inputs use their value attribute as their label.",
+    "FALSE POSITIVE: flagging a search box that has a <label> with class='visually-hidden' or class='sr-only' for 'missing visible label' -- visually-hidden labels are a W3C-recommended pattern for search fields with adjacent icon context. 3.3.2 requires a label, not necessarily a sighted-visible one."
+  ],
+  "plain_meaning": "Every control that asks the user for input must come with a label or instructions that make clear what should be entered. The label can be a visible text label, an aria-label, an aria-labelledby reference, a nested label element, a visually-hidden but programmatically-present label, or clear adjacent instructions. The key is that a programmatic label or instruction exists.",
+  "scope_applies_to": [
+    "All form input elements (text, email, password, number, etc.)",
+    "Select dropdowns and combo boxes",
+    "Checkboxes and radio buttons (individual and grouped via fieldset/legend)",
+    "Textareas",
+    "Custom form widgets that collect user input",
+    "Required-field indicators and format instructions where needed"
+  ],
+  "scope_does_not_apply_to": [
+    "Icon-only buttons and controls outside forms (those fall under SC 4.1.2)",
+    "Non-interactive display text",
+    "Accessible name of buttons that submit a form (the button label itself is SC 4.1.2)",
+    "Visual placement or styling of labels as long as a programmatic label exists",
+    "Error messages (those are SC 3.3.1)",
+    "Help systems (those are SC 3.3.5)"
+  ],
+  "borderline_calibration": [
+    "A visually-hidden (sr-only) label IS a valid label for this SC. Do NOT flag controls that have a programmatic label just because the label is not visible to sighted users.",
+    "Any of label[for], nested label, aria-label, aria-labelledby, title, or clearly adjacent instructional text counts as providing a label.",
+    "A placeholder alone is NOT a sufficient label but a placeholder plus adjacent text that together identify the purpose can be acceptable.",
+    "Flag only when NO programmatic labeling mechanism of any kind is present for a user-input control.",
+    "If a control has any accessible name via any standard mechanism, do not flag it here."
+  ]
+}

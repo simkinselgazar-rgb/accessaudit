@@ -1,0 +1,67 @@
+{
+  "criterion_id": "2.2.5",
+  "criterion_name": "Re-authenticating",
+  "visual_checks": [
+    "Look for session timeout behavior by checking if the page redirects to a login screen after a period of inactivity",
+    "Check if there are any warnings before a session timeout occurs",
+    "After re-authenticating following a timeout, verify whether previously entered data (form fields, shopping cart, draft content) is preserved",
+    "Look for save or auto-save mechanisms that persist user data before session expiration",
+    "Check if multi-step forms or workflows retain progress after re-authentication",
+    "Verify that the user is returned to the same point in their workflow after logging back in"
+  ],
+  "pass_conditions": [
+    "User data entered before session timeout is preserved and restored after re-authentication",
+    "Form data, shopping cart contents, and draft content survive session expiration and re-login",
+    "Multi-step processes retain the user's progress after re-authentication",
+    "The user is returned to the same point in their activity after re-authenticating",
+    "Auto-save or data persistence mechanisms ensure no user data is lost during session timeout"
+  ],
+  "fail_conditions": [
+    "User data entered before session timeout is lost after re-authentication",
+    "Form fields are cleared and must be re-entered after logging back in following a timeout",
+    "Shopping cart contents or selections are lost when the session expires",
+    "Multi-step processes restart from the beginning after re-authentication instead of resuming where the user left off",
+    "Draft content (emails, documents, comments) is discarded upon session expiration"
+  ],
+  "na_conditions": [
+    "Page does not require authentication or have session timeouts",
+    "No user data entry or stateful interactions exist on the page",
+    "The application does not use session-based authentication"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Session timeout behavior could not be triggered or observed during evaluation"
+  ],
+  "common_mistakes": [
+    "Clearing all form data when redirecting to the login page after a timeout",
+    "Shopping cart implementations that tie cart contents to the session rather than the user account",
+    "Multi-step checkout or application processes that restart from step 1 after re-authentication",
+    "Not auto-saving draft content before session expiration",
+    "Redirecting the user to the homepage after re-authentication instead of their previous location",
+    "Relying solely on client-side storage that may be cleared when the session ends"
+  ],
+  "examples": {
+    "pass": "A user filling out a long insurance application form is timed out and redirected to login; after re-authenticating, all previously entered form data is restored and they continue from where they left off",
+    "fail": "A user completing a multi-page job application is logged out due to inactivity; after logging back in, all form data is lost and the application must be started over from the first page",
+    "partial": "After re-authentication, some form fields are preserved but file attachments and selections in dropdown menus are lost and must be re-entered"
+  },
+  "plain_meaning": "When an authenticated session expires, the user must be able to resume what they were doing without losing data after logging back in. The intent is that users who step away or need more time are not punished by losing their work on re-login.",
+  "scope_applies_to": [
+    "Multi-step forms or checkout flows behind authentication",
+    "Long-form content editors (posts, applications, submissions)",
+    "Data-entry workflows that span session boundaries",
+    "Any authenticated activity with in-progress state"
+  ],
+  "scope_does_not_apply_to": [
+    "Unauthenticated pages",
+    "Pages with no data entry",
+    "Content where session loss does not destroy user work",
+    "Warnings about timeout duration (that is SC 2.2.6)"
+  ],
+  "borderline_calibration": [
+    "If the page has no authentication or no data entry, this SC is N/A.",
+    "Auto-saving drafts, preserving form state across re-login, or restoring cart contents all satisfy the SC.",
+    "Loss of transient UI state (scroll position) is not a failure; loss of typed data is."
+  ]
+}

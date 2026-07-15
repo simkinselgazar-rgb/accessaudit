@@ -1,0 +1,43 @@
+{
+  "criterion_id": "DOC-2.4.2-SLIDES",
+  "criterion_name": "Slide Titles",
+  "visual_checks": [
+    "Review each slide in the presentation and check whether it has a visible or programmatic title",
+    "Compare slide titles across the entire presentation to identify duplicates",
+    "Check if any slide titles are positioned off-slide or hidden from view while still present in the structure",
+    "Verify that each slide title is descriptive and distinguishes the slide from others in the presentation",
+    "Look for slides where the title placeholder has been deleted or left empty"
+  ],
+  "pass_conditions": [
+    "Every slide in the presentation has a unique, descriptive title",
+    "Slide titles accurately reflect the content of each slide",
+    "Titles are programmatically associated with the slide (using the title placeholder or marked as the slide title)",
+    "If a title is visually hidden for design purposes, it is still present in the slide structure as an accessible title"
+  ],
+  "fail_conditions": [
+    "One or more slides have no title at all (title placeholder deleted or empty)",
+    "Multiple slides share the same title text, making them indistinguishable for assistive technology users",
+    "A slide title is dragged off the visible slide area to hide it rather than using proper hide-title techniques",
+    "Slide titles are generic and non-descriptive (e.g., 'Slide 1', 'Slide 2', 'Continued')",
+    "A text box is used as a visual title but is not set as the actual slide title element in the slide structure"
+  ],
+  "na_conditions": [
+    "The document is not a presentation format (not PowerPoint, Google Slides, or similar)"
+  ],
+  "ne_conditions": [
+    "The presentation structure could not be parsed to determine slide titles",
+    "Slides failed to render so their titles cannot be verified"
+  ],
+  "common_mistakes": [
+    "Deleting the title placeholder and using a regular text box for the visual heading, which is not recognized as the slide title",
+    "Using the same title on continuation slides (e.g., 'Budget Overview' on three consecutive slides) instead of differentiating them (e.g., 'Budget Overview - Revenue', 'Budget Overview - Expenses')",
+    "Dragging the title placeholder off the visible slide area instead of using the 'Hide Title' accessibility technique",
+    "Leaving auto-generated titles like 'Title and Content' or 'Blank' from the slide layout",
+    "Having a title on the master slide but not on individual slides"
+  ],
+  "examples": {
+    "pass": "A 15-slide presentation has a unique descriptive title on each slide, such as 'Q3 Revenue Summary', 'Regional Sales Breakdown', and 'Projected Growth for 2026'",
+    "fail": "A presentation has 5 slides with no title placeholder and 3 slides all titled 'Overview', making navigation impossible for screen reader users",
+    "partial": "Most slides have unique titles but two slides share the title 'Summary' and one slide has its title placeholder dragged off the visible area"
+  }
+}

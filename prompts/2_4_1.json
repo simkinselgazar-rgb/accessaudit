@@ -1,0 +1,66 @@
+{
+  "criterion_id": "2.4.1",
+  "criterion_name": "Bypass Blocks",
+  "visual_checks": [
+    "Look for a 'Skip to main content' or 'Skip navigation' link at the very top of the page — it may be visually hidden until it receives keyboard focus",
+    "Check if the page has repeated navigation blocks (header, sidebar nav, footer links) that appear on every page of the site",
+    "Look for ARIA landmark roles (banner, navigation, main, contentinfo) or HTML5 landmark elements (header, nav, main, footer) that allow assistive technology users to jump between sections",
+    "Check if heading elements (h1-h6) are used to demarcate sections, allowing screen reader users to navigate by headings",
+    "Verify that any skip link target actually moves keyboard focus to the main content area when activated"
+  ],
+  "pass_conditions": [
+    "A functioning skip navigation link is present that moves focus past the repeated navigation to the main content area",
+    "ARIA landmark roles or HTML5 landmark elements are used to identify page regions (navigation, main, complementary, contentinfo)",
+    "Headings are used to organize content sections, enabling heading-based navigation in screen readers",
+    "Skip links become visible when they receive keyboard focus (if visually hidden by default)",
+    "Multiple mechanisms exist for bypassing repeated content (skip links, landmarks, headings)"
+  ],
+  "fail_conditions": [
+    "No skip navigation mechanism is provided and users must Tab through the entire navigation on every page",
+    "A skip link exists but does not function — focus does not move to the target or the link is broken",
+    "No ARIA landmarks or HTML5 landmark elements are used to identify page regions",
+    "The page has extensive repeated content blocks with no headings or landmarks to allow users to jump past them",
+    "Skip link is present but permanently hidden (display:none or visibility:hidden) so it is inaccessible to both sighted keyboard users and screen readers"
+  ],
+  "na_conditions": [
+    "Page has no repeated blocks of content (e.g., a single-page application with no persistent navigation)",
+    "Page is a standalone page with no content that repeats across multiple pages"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot verify skip link functionality from static screenshots — keyboard interaction testing required",
+    "Page DOM could not be captured to verify landmark structure"
+  ],
+  "common_mistakes": [
+    "Skip link exists in the HTML but is permanently hidden with display:none, making it unusable",
+    "Skip link target ID does not match an element on the page, so activating it does nothing",
+    "Skip link jumps to the wrong location (e.g., to a sidebar instead of main content)",
+    "Using only ARIA landmarks without a visible skip link — sighted keyboard users cannot use landmarks without a screen reader",
+    "Multiple nav elements on the page with no aria-label to distinguish them (e.g., 'Main navigation' vs 'Footer navigation')",
+    "Skip link is only visible on hover, not on keyboard focus"
+  ],
+  "examples": {
+    "pass": "The page has a 'Skip to main content' link that becomes visible on keyboard focus, the main content is wrapped in <main>, navigation is in <nav aria-label='Primary'>, and headings break the content into navigable sections",
+    "fail": "The page has a complex header with 45 navigation links and no skip link, no landmark roles, and no heading hierarchy — keyboard users must Tab through all 45 links on every page visit",
+    "partial": "A skip link is present and functional but the page has two <nav> regions with no aria-label to distinguish them, and the footer content area has no landmark"
+  },
+  "plain_meaning": "Users must have a way to skip past blocks of content that repeat on many pages (header, navigation, sidebars) to get directly to the main content. The intent is that keyboard and screen-reader users are not forced to wade through dozens of repeated links on every page.",
+  "scope_applies_to": [
+    "Pages that share a common header, navigation, or sidebar with other pages",
+    "Templates with repeated content blocks before the main content",
+    "Any repeated block that would force keyboard users to tab through it on every page"
+  ],
+  "scope_does_not_apply_to": [
+    "Single-page applications with no repeated blocks",
+    "Pages that are unique with no shared navigation",
+    "Focus order within the main content (that is SC 2.4.3)",
+    "Heading quality or descriptiveness (that is SC 2.4.6)",
+    "Page title quality (that is SC 2.4.2)"
+  ],
+  "borderline_calibration": [
+    "ANY ONE of the following mechanisms satisfies the SC: a skip link, ARIA landmarks (banner/nav/main/etc.), properly structured headings allowing jump navigation, or frames/iframes with titles. You do not need all of them.",
+    "Do not fail a page for missing a skip link if it has a main landmark and a proper heading structure.",
+    "A skip link that is hidden until focused is still a valid mechanism.",
+    "If the page has no repeated blocks, this SC is N/A."
+  ]
+}

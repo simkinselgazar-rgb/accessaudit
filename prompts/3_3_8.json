@@ -1,0 +1,78 @@
+{
+  "criterion_id": "3.3.8",
+  "criterion_name": "Accessible Authentication (Minimum)",
+  "visual_checks": [
+    "Identify authentication steps on the page — login forms, account verification, re-authentication prompts",
+    "Check if the login process requires a cognitive function test: memorizing a password, solving a CAPTCHA puzzle, transcribing text, or performing a calculation",
+    "Look for whether the password field allows pasting (users may paste from a password manager)",
+    "Check if the site supports password manager auto-fill (no autocomplete='off' on login fields)",
+    "Look for CAPTCHA challenges — are they text-based, image-based, or puzzle-based? Is there an alternative?",
+    "Check for 'magic link' or email-based authentication as an alternative to password entry",
+    "Look for biometric, passkey, or single sign-on (SSO) authentication options"
+  ],
+  "pass_conditions": [
+    "The authentication process does not require a cognitive function test (memorizing, transcribing, calculating, solving puzzles) unless an alternative is provided",
+    "Password fields support paste functionality (users can paste from password managers)",
+    "Password fields have autocomplete='current-password' or 'new-password' to support browser and password manager auto-fill",
+    "If a CAPTCHA is required, an alternative method is provided that does not rely on cognitive function (e.g., email verification link, SMS code, object recognition as an alternative to text transcription)",
+    "Alternative authentication methods are available that do not require cognitive function tests (SSO, passkeys, magic links, biometrics)",
+    "Users are not required to memorize or transcribe information as the sole method of authentication"
+  ],
+  "fail_conditions": [
+    "Password fields block paste functionality (onpaste='return false' or similar), preventing use of password managers",
+    "The login form has autocomplete='off' on the username or password fields, preventing browser auto-fill",
+    "A text-based CAPTCHA (type the distorted letters) is required with no alternative authentication method",
+    "Users must memorize and type a complex password with no support for password managers, auto-fill, or alternative login",
+    "A puzzle CAPTCHA (drag and drop, rotate the image) is the only authentication option with no alternative",
+    "Authentication requires solving a math problem or logic puzzle with no alternative method",
+    "Two-factor authentication requires manually typing a long code that cannot be auto-filled"
+  ],
+  "na_conditions": [
+    "Page has no authentication mechanism — no login, signup, or verification process",
+    "Page is publicly accessible with no authentication required",
+    "Authentication is handled entirely by a third-party service on a different page"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Authentication flow could not be tested without valid credentials",
+    "CAPTCHA or verification steps appear only under certain conditions that were not triggered during testing",
+    "Cannot determine if paste is blocked without interactive testing"
+  ],
+  "common_mistakes": [
+    "Blocking paste in password fields — this forces users to manually type passwords, punishing those who use password managers",
+    "Using autocomplete='off' on login forms, preventing browsers from auto-filling saved credentials",
+    "Requiring text CAPTCHAs (type the distorted characters) as the only login verification with no accessible alternative",
+    "Puzzle CAPTCHAs (drag the piece, rotate the image) as the sole verification method",
+    "Requiring users to remember and type a one-time code from email or SMS when copy-paste is blocked",
+    "Math-based CAPTCHAs ('What is 7 + 3?') as the only option — this is a cognitive function test",
+    "Custom login widgets that do not support browser auto-fill or password manager integration"
+  ],
+  "examples": {
+    "pass": "A login page has username and password fields with autocomplete='username' and autocomplete='current-password', supports pasting passwords, and offers 'Sign in with Google' SSO as an alternative. If a CAPTCHA is triggered, it uses a checkbox-style CAPTCHA with an audio alternative.",
+    "fail": "A banking login requires typing a password (paste is disabled via JavaScript), then requires typing distorted CAPTCHA text as the only verification method. There is no SSO, no magic link, no audio CAPTCHA alternative, and the password field has autocomplete='off'.",
+    "partial": "The login form supports password paste and auto-fill, but after entering credentials, users must solve a visual puzzle CAPTCHA (rotate an image to the correct orientation) with no alternative method provided. Users who cannot perceive or manipulate the puzzle are locked out."
+  },
+  "plain_meaning": "Authentication must not require a cognitive function test (remembering a password, solving a puzzle, transcribing characters) unless at least one alternative path is available: an alternative authentication method that does NOT require a cognitive test, a mechanism to assist the user (such as allowing password managers to fill and paste), object recognition (recognizing common objects such as cars or traffic lights), or recognition of personal content the user provided.",
+  "scope_applies_to": [
+    "Login and sign-in flows",
+    "Password entry, PIN entry, security questions, puzzle CAPTCHAs",
+    "Multi-factor authentication steps that require cognitive work",
+    "Re-authentication during sensitive actions",
+    "Account recovery flows that require memorized information"
+  ],
+  "scope_does_not_apply_to": [
+    "Non-authentication form fields",
+    "Account creation steps that are not cognitive tests",
+    "Simple clicking a magic link from email (not a cognitive test)",
+    "Biometric authentication (not a cognitive test)",
+    "Authentication where object-recognition CAPTCHA is used (exempt under 3.3.8, but NOT exempt under 3.3.9)"
+  ],
+  "borderline_calibration": [
+    "Password entry IS a cognitive function test (memorization).",
+    "PASS if password managers are not blocked (no paste blocking on password fields, no autofill prevention, no input-masking that prevents filling). Password-manager support is the Mechanism exception.",
+    "Blocking paste into a password field is a FAIL.",
+    "Disabling autofill on authentication fields is a FAIL.",
+    "Object-recognition CAPTCHAs (identify traffic lights) are exempt under 3.3.8.",
+    "Recognizing previously-submitted personal content (a photo the user uploaded) is exempt."
+  ]
+}

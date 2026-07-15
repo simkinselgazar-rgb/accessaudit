@@ -1,0 +1,68 @@
+{
+  "criterion_id": "2.5.8",
+  "criterion_name": "Target Size (Minimum)",
+  "visual_checks": [
+    "Look at all clickable/tappable elements — are any smaller than 24x24 CSS pixels? Check navigation links, icon buttons, close buttons, small action links. Inline text links within paragraphs are exempt.",
+    "Measure or visually estimate the size of icon-only buttons such as close (X) buttons, hamburger menus, social media icons, and pagination controls",
+    "Check footer links, breadcrumb links, and utility navigation for undersized targets that may be difficult to tap on touch devices",
+    "Look for targets that are smaller than 24x24 CSS pixels but have sufficient spacing around them — the 24px requirement can be met by the target size plus its unobscured spacing to the nearest adjacent target",
+    "Identify groups of small interactive elements placed close together, such as tag clouds, dense toolbars, or compact icon sets, where both size and spacing may be insufficient"
+  ],
+  "pass_conditions": [
+    "All clickable/tappable targets are at least 24x24 CSS pixels in size, or the target plus its unobscured spacing to the nearest adjacent target totals at least 24 CSS pixels",
+    "Icon buttons (close, menu, social icons, pagination) have a minimum touch target area of 24x24 CSS pixels including any padding",
+    "Navigation links in menus and toolbars have adequate size or spacing to meet the 24px minimum threshold",
+    "Small visual elements use padding, min-width, or min-height to ensure the interactive area meets the 24x24 CSS pixel minimum",
+    "Inline text links within sentences or paragraphs are present but are exempt from this requirement and do not affect the pass assessment"
+  ],
+  "fail_conditions": [
+    "Icon buttons such as close (X), hamburger menu, or action icons are smaller than 24x24 CSS pixels with insufficient spacing to compensate",
+    "Small interactive controls in toolbars or dense navigation areas are both undersized (below 24x24 CSS pixels) and placed too close together with insufficient spacing",
+    "Pagination controls or social media icon links have a clickable area smaller than 24x24 CSS pixels with no compensating spacing",
+    "Footer links or breadcrumb links are rendered as small text with a tap target well below 24x24 CSS pixels and no additional spacing",
+    "Custom checkbox or radio button controls have a visible and interactive area smaller than 24x24 CSS pixels"
+  ],
+  "na_conditions": [
+    "Page contains no interactive targets, or all interactive elements are inline text links within blocks of text (which are exempt from this criterion)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Target sizes could not be measured because elements are dynamically sized or rendered in a way that prevents accurate measurement from screenshots and DOM data"
+  ],
+  "common_mistakes": [
+    "Forgetting that the 24x24 CSS pixel requirement applies to the interactive area, not just the visible icon — padding counts toward target size",
+    "Confusing this criterion (24px minimum at Level AA) with WCAG 2.5.5 Target Size Enhanced (44px at Level AAA)",
+    "Not accounting for spacing — a 20x20 pixel target with 4px of clear space on all sides to the nearest adjacent target meets the requirement",
+    "Treating inline text links in paragraphs as failures when they are explicitly exempt from this criterion",
+    "Overlooking that user-agent-controlled targets (browser default checkboxes, selects) and targets whose size is determined by the user agent are exempt",
+    "Setting a large visual button but restricting the clickable area to only the text or icon inside it"
+  ],
+  "examples": {
+    "pass": "All icon buttons in the toolbar are styled with min-width: 24px and min-height: 24px with adequate padding, giving each a tap target of at least 24x24 CSS pixels",
+    "fail": "A close button (X) in a modal dialog is rendered as a 16x16 pixel icon with no additional padding, and its nearest adjacent target is only 2px away — total size plus spacing is 18px, below the 24px minimum",
+    "partial": "Most interactive elements meet the 24x24 CSS pixel minimum, but three social media icon links in the footer are 18x18 pixels with only 2px spacing between them"
+  },
+  "plain_meaning": "Pointer targets must be at least 24 by 24 CSS pixels, except for the listed exceptions: spacing (a 24px circle centered on the target does not overlap another target), equivalent alternative elsewhere, inline targets in running text, user-agent-controlled size, or essential specific size. This is the Level AA minimum, less strict than the AAA 44px requirement.",
+  "scope_applies_to": [
+    "Buttons, links, and interactive controls with author-controlled sizing",
+    "Icon buttons, close buttons, pagination controls, and small tap targets",
+    "Custom controls where the author sets the target dimensions",
+    "Mobile and touch layouts"
+  ],
+  "scope_does_not_apply_to": [
+    "Inline links embedded in running text within a paragraph",
+    "Controls whose size is determined by the user agent (unstyled native form controls)",
+    "Targets that meet the spacing exception: a 24px diameter circle centered on the target does not intersect any other target",
+    "Targets with an equivalent larger alternative elsewhere on the page",
+    "Cases where a specific size is essential to the information",
+    "Non-interactive elements"
+  ],
+  "borderline_calibration": [
+    "The threshold is 24 CSS pixels, not 44; do not apply the AAA 44px rule here.",
+    "The spacing exception is generous: small targets with enough breathing room around them pass.",
+    "Inline links in paragraphs are always exempt.",
+    "Only flag when a clickable area is under 24x24 AND no exception applies.",
+    "Check centers and surrounding spacing, not just the visible styled box."
+  ]
+}

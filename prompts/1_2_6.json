@@ -1,0 +1,69 @@
+{
+  "criterion_id": "1.2.6",
+  "criterion_name": "Sign Language (Prerecorded)",
+  "visual_checks": [
+    "Look for a picture-in-picture (PiP) window showing a sign language interpreter alongside the video",
+    "Check if the sign language interpretation is synchronized with the spoken audio content",
+    "Verify the interpreter is clearly visible and not obscured by video content or UI controls",
+    "Check if the interpreter window is large enough to see hand shapes, facial expressions, and body movements",
+    "Look for a toggle or option to enable/disable the sign language interpretation track",
+    "Check if the sign language interpretation covers all spoken dialogue and narration in the video"
+  ],
+  "pass_conditions": [
+    "A sign language interpreter is provided in a PiP window or separate synchronized video",
+    "The interpretation is synchronized with the spoken audio content",
+    "The interpreter is clearly visible with sufficient size to convey hand shapes, facial expressions, and body movements",
+    "All spoken dialogue and narration in the prerecorded video is interpreted",
+    "The sign language interpretation does not obstruct essential video content"
+  ],
+  "fail_conditions": [
+    "Prerecorded video with audio has no sign language interpretation provided",
+    "Sign language interpretation is present but not synchronized with the audio",
+    "The interpreter window is too small to clearly see signs and facial expressions",
+    "Only portions of the spoken content are interpreted, leaving gaps",
+    "The interpreter is obscured by video controls or overlapping content"
+  ],
+  "na_conditions": [
+    "Page contains no prerecorded video with audio content",
+    "Page contains only audio-only or video-only (no synchronized media) content",
+    "The media is live rather than prerecorded"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Video content failed to load so sign language interpretation cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Providing captions but no sign language interpretation, assuming captions alone satisfy this criterion",
+    "Sign language interpreter window too small or positioned where video controls overlap it",
+    "Interpretation that covers only the main dialogue but omits narration or off-screen speech",
+    "No option to toggle sign language track on or off for user preference",
+    "Interpreter video that is out of sync with the main audio track"
+  ],
+  "examples": {
+    "pass": "A training video includes a picture-in-picture window in the lower-right corner showing a sign language interpreter who interprets all spoken dialogue and narration in sync with the audio",
+    "fail": "A prerecorded webinar video has captions but no sign language interpreter is provided in any form",
+    "partial": "A sign language interpreter is provided for the main presentation but not for the Q&A portion of the recorded video"
+  },
+  "plain_meaning": "At Level AAA, prerecorded synchronized media must offer sign language interpretation of the audio. The intent is to serve deaf users whose first language is a sign language and for whom written captions in a spoken language are a second-language experience. This is a high bar and is rarely met outside of specialized accessible-content initiatives.",
+  "scope_applies_to": [
+    "Prerecorded synchronized media with meaningful audio content, when the site is claiming Level AAA conformance",
+    "Video lectures, announcements, and formal communications aiming for AAA",
+    "Embedded or self-hosted prerecorded video with audio"
+  ],
+  "scope_does_not_apply_to": [
+    "Live content -- not covered by 1.2.6",
+    "Prerecorded audio-only or video-only content -- that belongs to SC 1.2.1",
+    "Sites not claiming Level AAA conformance (criterion is AAA)",
+    "Captions -- that belongs to SC 1.2.2",
+    "Audio description -- that belongs to SC 1.2.3 / 1.2.5",
+    "Media that is a media alternative for text on the same page and is clearly labeled as such (general media-alternative exemption)",
+    "Keyboard or focus issues on the player (SC 2.1.1 / 2.4.7)"
+  ],
+  "borderline_calibration": [
+    "This is AAA. Only flag when the site claims AAA conformance or when the task explicitly asks for AAA evaluation.",
+    "A picture-in-picture signer or a side-by-side signer both satisfy the rule.",
+    "Sign language embedded in the original video counts; no separate track is required.",
+    "Missing sign language interpretation on AAA-scope prerecorded video is a hard failure at medium+ within AAA context; outside AAA, mark not-applicable."
+  ]
+}

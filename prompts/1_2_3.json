@@ -1,0 +1,69 @@
+{
+  "criterion_id": "1.2.3",
+  "criterion_name": "Audio Description or Media Alternative (Prerecorded)",
+  "visual_checks": [
+    "Identify prerecorded video content where important visual information is not conveyed by the audio alone",
+    "Look for an audio description track option in the video player controls",
+    "Look for a text-based alternative (full transcript or descriptive text) near the video",
+    "Check if the existing audio narration already describes all key visual content (actions, scene changes, on-screen text)",
+    "Determine if there is visual content that a blind user would miss without audio description"
+  ],
+  "pass_conditions": [
+    "An audio description track is available that narrates important visual content not described in the main audio",
+    "OR a full text-based media alternative is provided that describes both the audio and visual content",
+    "The audio description or text alternative conveys visual information essential to understanding the content",
+    "The audio description does not conflict with or talk over existing dialogue"
+  ],
+  "fail_conditions": [
+    "Video contains important visual-only information (actions, text on screen, scene changes) with no audio description or text alternative",
+    "Audio description is listed as available but the track is missing or empty",
+    "Text alternative exists but does not describe the key visual content",
+    "Video relies on visual demonstrations without verbal explanation and no audio description is provided"
+  ],
+  "na_conditions": [
+    "Page contains no prerecorded synchronized media (video with audio)",
+    "The existing audio track already fully describes all important visual content (nothing is visual-only)",
+    "Media is clearly labeled as a media alternative for text content already on the page"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Video content could not be loaded to assess visual information",
+    "Cannot determine whether visual content requires audio description"
+  ],
+  "common_mistakes": [
+    "Assuming narrated videos do not need audio description when important visual actions occur without verbal mention",
+    "Providing a transcript that only includes dialogue and not descriptions of visual actions",
+    "Audio description track that describes trivial visual details but misses key information",
+    "Confusing captions (1.2.2) with audio description — captions are for the deaf, audio description is for the blind"
+  ],
+  "examples": {
+    "pass": "A cooking tutorial video has an audio description track that narrates 'The chef adds two tablespoons of olive oil to the heated pan' during silent cooking sequences",
+    "fail": "A video tutorial shows on-screen steps visually with no voiceover describing what is shown, and no audio description or text alternative is available",
+    "partial": "A text transcript is provided but it only includes the spoken dialogue and does not describe the on-screen demonstrations"
+  },
+  "plain_meaning": "For prerecorded video with audio, users who cannot see the video must still get the visual information. This is satisfied in one of two ways: provide a full text alternative (a document that describes both what is said and what is shown), OR provide audio description -- an additional narration track that describes key visual information during natural pauses in the dialogue. At Level A, either option satisfies the rule. The criterion does not apply when the media is itself a media alternative for text and is clearly labeled as such.",
+  "scope_applies_to": [
+    "Prerecorded synchronized media where visual content carries information not conveyed by the audio track",
+    "Video lectures, tutorials, demonstrations where what is shown matters",
+    "Embedded third-party video players hosting such content",
+    "Self-hosted prerecorded video content",
+    "Narrative videos where on-screen events carry meaning beyond the spoken words"
+  ],
+  "scope_does_not_apply_to": [
+    "Live synchronized media -- no Level A audio description requirement",
+    "Prerecorded audio-only content -- that belongs to SC 1.2.1",
+    "Prerecorded video-only (silent) content -- that belongs to SC 1.2.1",
+    "Captions for the audio track -- that belongs to SC 1.2.2",
+    "Extended audio description -- that belongs to SC 1.2.7 (Level AAA)",
+    "Media that is a media alternative for text on the same page and is clearly labeled as such",
+    "Video where all visual information is already conveyed in the spoken audio (talking-head content with no meaningful visuals)",
+    "Keyboard operability of the player -- that belongs to SC 2.1.1"
+  ],
+  "borderline_calibration": [
+    "Either a full text alternative OR audio description satisfies Level A. Do NOT demand both.",
+    "A talking-head video where the speaker's face and background carry no information may be considered to already have its visual information in the audio; mark not-applicable with rationale.",
+    "Presence of a linked transcript that describes the visuals (not just the dialogue) counts as a text alternative.",
+    "When unclear whether visuals carry information, err on the side of requiring an alternative.",
+    "Missing both audio description and text alternative for clearly-visual prerecorded content is a hard failure at medium+."
+  ]
+}

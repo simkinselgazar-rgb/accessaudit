@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report - WCAG Trusted Tester</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .acr-report-container {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 0;
+      margin-top: 1rem;
+      overflow: hidden;
+    }
+    .acr-report-container iframe {
+      width: 100%;
+      border: none;
+      min-height: 80vh;
+    }
+  </style>
+</head>
+<body>
+
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;">Skip to main content</a>
+  <header class="app-header">
+    <div class="container">
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="/" class="header-brand">
+          <img src="/static/icon.svg" alt="WCAG Trusted Tester" width="36" height="36" style="border-radius:4px;">
+          <div class="brand-text">
+            <h1>WCAG Trusted Tester</h1>
+            <span class="brand-tool">WCAG Testing Tool</span>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="header-link">Dashboard</a>
+          <a href="/#form-heading" class="header-link">New Review</a>
+          <a href="/settings" class="header-link">Settings</a>
+        </div>
+      </nav>
+      <p class="subtitle">Section 508 &amp; WCAG Conformance Testing</p>
+    </div>
+  </header>
+
+  <main class="container" id="main-content">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Home</a>
+      <span class="sep" aria-hidden="true">&rsaquo;</span>
+      <span aria-current="page">Report: {{ meta.source_url or meta.source_file or review_id }}</span>
+    </nav>
+
+    <!-- Action bar -->
+    <div class="export-links mb-2">
+      <strong style="margin-right:4px;">Internal Reports:</strong>
+      <a href="/review/{{ review_id }}/export/pdf" onclick="return handleExport(event, this)">Export PDF</a>
+      <a href="/review/{{ review_id }}/export/docx" onclick="return handleExport(event, this)">Export DOCX</a>
+      <a href="/review/{{ review_id }}/export/xlsx" onclick="return handleExport(event, this)">Export XLSX</a>
+      <a href="/review/{{ review_id }}/report/json" target="_blank"
+         style="background:#e3f2fd;color:#1565c0;border-color:#90caf9;">Export JSON</a>
+      <a href="/review/{{ review_id }}/export/internal" target="_blank"
+         style="background:#fff3e0;color:#e65100;border-color:#ffcc80;">Internal Summary (JSON)</a>
+    </div>
+    <div class="export-links mb-2">
+      <strong style="margin-right:4px;">Client Delivery Reports:</strong>
+      <a href="/review/{{ review_id }}/export/pdf/client" onclick="return handleExport(event, this)">Export PDF</a>
+      <a href="/review/{{ review_id }}/export/docx/client" onclick="return handleExport(event, this)">Export DOCX</a>
+      <a href="/review/{{ review_id }}/export/xlsx/client" onclick="return handleExport(event, this)">Export XLSX</a>
+    </div>
+    <div class="export-links mb-2">
+      <a href="/review/{{ review_id }}/captures">View Captures</a>
+      <a href="/review/{{ review_id }}/download/evidence.zip"
+         style="background:#e8f5e9;color:#1b5e20;border-color:#a5d6a7;">Download All Evidence (ZIP)</a>
+      <a href="/?rerun={{ review_id }}"
+         style="background:#fffde7;color:#C5922E;border-color:#C5922E;">Rerun with Same Settings</a>
+    </div>
+
+    {# Quality banners — persistent across visits, surfaced on every report load. #}
+    {% if reviewer_data %}
+      {% set rc = reviewer_data %}
+      {% set total_issues = (rc.calibration.recalibrations | length if rc.calibration else 0)
+        + (rc.contradiction.contradictions | length if rc.contradiction else 0)
+        + (rc.citation.citation_errors | length if rc.citation else 0)
+        + (rc.tone.rewrites | length if rc.tone else 0) %}
+      <div class="audit-banner {{ 'audit-warns' if total_issues > 0 else 'audit-ok' }}" style="margin:1rem 0;">
+        <strong>Final Reviewer ({{ rc.model or 'Pro' }}):</strong>
+        {% if total_issues == 0 and (rc.synthesis.systemic_issues | length if rc.synthesis else 0) == 0 %}
+          ACR is internally consistent. No reviewer flags.
+        {% else %}
+          {% if rc.calibration and rc.calibration.recalibrations %}{{ rc.calibration.recalibrations | length }} verdict recalibration(s).{% endif %}
+          {% if rc.contradiction and rc.contradiction.contradictions %} {{ rc.contradiction.contradictions | length }} cross-SC contradiction(s).{% endif %}
+          {% if rc.citation and rc.citation.citation_errors %} {{ rc.citation.citation_errors | length }} citation error(s).{% endif %}
+          {% if rc.tone and rc.tone.rewrites %} {{ rc.tone.rewrites | length }} tone rewrite(s).{% endif %}
+          {% if rc.synthesis and rc.synthesis.systemic_issues %} {{ rc.synthesis.systemic_issues | length }} systemic pattern(s) identified.{% endif %}
+        {% endif %}
+        {% if rc.synthesis and rc.synthesis.systemic_issues %}
+        <details style="margin-top:.5rem;">
+          <summary>Systemic patterns ({{ rc.synthesis.systemic_issues | length }})</summary>
+          <ul>
+            {% for s in rc.synthesis.systemic_issues %}
+            <li><strong>{{ s.pattern }}</strong> &mdash; affects {{ s.affected_criteria | join(', ') }}<br>
+              <span style="font-size:.85rem;color:#555;">{{ s.description }}</span>
+              {% if s.root_cause %}<br><em style="font-size:.85rem;">Root cause: {{ s.root_cause }}</em>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if audit_data %}
+      {% set bug_count = audit_data.bugs | length if audit_data.bugs else 0 %}
+      {% set warn_count = audit_data.warns | length if audit_data.warns else 0 %}
+      <div class="audit-banner {{ 'audit-bugs' if bug_count > 0 else ('audit-warns' if warn_count > 0 else 'audit-ok') }}" style="margin:1rem 0;">
+        <strong>Quality Audit:</strong>
+        {% if bug_count == 0 and warn_count == 0 %}
+          0 bugs, 0 warnings — clean.
+        {% else %}
+          {{ bug_count }} bug(s), {{ warn_count }} warning(s).
+        {% endif %}
+        {% if bug_count > 0 %}
+        <details open style="margin-top:.5rem;">
+          <summary>Bugs ({{ bug_count }})</summary>
+          <ul>{% for b in audit_data.bugs %}<li>{{ b }}</li>{% endfor %}</ul>
+        </details>
+        {% endif %}
+        {% if warn_count > 0 %}
+        <details style="margin-top:.5rem;">
+          <summary>Warnings ({{ warn_count }})</summary>
+          <ul>{% for w in audit_data.warns %}<li>{{ w }}</li>{% endfor %}</ul>
+        </details>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <script>
+    function handleExport(e, link) {
+      e.preventDefault();
+      var origText = link.textContent;
+      link.textContent = 'Generating...';
+      link.style.pointerEvents = 'none';
+      fetch(link.href)
+        .then(function(r) {
+          if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'Export failed'); });
+          return r.blob().then(function(blob) { return {blob: blob, r: r}; });
+        })
+        .then(function(data) {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(data.blob);
+          var disp = data.r.headers.get('content-disposition') || '';
+          var match = disp.match(/filename="?([^"]+)"?/);
+          a.download = match ? match[1] : 'report' + link.href.split('/export/')[1];
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          link.textContent = origText;
+          link.style.pointerEvents = '';
+        })
+        .catch(function(err) {
+          alert('Export failed: ' + err.message);
+          link.textContent = origText;
+          link.style.pointerEvents = '';
+        });
+      return false;
+    }
+    </script>
+
+    <!-- Summary cards -->
+    {% if supports is defined %}
+    <div class="summary-cards mb-2">
+      <div class="summary-card supports">
+        <div class="count">{{ supports }}</div>
+        <div class="label">Supports</div>
+      </div>
+      <div class="summary-card partially">
+        <div class="count">{{ partially_supports }}</div>
+        <div class="label">Partially Supports</div>
+      </div>
+      <div class="summary-card does-not">
+        <div class="count">{{ does_not_support }}</div>
+        <div class="label">Does Not Support</div>
+      </div>
+      <div class="summary-card na">
+        <div class="count">{{ not_applicable }}</div>
+        <div class="label">Not Applicable</div>
+      </div>
+      <div class="summary-card ne">
+        <div class="count">{{ not_evaluated }}</div>
+        <div class="label">Not Evaluated</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ACR Report (embedded) -->
+    <div class="acr-report-container">
+      {{ acr_html | safe }}
+    </div>
+
+    <!-- Test Details (drill into individual criteria) -->
+    {% if results and results | length > 0 %}
+    <section class="card" style="margin-top:24px;" aria-labelledby="detail-heading">
+      <h3 id="detail-heading" class="card-title">Test Details (click to view sources, findings, and AI prompts)</h3>
+      <div style="overflow-x:auto;">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th scope="col">Criteria</th>
+              <th scope="col">Conformance</th>
+              <th scope="col">Confidence</th>
+              <th scope="col">Findings</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in results %}
+            <tr>
+              <td>
+                <strong>{{ r.criterion_id }}</strong>
+                <span style="font-size:.82rem;color:#616161;margin-left:4px;">{{ r.criterion_name }}</span>
+              </td>
+              <td>
+                {% set cl = r.conformance_level %}
+                <span class="{% if cl == 'Supports' %}conf-supports{% elif cl == 'Partially Supports' %}conf-partially-supports{% elif cl == 'Does Not Support' %}conf-does-not-support{% elif cl == 'Not Applicable' %}conf-not-applicable{% else %}conf-not-evaluated{% endif %}">
+                  {{ cl }}
+                </span>
+              </td>
+              <td>{{ ((r.confidence or 0) * 100) | round(0) }}%</td>
+              <td>{{ r.findings | length if r.findings else 0 }}</td>
+              <td>
+                <a href="/review/{{ review_id }}/test/{{ r.criterion_id }}">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="container" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <img src="/static/icon.svg" alt="" width="20" height="20" style="height:20px;width:20px;border-radius:3px;">
+      <span>WCAG Trusted Tester v2.0.0</span>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

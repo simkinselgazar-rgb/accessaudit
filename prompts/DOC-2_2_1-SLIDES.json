@@ -1,0 +1,44 @@
+{
+  "criterion_id": "DOC-2.2.1-SLIDES",
+  "criterion_name": "Auto-Advancing Slides",
+  "visual_checks": [
+    "Check the presentation's transition settings for each slide to see if automatic timing is configured",
+    "Look for timed transitions or auto-advance settings in the slide show configuration",
+    "Verify whether any slides are set to advance after a specific time interval",
+    "Check if a pause or stop mechanism is available when auto-advancing is enabled",
+    "Look for kiosk mode or looping settings that would cause uncontrolled automatic progression"
+  ],
+  "pass_conditions": [
+    "Slides advance only on user interaction (mouse click, keyboard press, or equivalent)",
+    "No automatic timing or timed transitions are set on any slide",
+    "If auto-advancing is used, a clearly accessible pause, stop, or manual override mechanism is provided",
+    "If the presentation loops, users can pause, stop, or control the progression"
+  ],
+  "fail_conditions": [
+    "One or more slides have timed transitions that auto-advance without user control",
+    "The presentation is set to auto-play or loop with no pause mechanism",
+    "Kiosk mode is enabled with timed transitions and no way for users to control the pace",
+    "Slide timing is set to advance faster than users can reasonably read the content",
+    "Auto-advancing is enabled with no option to pause, stop, or extend the time"
+  ],
+  "na_conditions": [
+    "The document is not a presentation format (not PowerPoint, Google Slides, or similar)",
+    "The presentation contains only a single slide"
+  ],
+  "ne_conditions": [
+    "The presentation's transition and timing settings could not be accessed or extracted",
+    "The slide show configuration data is not available for evaluation"
+  ],
+  "common_mistakes": [
+    "Setting timed transitions for a conference presentation and then publishing the same file online without removing the timing",
+    "Using auto-advance for all slides without considering users who need more time to read content",
+    "Configuring kiosk mode for a lobby display and reusing the same file for online distribution",
+    "Adding slide timing for rehearsal purposes and forgetting to remove it before publishing",
+    "Assuming that keyboard controls in presentation software are sufficient as a pause mechanism when the file may be viewed in a PDF reader or web viewer that does not support those controls"
+  ],
+  "examples": {
+    "pass": "A presentation has all slides set to 'On Mouse Click' advancement with no automatic timing configured",
+    "fail": "A 20-slide presentation has each slide set to auto-advance after 5 seconds with no pause or stop mechanism, preventing users who need more reading time from accessing the content",
+    "partial": "Most slides advance on click but three slides in the middle of the presentation have 10-second auto-advance timers set from a prior use as a kiosk display"
+  }
+}

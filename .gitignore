@@ -1,0 +1,33 @@
+# ── Secrets & local config — NEVER commit ───────────────────────────────────
+settings.json
+.env
+.env.*
+*.pem
+*.key
+
+# ── Runtime output (generated per review run) ────────────────────────────────
+reviews/
+llm_transcripts/
+auth_sessions/
+*.log
+
+# ── Personal / business files (not part of the public tool) ─────────────────
+send_outreach.py
+notes/
+*.xlsx
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# ── Editors / agents / OS ────────────────────────────────────────────────────
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

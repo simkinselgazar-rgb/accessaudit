@@ -1,0 +1,72 @@
+{
+  "criterion_id": "CAV",
+  "criterion_name": "Conforming Alternate Version",
+  "visual_checks": [
+    "Check if a non-conforming version of the document exists alongside a conforming alternate version",
+    "Verify that the conforming alternate version contains the same information and functionality as the primary version",
+    "Confirm the alternate version is equally current and up to date with the primary version",
+    "Look for a clear mechanism to reach the conforming alternate version from the non-conforming version",
+    "Verify that the conforming alternate version is in an accessible format and meets applicable accessibility requirements",
+    "Check that the path from the non-conforming version to the conforming alternate is itself accessible"
+  ],
+  "pass_conditions": [
+    "A conforming alternate version is provided that contains the same information as the non-conforming version",
+    "The alternate version is equally current and updated whenever the primary version changes",
+    "The conforming alternate version is reachable directly from the non-conforming version via an accessible mechanism",
+    "The alternate version meets all applicable WCAG success criteria",
+    "The conforming version provides equivalent functionality and information to the non-conforming version"
+  ],
+  "fail_conditions": [
+    "A non-conforming document is published with no conforming alternate version available",
+    "The alternate version exists but is outdated compared to the primary version",
+    "The alternate version is not reachable from the non-conforming version (no link, reference, or accessible path)",
+    "The alternate version is missing content or information that is present in the primary version",
+    "The mechanism to reach the alternate version is itself not accessible (e.g., link is not perceivable or operable)",
+    "The alternate version exists but also fails to meet accessibility requirements",
+    "The alternate version is in a format that is less usable than necessary (e.g., plain text dump of a complex interactive document)"
+  ],
+  "na_conditions": [
+    "Only one version of the document exists and no alternate version is needed",
+    "The primary document itself is fully conforming and no alternate version is required"
+  ],
+  "ne_conditions": [
+    "It could not be determined whether an alternate version exists",
+    "The relationship between document versions could not be evaluated from the available data"
+  ],
+  "common_mistakes": [
+    "Providing an alternate version that was created from an earlier draft and not updated with the final content",
+    "Offering an HTML alternate of a PDF but omitting tables, images, or sections from the conversion",
+    "Placing the conforming alternate version on a different site or location with no link from the non-conforming version",
+    "Providing a text-only version as the alternate but stripping out meaningful formatting, structure, and media",
+    "Relying on users to find the alternate version through search rather than providing a direct accessible path",
+    "Creating an accessible version once and not maintaining it as the primary document is updated"
+  ],
+  "examples": {
+    "pass": "A scanned PDF (non-conforming) includes a direct link on the download page to a tagged, accessible PDF version that contains the same content and was published on the same date",
+    "fail": "A complex infographic PDF is posted with a note saying 'accessible version available upon request' but no direct link to an existing alternate version is provided",
+    "partial": "An accessible HTML version of a PDF report is linked from the download page, but the HTML version is missing two appendices that are present in the PDF"
+  },
+  "plain_meaning": "When a piece of web content cannot be made directly accessible, a Conforming Alternate Version must be provided: a separate version that meets WCAG at the required level, contains equivalent information and functionality, is kept as up to date as the primary version, and is reachable from the non-conforming version via an accessible mechanism. The alternate is not a second-class fallback; it must be equivalent in content and current in updates.",
+  "scope_applies_to": [
+    "Non-conforming primary content (for example scanned PDFs, complex infographics) that ships with an accessible alternate",
+    "The mechanism on the non-conforming version that points to the alternate",
+    "The equivalence of information and functionality between versions",
+    "The currency and update schedule of the alternate vs the primary",
+    "The accessibility of the path from primary to alternate",
+    "The conformance of the alternate itself to WCAG at the required level"
+  ],
+  "scope_does_not_apply_to": [
+    "Content that is itself fully conforming (no alternate required)",
+    "Sites with a single version where no alternate version is needed",
+    "Alternate versions that exist only as internal drafts and are not published",
+    "Accessibility concerns that belong to other specific SCs when applied to the alternate version",
+    "Search-only discoverability when a direct link is required"
+  ],
+  "borderline_calibration": [
+    "An alternate that is missing content the primary has is a FAIL.",
+    "An alternate that is out of date relative to the primary is a FAIL.",
+    "An alternate that cannot be reached via an accessible link from the non-conforming version is a FAIL.",
+    "A 'request an accessible copy' note with no pre-existing alternate does NOT satisfy this criterion.",
+    "If the primary is already conforming, return Not Applicable rather than PASS."
+  ]
+}

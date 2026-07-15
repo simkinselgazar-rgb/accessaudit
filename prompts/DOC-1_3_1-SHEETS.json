@@ -1,0 +1,54 @@
+{
+  "criterion_id": "DOC-1.3.1-SHEETS",
+  "criterion_name": "Spreadsheet Structure",
+  "visual_checks": [
+    "CRITICAL — SPREADSHEET LAYOUT ANALYSIS: Examine the overall layout of each sheet. Is there a clear header row at the top? A header column on the left? Or is data scattered without consistent structure?",
+    "Check whether the first row of each data range contains column headers that describe the data below them.",
+    "Look for merged cells — do they obscure the relationship between headers and data? Merged cells across multiple rows or columns break screen reader navigation.",
+    "Check sheet tab names: are they descriptive (e.g., 'Q1 Revenue', 'Employee List') or generic (e.g., 'Sheet1', 'Sheet2', 'Sheet3')?",
+    "Look for blank rows or columns inserted for visual spacing that break the contiguous data range and confuse assistive technology.",
+    "Check whether data starts in cell A1 or if there are empty rows/columns above and to the left of the data, which can disorient screen reader users.",
+    "Identify any cells that use color alone to convey meaning (e.g., red cells for negative values with no other indicator).",
+    "Look for multiple data tables on a single sheet — each should be clearly separated and identifiable."
+  ],
+  "pass_conditions": [
+    "Each sheet has a clearly defined header row that is formatted as a header (using Format as Table, or the header row is identified in table properties)",
+    "Column headers are descriptive and clearly label the data in each column",
+    "Row headers (if applicable) are present in the first column and clearly label each row of data",
+    "No merged cells exist within data ranges that would break the association between headers and data cells",
+    "Sheet names are descriptive and meaningful, reflecting the content of each sheet",
+    "Data begins at or near cell A1 without unnecessary blank rows or columns above or to the left",
+    "Blank rows and columns are not used as spacers within data ranges"
+  ],
+  "fail_conditions": [
+    "No header row is identified — the first row of data looks the same as every other row to assistive technology",
+    "Merged cells span multiple data columns or rows, making it impossible for a screen reader to associate data with the correct header",
+    "Sheet tabs use default names like 'Sheet1', 'Sheet2', 'Sheet3' with no indication of content",
+    "Data is arranged in a non-standard layout (e.g., multiple small tables scattered across the sheet without clear boundaries)",
+    "Blank rows or columns within data ranges cause screen readers to believe the data table has ended",
+    "Headers are placed several rows below the top of the sheet with no programmatic indication of where the data table begins",
+    "Color is the sole method of conveying data meaning (e.g., red/green cells with no text labels or conditional formatting notes)"
+  ],
+  "na_conditions": [
+    "Document is not a spreadsheet (not an XLSX, XLS, ODS, or CSV file)",
+    "Document does not contain tabular data in spreadsheet format"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Spreadsheet could not be opened or its structure could not be inspected",
+    "File format does not support programmatic header identification"
+  ],
+  "common_mistakes": [
+    "Merging cells for a 'title row' across the top of a spreadsheet, which breaks the data table structure below it",
+    "Using blank rows as visual separators between groups of data instead of using grouping or separate tables",
+    "Leaving sheet tabs as 'Sheet1', 'Sheet2' because renaming was overlooked during development",
+    "Placing a title or instructions in rows 1-3 and starting the actual data table at row 4 without using a named table that defines the header row",
+    "Merging header cells to create multi-level column headers (e.g., merging cells above Q1-Q4 to create a 'Quarterly Data' super-header) which breaks screen reader column navigation",
+    "Creating visually appealing layouts with extensive merged cells, borders, and spacing that are completely unnavigable by screen readers"
+  ],
+  "examples": {
+    "pass": "An Excel workbook has three sheets named 'FY2025 Budget', 'Personnel', and 'Equipment'. Each sheet has data starting at A1 with a clearly formatted header row using Format as Table. No merged cells exist within data ranges. A screen reader can navigate cell by cell and hear the column header announced with each value.",
+    "fail": "An Excel workbook has 5 sheets all named 'Sheet1' through 'Sheet5'. The first sheet has a merged title spanning A1:F1, a blank row 2, and data starting at row 3 with no header row identification. Multiple merged cells within the data area make it impossible for a screen reader to associate values with column headers.",
+    "partial": "A workbook has descriptive sheet names and header rows on most sheets, but one sheet has extensive merged cells in a summary table that break header-data associations, and another uses blank rows as visual separators within a data range."
+  }
+}

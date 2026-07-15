@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ meta.company_name or "Company" }} Accessibility Conformance Report</title>
+  <style>
+    body { font-family: "Segoe UI", Calibri, Arial, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.55; font-size: 11pt; }
+    h1 { font-size: 1.8rem; border-bottom: 2px solid #1a1a1a; padding-bottom: 0.5rem; }
+    h2 { font-size: 1.35rem; margin-top: 2.5rem; border-bottom: 1px solid #999; padding-bottom: 0.3rem; }
+    h3 { font-size: 1.1rem; margin-top: 1.75rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { border: 1px solid #999; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #e8e8e8; font-weight: 600; }
+    .meta-field { margin: 0.3rem 0; }
+    .meta-field strong { display: inline-block; min-width: 200px; }
+    .supports { color: #047857; }
+    .partially { color: #b45309; }
+    .does-not { color: #b91c1c; }
+    .na { color: #6b7280; }
+    .terms dt { font-weight: 700; margin-top: 0.5rem; }
+    .terms dd { margin-left: 0; margin-bottom: 0.5rem; }
+    .finding { border-left: 4px solid #b91c1c; background: #fef2f2; padding: 0.6rem 0.8rem; margin: 0.6rem 0; font-size: 0.95em; }
+    .finding.medium { border-left-color: #b45309; background: #fffbeb; }
+    .finding.low { border-left-color: #2563eb; background: #eff6ff; }
+    .finding.info { border-left-color: #6b7280; background: #f3f4f6; }
+    .finding .sev { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ccc; color: #6b7280; font-size: 0.85rem; }
+    .criterion-cell { font-size: 0.95em; }
+    .criterion-cell .also-applies { color: #555; font-size: 0.85em; }
+    @media print { body { margin: 0; padding: 0; } .footer { page-break-before: always; } }
+  </style>
+</head>
+<body>
+
+  <h1>{{ meta.company_name or "[Company]" }} Accessibility Conformance Report</h1>
+  <p>Revised Section 508 Edition<br>(Based on VPAT&reg; Version 2.5Rev)</p>
+
+  <section>
+    <p class="meta-field"><strong>Name of Product/Version:</strong> {{ meta.product_name or meta.source_url or "—" }}</p>
+    <p class="meta-field"><strong>Report Date:</strong> {{ generated_at }}</p>
+    <p class="meta-field"><strong>Product Description:</strong> {{ meta.product_description or "Web application" }}</p>
+    <p class="meta-field"><strong>Contact Information:</strong> {{ meta.contact_email or meta.contact_name or "—" }}</p>
+    <p class="meta-field"><strong>Notes:</strong> {{ meta.notes or "—" }}</p>
+    <p class="meta-field"><strong>Evaluation Methods Used:</strong> {{ meta.evaluation_methods or "Combination of automated programmatic testing and manual expert review using the DHS Trusted Tester methodology." | replace("AI-powered", "") | replace("AI-driven", "") | replace("ai-powered", "") }}</p>
+
+    <h3>Applicable Standards/Guidelines</h3>
+    <table>
+      <thead><tr><th>Standard/Guideline</th><th>Included In Report</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Web Content Accessibility Guidelines {{ meta.wcag_version or "2.2" }}</td>
+          <td>Level A (Yes)<br>Level AA ({% if meta.coverage_level in ["AA", "AAA"] %}Yes{% else %}No{% endif %})<br>Level AAA ({% if meta.coverage_level == "AAA" %}Yes{% else %}No{% endif %})</td>
+        </tr>
+        <tr>
+          <td>Revised Section 508 standards published January 18, 2017 and corrected January 22, 2018</td>
+          <td>(Yes)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Terms</h2>
+    <p>The terms used in the Conformance Level information are defined as follows:</p>
+    <dl class="terms">
+      <dt>Supports</dt>
+      <dd>The functionality of the product has at least one method that meets the criterion without known defects or meets with equivalent facilitation.</dd>
+      <dt>Partially Supports</dt>
+      <dd>Some functionality of the product does not meet the criterion.</dd>
+      <dt>Does Not Support</dt>
+      <dd>The majority of product functionality does not meet the criterion.</dd>
+      <dt>Not Applicable</dt>
+      <dd>The criterion is not relevant to the product.</dd>
+      <dt>Not Evaluated</dt>
+      <dd>The product has not been evaluated against the criterion. This can only be used in WCAG Level AAA criteria.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>WCAG {{ meta.wcag_version or "2.2" }} Report</h2>
+    <p>Tables 1 and 2 also document conformance with Revised Section 508:</p>
+    <ul>
+      <li>Chapter 5 &mdash; 501.1 Scope, 504.2 Content Creation or Editing</li>
+      <li>Chapter 6 &mdash; 602.3 Electronic Support Documentation</li>
+    </ul>
+    <p><em>Note: When reporting on conformance with the WCAG {{ meta.wcag_version or "2.2" }} Success Criteria, they are scoped for full pages, complete processes, and accessibility-supported ways of using technology as documented in the WCAG {{ meta.wcag_version or "2.2" }} Conformance Requirements.</em></p>
+
+    {% for level_key, level_label, table_num in [("level_a", "Level A", 1), ("level_aa", "Level AA", 2), ("level_aaa", "Level AAA", 3)] %}
+      {% set level_results = {'level_a': level_a, 'level_aa': level_aa, 'level_aaa': level_aaa}[level_key] %}
+      {% if level_results %}
+      <h3>Table {{ table_num }}: Success Criteria, {{ level_label }}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40%;">Criteria</th>
+            <th style="width: 20%;">Conformance Level</th>
+            <th style="width: 40%;">Remarks and Explanations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in level_results %}
+          {% set cl = r.conformance_level if r.conformance_level is string else r.conformance_level.value %}
+          <tr>
+            <td class="criterion-cell">
+              {{ r.criterion_id }} {{ r.criterion_name }} ({{ level_label }})
+              {% if sec508_refs and sec508_refs[r.criterion_id] %}
+              <br><span class="also-applies">Also applies to:<br>{{ sec508_refs[r.criterion_id] | replace('\n', '<br>') | safe }}</span>
+              {% endif %}
+            </td>
+            <td>
+              Web: {% if cl == 'Supports' %}<span class="supports">{{ cl }}</span>
+              {% elif cl == 'Partially Supports' %}<span class="partially">{{ cl }}</span>
+              {% elif cl == 'Does Not Support' %}<span class="does-not">{{ cl }}</span>
+              {% else %}<span class="na">{{ cl }}</span>{% endif %}
+            </td>
+            <td>Web: {{ r.summary or "—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    {% endfor %}
+  </section>
+
+  {% if fpc_table %}
+  <section>
+    <h2>Revised Section 508 Report</h2>
+    <h3>Chapter 3: Functional Performance Criteria (FPC)</h3>
+    <table>
+      <thead>
+        <tr><th>Criteria</th><th>Conformance Level</th><th>Remarks and Explanations</th></tr>
+      </thead>
+      <tbody>
+        {% for row in fpc_table %}
+        <tr>
+          <td>{{ row.code }} {{ row.name or "" }}</td>
+          <td>{{ row.conformance }}</td>
+          <td>{{ row.remark or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Legal Disclaimer</h2>
+    <p><em>{{ meta.company_name or "[Company]" }} makes no warranties, express or implied, with respect to the accuracy or completeness of this document. This report reflects the state of the product at the time of evaluation.</em></p>
+  </section>
+
+  {% if findings %}
+  <section>
+    <h2>Appendix: Detailed Findings</h2>
+    <p>The following {{ findings | length }} individual findings were identified during testing.</p>
+    {% for f in findings %}
+      {% set sev = f.severity if f.severity is string else (f.severity.value if f.severity else 'medium') %}
+      <div class="finding {{ sev }}">
+        <div class="sev">SC {{ f.criterion_id or "—" }} — {{ sev | upper }}</div>
+        <div><strong>Element:</strong> {{ f.element or "—" }}{% if f.css_selector %} <code>{{ f.css_selector }}</code>{% endif %}</div>
+        {% if f.location %}<div><strong>Location:</strong> {{ f.location }}</div>{% endif %}
+        <div><strong>Issue:</strong> {{ f.issue }}</div>
+        {% if f.impact %}<div><strong>Impact:</strong> {{ f.impact }}</div>{% endif %}
+        {% if f.recommendation %}<div><strong>Conformance requirement:</strong> {{ f.recommendation }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <div class="footer">
+    {{ meta.company_name or "" }} Accessibility Conformance Report &mdash; {{ generated_at }}
+  </div>
+</body>
+</html>

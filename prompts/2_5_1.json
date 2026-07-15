@@ -1,0 +1,65 @@
+{
+  "criterion_id": "2.5.1",
+  "criterion_name": "Pointer Gestures",
+  "visual_checks": [
+    "Look for any functionality that requires multipoint gestures such as pinch-to-zoom, two-finger swipe, or multi-finger tap",
+    "Identify any path-based gestures such as swipe, drag-along-a-path, or drawing a shape to trigger an action",
+    "Check interactive maps, carousels, sliders, drawing canvases, and image galleries for gesture-dependent controls",
+    "Look for custom gesture-driven UI components such as sortable lists that require drag paths or rotational gestures",
+    "Verify whether single-pointer alternatives (e.g., tap, click, long press) are provided for every multipoint or path-based gesture"
+  ],
+  "pass_conditions": [
+    "All functionality operated by multipoint or path-based gestures can also be operated with a single pointer without a path-based gesture",
+    "Single-pointer alternatives such as tap buttons, increment/decrement controls, or click-based navigation are provided for carousel swipes, pinch-zoom, and drag-based reordering",
+    "Map components provide zoom-in/zoom-out buttons as alternatives to pinch-to-zoom and pan gestures",
+    "Slider controls can be operated by clicking or tapping a point on the track, or via increment/decrement buttons, not only by dragging along a path"
+  ],
+  "fail_conditions": [
+    "A carousel or gallery requires a swipe gesture and provides no tap or button-based alternative to advance slides",
+    "A map component requires pinch-to-zoom with no zoom buttons or other single-pointer alternative",
+    "A drawing or annotation tool requires path-based gestures and offers no alternative input method",
+    "A sortable list requires a drag-along-a-path gesture with no single-pointer alternative such as move-up/move-down buttons",
+    "A custom UI widget requires a multi-finger tap or rotation gesture with no single-pointer fallback"
+  ],
+  "na_conditions": [
+    "Page contains no functionality that relies on multipoint or path-based pointer gestures"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Interactive gesture-based components could not be evaluated because they require real touch or pointer input beyond what automated testing can simulate"
+  ],
+  "common_mistakes": [
+    "Providing keyboard alternatives but no single-pointer alternative — this criterion specifically requires a single-pointer, non-path-based alternative",
+    "Assuming swipe gestures are universally accessible — users with motor impairments may not be able to perform directional swipes",
+    "Overlooking embedded third-party map or media widgets that rely on pinch/zoom gestures without button alternatives",
+    "Confusing this criterion with keyboard accessibility — a button alternative satisfies both, but keyboard-only does not satisfy pointer gesture requirements",
+    "Forgetting that the alternative must achieve the same result, not just a partial substitute"
+  ],
+  "examples": {
+    "pass": "A photo gallery supports swipe-to-advance but also provides visible 'Previous' and 'Next' buttons that work with a single tap or click",
+    "fail": "An interactive map requires pinch-to-zoom and two-finger drag to pan, with no on-screen zoom buttons or other single-pointer controls",
+    "partial": "A carousel provides 'Next' and 'Previous' buttons but a separate sortable list on the same page requires a drag-along-a-path gesture with no single-pointer alternative"
+  },
+  "plain_meaning": "Any functionality that requires a complex gesture to operate -- multi-finger gestures like pinch-to-zoom, or path-based gestures like swipe or drawing a shape -- must also be operable with a simple single-point action such as a tap or click, unless the complex gesture is essential to the function. This ensures users who cannot perform multi-touch or path gestures can still use the feature.",
+  "scope_applies_to": [
+    "Features triggered by multi-finger gestures (two-finger pinch, three-finger swipe)",
+    "Features triggered by path-based gestures (swipe, drag along a path, drawing a shape)",
+    "Custom carousels, sliders, and image viewers that rely on swipe",
+    "Custom maps or zoom features that rely on pinch",
+    "Signature pads where signing is incidental rather than essential"
+  ],
+  "scope_does_not_apply_to": [
+    "Single-point activations like taps, clicks, and long-press",
+    "Gestures where the path or multi-point nature is essential (drawing an actual signature, a freehand art tool)",
+    "Keyboard operability (that is SC 2.1.1)",
+    "Drag operations that can be handled as single pointer without a path (covered more specifically by SC 2.5.7)",
+    "User-agent gestures provided by the browser or OS"
+  ],
+  "borderline_calibration": [
+    "If the feature offers any single-pointer alternative (buttons, taps), it passes even if gestures are also available.",
+    "Essential gestures (drawing, real signatures) are exempt; do not flag them.",
+    "Only flag when the ONLY way to operate the function is a complex gesture.",
+    "A swipe carousel with visible next/previous arrow buttons passes."
+  ]
+}

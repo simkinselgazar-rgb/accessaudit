@@ -1,0 +1,80 @@
+{
+  "criterion_id": "4.1.3",
+  "criterion_name": "Status Messages",
+  "visual_checks": [
+    "Look at the page for areas that update dynamically — search results counts, form validation messages, loading indicators, cart item counts, toast notifications. Do these have aria-live or role=status/alert to announce changes to screen readers?",
+    "Submit forms with invalid data and check whether error messages or success confirmations appear — are these announced programmatically?",
+    "Look for loading spinners, progress indicators, or 'please wait' messages that appear during asynchronous operations",
+    "Check for areas where content updates without a full page reload — infinite scroll counts, filter result totals, sort confirmations",
+    "Look for toast notifications, snackbars, or banner messages that appear temporarily at the top or bottom of the page",
+    "Identify shopping cart badge counts, notification badges, or counters that update when users take action",
+    "Check whether search result counts (e.g., 'Showing 25 results for shoes') are announced when results load"
+  ],
+  "pass_conditions": [
+    "Form validation error messages use role='alert' or aria-live='assertive' so they are announced immediately",
+    "Success or confirmation messages (e.g., 'Item added to cart') use role='status' or aria-live='polite' for non-urgent announcements",
+    "Search result counts or filter result updates are wrapped in an aria-live='polite' region",
+    "Loading/progress indicators use role='status' or role='progressbar' with aria-live so users know the page is working",
+    "Toast notifications and snackbar messages use role='status' or role='alert' depending on urgency",
+    "Status messages do not steal focus — they are announced via live regions without moving the user's cursor",
+    "Dynamic counters (cart badge, notification count) update within an aria-live region or use a visually hidden live region to announce changes"
+  ],
+  "fail_conditions": [
+    "Form validation errors appear visually but have no role='alert' or aria-live, so screen reader users are unaware of errors",
+    "Success or confirmation messages appear on screen but are not announced to assistive technology",
+    "Search results update with a new count but the count is not in an aria-live region — screen reader users do not know results changed",
+    "A loading spinner displays but there is no programmatic announcement that content is loading or has finished loading",
+    "Toast notifications appear and disappear without ever being announced via a live region",
+    "Status messages steal focus unnecessarily, disrupting the user's workflow instead of using a live region",
+    "aria-live regions are present in the DOM but are added dynamically at the same time as the message, preventing the announcement from firing"
+  ],
+  "na_conditions": [
+    "Page is entirely static with no forms, no dynamic content updates, no search functionality, and no asynchronous operations that produce status messages"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Dynamic status messages require user interaction (form submission, button clicks) that could not be simulated during testing",
+    "Status messages are triggered by server-side events or timers that did not fire during the evaluation window",
+    "No status messages were observed during static capture — if the page has forms or search but no status messages were triggered, the auditor cannot verify ARIA live region usage. Check the DOM for role=status, role=alert, aria-live attributes. If these exist in the markup, they are likely functional even if not triggered during testing."
+  ],
+  "common_mistakes": [
+    "Adding aria-live to an element at the same time as inserting the message text — the live region must already exist in the DOM before the content changes for the announcement to fire",
+    "Using role='alert' for non-urgent informational messages (like 'Results updated'), causing disruptive announcements — role='status' or aria-live='polite' is more appropriate",
+    "Form validation errors that only indicate the problem through color change (red border) with no programmatic announcement",
+    "Toast notifications that disappear after a few seconds without ever being announced — screen reader users miss them entirely",
+    "Using aria-live='assertive' for everything instead of reserving it for truly urgent messages like errors",
+    "Putting aria-live on a large container that re-renders entirely, causing the screen reader to read out all content instead of just the status change",
+    "Cart or notification badge counts that update visually but have no aria-live region to announce the change"
+  ],
+  "examples": {
+    "pass": "A search page has <div role='status' aria-live='polite'>Showing 42 results for 'hiking boots'</div> that updates when results load. A login form displays <p role='alert'>Incorrect password, please try again</p> when validation fails. An 'Add to cart' button triggers a visually hidden <span role='status'>Item added to cart, 3 items total</span> announcement.",
+    "fail": "A contact form shows a red 'Please fill in all required fields' message above the form after submission, but it is a plain <div> with no role or aria-live — screen reader users are not informed of the error. A shopping site updates the cart count badge from '2' to '3' visually, but the badge has no aria-live region, so the change is silent to assistive technology.",
+    "partial": "Form validation errors correctly use role='alert' and are announced, but the search results count ('15 results found') updates in a plain <span> with no aria-live region, and a toast notification confirming 'Settings saved' lacks role='status' — some status messages are handled correctly while others are missed."
+  },
+  "plain_meaning": "When the page presents a status message (success confirmation, error summary appearing after submit, count of search results, loading complete, etc.) WITHOUT moving keyboard focus to it, that message must be programmatically exposed so assistive technology announces it. This is done with role=status, role=alert, aria-live regions, or equivalent ARIA properties.",
+  "scope_applies_to": [
+    "Success toasts and confirmation messages that appear without focus change",
+    "Error summaries that render after form submit without focus",
+    "Search result counts updating dynamically",
+    "Loading indicators that announce completion",
+    "Shopping cart item-count updates",
+    "Any dynamic status change that should be announced without stealing focus"
+  ],
+  "scope_does_not_apply_to": [
+    "Errors where focus IS moved to the error field (focus announces them, not a live region)",
+    "Modal dialogs that take focus on open",
+    "Plain visible text updates that do not require AT announcement to be usable",
+    "Content changes that occur as a direct result of user navigation",
+    "Error identification text itself (that is SC 3.3.1)",
+    "Labels, instructions, and static help text"
+  ],
+  "borderline_calibration": [
+    "PASS when the status container has role=status, role=alert, aria-live=polite, aria-live=assertive, or equivalent.",
+    "FAIL when a new status message appears in the DOM without focus change and without any live-region semantics.",
+    "If focus is moved to the status (for example to an error summary heading), it is announced by focus and does NOT need live-region semantics.",
+    "Do not flag purely visible changes that carry no status meaning.",
+    "Prefer Not Enough Evidence when no dynamic status was captured.",
+    "If the DOM contains elements with role=status, role=alert, or aria-live=polite/assertive, the page has the infrastructure for status messages even if none were triggered. This is evidence of support, not a failure."
+  ]
+}

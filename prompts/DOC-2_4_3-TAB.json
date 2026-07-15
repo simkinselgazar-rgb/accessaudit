@@ -1,0 +1,42 @@
+{
+  "criterion_id": "DOC-2.4.3-TAB",
+  "criterion_name": "PDF Tab Order",
+  "visual_checks": [
+    "Check the PDF's tab order settings in the page properties or document structure",
+    "Verify that the tab order is set to follow the document structure (tagged structure order)",
+    "If possible, test tabbing through form fields or interactive elements to confirm the order follows the logical reading sequence",
+    "Compare the visual layout reading order against the programmatic tab order"
+  ],
+  "pass_conditions": [
+    "Tab order is set to 'Use Document Structure' (document structure order) for all pages",
+    "Interactive elements receive focus in a logical order that matches the document's reading sequence",
+    "The tab order follows the tag tree structure of the PDF"
+  ],
+  "fail_conditions": [
+    "Tab order is set to 'Unspecified' which causes unpredictable navigation",
+    "Tab order is set to 'Use Row Order' or 'Use Column Order' instead of document structure",
+    "Tab order does not follow the logical reading sequence of the document",
+    "Different pages in the same document have inconsistent tab order settings",
+    "The document has interactive elements but no tab order has been defined"
+  ],
+  "na_conditions": [
+    "The document is not a PDF",
+    "The PDF contains no interactive elements, form fields, or links that would be navigated via tab"
+  ],
+  "ne_conditions": [
+    "The PDF tab order settings could not be determined from the available data",
+    "The PDF page properties could not be accessed for evaluation"
+  ],
+  "common_mistakes": [
+    "Leaving tab order at the default 'Unspecified' setting after creating a tagged PDF",
+    "Setting tab order to row or column order which may not match the logical reading sequence for complex layouts",
+    "Setting tab order correctly on some pages but not others within the same document",
+    "Assuming that tagging a PDF automatically sets the correct tab order without verifying the page property",
+    "Not updating tab order after reorganizing pages or content in the document"
+  ],
+  "examples": {
+    "pass": "A tagged PDF form has its tab order set to 'Use Document Structure' on every page, and tabbing through fields follows the logical top-to-bottom reading order matching the tag tree",
+    "fail": "A PDF form has tab order set to 'Unspecified' causing a screen reader user to jump between fields in an unpredictable sequence unrelated to the visual layout",
+    "partial": "Most pages in a multi-page PDF have tab order set to document structure, but two pages still have tab order set to 'Unspecified'"
+  }
+}

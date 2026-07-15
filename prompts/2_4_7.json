@@ -1,0 +1,78 @@
+{
+  "criterion_id": "2.4.7",
+  "criterion_name": "Focus Visible",
+  "visual_checks": [
+    "Compare the unfocused and focused screenshot pairs — is there a visible difference when an element receives keyboard focus? Look for outline, glow, border change, background change. Is it visible against the page background?",
+    "Tab through interactive elements (links, buttons, form fields, custom controls) and verify each one shows a visible focus indicator",
+    "Check if the focus indicator is visible on all background colors — a light blue outline may be invisible on a white background",
+    "Look for CSS that removes the default focus outline (outline: none or outline: 0) without providing a custom replacement",
+    "Verify that custom focus styles have sufficient contrast against the surrounding background (at least 3:1 contrast ratio for the indicator)",
+    "Check non-standard interactive elements (custom buttons, clickable divs, tab panels) — do they also show focus indicators?"
+  ],
+  "pass_conditions": [
+    "Every focusable element displays a visible focus indicator when it receives keyboard focus",
+    "The focus indicator is clearly distinguishable from the unfocused state — it provides a visible change in appearance (outline, border, glow, background change, underline, or combination)",
+    "The focus indicator is visible against all background colors used on the page",
+    "Custom focus styles replace any removed default outlines and are at least as visible as the browser default",
+    "Focus indicators on custom widgets (tabs, accordions, carousels, sliders) are visible and clear",
+    "The focus indicator encloses or is adjacent to the focused element so users can identify which element has focus"
+  ],
+  "fail_conditions": [
+    "Focus indicators are removed with CSS (outline: none or outline: 0) and no custom focus style is provided",
+    "Focus indicators are present but invisible or nearly invisible against the background (e.g., light gray outline on white background)",
+    "Some interactive elements show focus indicators but others do not (inconsistent focus visibility)",
+    "Custom components (JavaScript widgets, custom dropdowns) receive focus but display no visual indication",
+    "Focus indicator is only visible on some element types (e.g., form fields show focus but links and buttons do not)",
+    "The :focus-visible or :focus style is overridden to make the indicator transparent or the same color as the unfocused state"
+  ],
+  "na_conditions": [
+    "Page contains no keyboard-focusable elements (no links, buttons, form fields, or custom interactive controls)"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Focused and unfocused screenshot pairs could not be captured for comparison",
+    "Cannot verify focus visibility from a single static screenshot without focus state captured"
+  ],
+  "common_mistakes": [
+    "Using outline: none in a CSS reset without providing a custom :focus or :focus-visible style",
+    "Custom focus styles that rely solely on color change (e.g., text color change) which may not be visible to color-blind users",
+    "Focus indicators that are thin (1px) and low contrast, making them hard to see",
+    "Removing focus indicators on buttons and links 'for aesthetic reasons' while keeping them on form inputs",
+    "Using :focus-visible only, which may not show focus for mouse-clicking users, combined with removing :focus styles entirely for keyboard",
+    "Focus ring is present but obscured by adjacent elements due to z-index or overflow:hidden on the parent"
+  ],
+  "auditor_anti_patterns": [
+    "GROUND TRUTH RULE -- The user prompt includes a [TAB ORDER] section with the deterministic browser-recorded tab walk. Every element pressed-Tab-to lands there with a label of either 'VISIBLE / <indicator type>' OR 'NO FOCUS / <reason>'. THIS LABEL IS GROUND TRUTH because Playwright actually pressed Tab, sampled the computed style, and screenshotted the focused state. You MUST treat the tab walk's verdict as authoritative for every element it lists. Do NOT report 'no visible focus indicator' on any element that the tab walk marks VISIBLE -- that is a hallucination contradicting deterministic evidence. The tab walk has already done the per-element comparison; your job is to interpret it, not re-do it from screenshots.",
+    "FALSE POSITIVE: claiming 'no visible focus indicator' on an element by reading it off the static full-page screenshot. The full-page screenshot does NOT show focus state -- it is captured BEFORE any element is focused. You cannot judge focus visibility from a screenshot that has no focus on it. Use the tab walk data instead.",
+    "FALSE POSITIVE: reporting an element as missing focus indicator when no element in the tab walk actually matches the selector you cited. Only flag elements that the tab walk explicitly labels NO FOCUS, and quote the tab walk row in your evidence.",
+    "If the tab walk lists 0 elements with NO FOCUS (every element is VISIBLE), the correct verdict for SC 2.4.7 is Supports unless you find a focusable element the tab walk MISSED entirely (rare -- tab walk traverses every focusable element)."
+  ],
+  "examples": {
+    "pass": "Every link, button, and form field on the page shows a 2px solid dark blue outline when focused, clearly visible against the white page background and the light gray card backgrounds, with a consistent style across all interactive elements",
+    "fail": "The site's CSS contains 'a:focus, button:focus { outline: none; }' with no replacement style — when tabbing through the navigation, there is no visible change to indicate which link currently has focus",
+    "partial": "Form inputs show a visible blue border on focus, but navigation links and footer links have outline:none with no replacement, so keyboard users cannot see which link has focus in the navigation bar"
+  },
+  "plain_meaning": "Any keyboard-operable component must have a mode in which the currently focused element is visibly indicated. When a sighted keyboard user tabs to a control, they must be able to see which control currently has focus. The SC does not dictate how the indicator looks, only that one exists and is visible.",
+  "scope_applies_to": [
+    "All natively focusable interactive elements (links, buttons, form fields, etc.)",
+    "Custom widgets that receive keyboard focus",
+    "Skip links and in-page navigation targets",
+    "Elements with tabindex=0 that are part of the tab sequence",
+    "Menu items, tabs, and other composite widget parts that take focus"
+  ],
+  "scope_does_not_apply_to": [
+    "The contrast or size of the focus indicator (that is SC 2.4.13 at AAA or SC 1.4.11 for non-text contrast)",
+    "Whether focus is obscured by overlays (that is SC 2.4.11 / 2.4.12)",
+    "Elements that are not keyboard focusable in the first place",
+    "Mouse hover states and hover-only styling",
+    "Decorative visual effects unrelated to focus",
+    "The order in which focus moves (that is SC 2.4.3)"
+  ],
+  "borderline_calibration": [
+    "A deterministic browser tab walk is the ground truth: if the captured probe reports focus_visible is true for an element, do NOT flag it based on a screenshot guess.",
+    "Any perceivable visual change on focus (outline, background, underline, glow, border change) satisfies this SC.",
+    "Only flag an element when there is concrete evidence that the focused state looks identical to the unfocused state (for example, the initial and focus screenshots are byte-for-byte identical).",
+    "Do not require a specific indicator style; default browser outlines are acceptable.",
+    "If the problem is only that the indicator has weak contrast, route that to SC 2.4.13 or SC 1.4.11, not here."
+  ]
+}

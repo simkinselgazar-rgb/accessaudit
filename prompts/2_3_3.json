@@ -1,0 +1,65 @@
+{
+  "criterion_id": "2.3.3",
+  "criterion_name": "Animation from Interactions",
+  "visual_checks": [
+    "Trigger interactive elements (buttons, scrolling, hovering) and observe if motion animations occur",
+    "Check for parallax scrolling effects that move background content at different speeds",
+    "Look for elements that animate when they enter the viewport during scrolling",
+    "Identify zoom, slide, spin, or bounce animations triggered by user interaction",
+    "Check if a user preference or setting exists to disable non-essential motion animations",
+    "Observe whether the page respects the prefers-reduced-motion media query"
+  ],
+  "pass_conditions": [
+    "No motion animations are triggered by user interactions",
+    "Motion animations triggered by interactions can be disabled via a site setting or toggle",
+    "The page respects the prefers-reduced-motion media query and suppresses non-essential animations",
+    "All interaction-triggered animations are essential to the functionality being conveyed"
+  ],
+  "fail_conditions": [
+    "User interactions trigger motion animations with no mechanism to disable them",
+    "Parallax scrolling effects are present with no way to turn them off",
+    "Elements slide, zoom, spin, or bounce on interaction and prefers-reduced-motion is not respected",
+    "Hover or focus effects include motion animations that cannot be disabled"
+  ],
+  "na_conditions": [
+    "Page contains no interaction-triggered motion animations of any kind"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Interactive behavior could not be triggered to evaluate animation responses"
+  ],
+  "common_mistakes": [
+    "Parallax scrolling that cannot be turned off and is purely decorative",
+    "Scroll-triggered slide-in or fade-in animations without a reduced-motion fallback",
+    "Hover animations that include movement (not just color changes) with no disable option",
+    "Using CSS transitions with transform properties without a prefers-reduced-motion media query",
+    "Confusing opacity/color transitions (generally acceptable) with motion animations (position, scale, rotation)"
+  ],
+  "examples": {
+    "pass": "A page has scroll-triggered slide-in animations but includes a @media (prefers-reduced-motion: reduce) rule that disables all transform and translate animations, replacing them with simple opacity fades",
+    "fail": "Cards zoom and rotate into view as the user scrolls down the page, and there is no setting or reduced-motion query to disable these motion effects",
+    "partial": "The site respects prefers-reduced-motion for most animations but a hero section parallax scrolling effect still triggers motion even when reduced motion is preferred"
+  },
+  "plain_meaning": "Motion animation triggered by user interaction (parallax, scroll-linked movement, hover-triggered transitions) must be disableable by the user, unless the animation is essential to the function or information. The intent is to protect users with vestibular disorders from nausea-inducing motion.",
+  "scope_applies_to": [
+    "Parallax scrolling effects",
+    "Scroll-linked or scroll-triggered animations",
+    "Hover or click animations that move content across the screen",
+    "Transition animations between routes or views",
+    "Decorative motion that plays on interaction"
+  ],
+  "scope_does_not_apply_to": [
+    "Animation essential to understanding content (e.g. a progress indicator, a tutorial demo)",
+    "Non-motion animations (color fades, opacity changes with no movement)",
+    "Auto-playing motion not triggered by interaction (that is SC 2.2.2)",
+    "Flashing content (that is SC 2.3.1/2.3.2)",
+    "Pages with no motion animation"
+  ],
+  "borderline_calibration": [
+    "Honoring prefers-reduced-motion media query is a strong signal of compliance.",
+    "A setting in the UI to disable animation also satisfies the SC.",
+    "Essential animations (loading spinners, progress bars) are exempt.",
+    "If no interaction-triggered motion exists, N/A."
+  ]
+}

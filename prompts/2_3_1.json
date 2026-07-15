@@ -1,0 +1,74 @@
+{
+  "criterion_id": "2.3.1",
+  "criterion_name": "Three Flashes or Below Threshold",
+  "visual_checks": [
+    "Watch the video for any flashing or rapidly changing brightness areas — look for regions that alternate between light and dark more than three times per second",
+    "Identify strobe-like effects, rapid color transitions, or flickering elements anywhere on the page",
+    "Look for video content, animated GIFs, or canvas animations that contain rapid brightness changes or flashing sequences",
+    "Check for blinking or flashing text, icons, or UI elements that may exceed the three-flashes-per-second threshold",
+    "Look for transitions or page load animations that involve rapid light-to-dark or dark-to-light changes",
+    "Identify any content warnings about flashing, photosensitive epilepsy, or seizure risk — these suggest the page authors know flashing content is present",
+    "Check for advertising banners or embedded third-party content with rapid animation or flashing",
+    "Estimate the size of any flashing region — flashing content that occupies a small enough area (less than about 341 x 256 pixels on a typical display) and is not saturated red may fall below the general flash threshold"
+  ],
+  "pass_conditions": [
+    "No content on the page flashes more than three times per second",
+    "Any flashing content is below both the general flash threshold and the red flash threshold — the flashing area is small enough and/or the luminance change is mild enough",
+    "Flashing content that exceeds the threshold is not present during normal page interaction — it only appears if the user explicitly activates it after a warning",
+    "The page contains no rapidly alternating high-contrast patterns, strobe effects, or rapid brightness oscillations",
+    "Video content on the page has been analyzed and does not contain sequences exceeding three flashes per second"
+  ],
+  "fail_conditions": [
+    "Content flashes more than three times per second over a sufficiently large area (exceeding the general flash threshold of approximately 341 x 256 pixels at typical viewing distance)",
+    "Rapid alternation between saturated red and another color occurs more than three times per second (red flash violation) regardless of area size",
+    "A video, GIF, or animation contains strobe or rapid flashing sequences without any seizure warning and without user control to prevent playback",
+    "Page transitions or loading animations produce rapid flickering that exceeds three flashes per second across a large screen area",
+    "Advertising or third-party embedded content flashes rapidly and the site has not taken steps to prevent or warn about it",
+    "Flashing content autoplays without user consent and without prior warning about photosensitive risk"
+  ],
+  "na_conditions": [
+    "Page contains no video, animation, GIFs, blinking elements, or any content that changes brightness or color rapidly — all content is static or changes slowly"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "No video recording of the page was available to analyze temporal flashing behavior — static screenshots alone cannot determine flash frequency",
+    "Embedded video content could not be played or analyzed during testing",
+    "Third-party or dynamically loaded content was not present during the test window and could not be evaluated for flashing"
+  ],
+  "common_mistakes": [
+    "Autoplaying videos that contain rapid scene changes or strobe effects without a photosensitivity warning",
+    "Animated GIFs with rapid frame alternation between light and dark frames that exceed three flashes per second",
+    "Advertising banners with attention-grabbing flash effects that violate the threshold",
+    "Page transition animations (especially full-screen) that rapidly alternate between a white and dark background",
+    "CSS animations using rapid opacity or background-color toggling that create a flashing effect",
+    "Game or interactive content with flash effects (explosions, hit indicators) that strobe rapidly",
+    "Not accounting for combined flashing from multiple adjacent elements that together exceed the threshold area",
+    "Relying solely on a text warning about flashing without preventing automatic playback of the offending content"
+  ],
+  "examples": {
+    "pass": "The page contains a video that is paused by default. Before playback, a warning states 'This video contains flashing lights that may trigger seizures in people with photosensitive epilepsy.' The user must click Play to start the video, giving them informed consent.",
+    "fail": "A full-screen hero video autoplays on page load and contains a 2-second sequence of rapid strobe flashing (approximately 8 flashes per second) during a concert scene. No warning is shown and no mechanism prevents playback. This could trigger photosensitive seizures.",
+    "partial": "The page has a small animated banner ad (200 x 100 pixels) that flashes rapidly. While the area is below the general flash threshold, the flashing alternates between saturated red and white, potentially violating the red flash threshold. The site provides no control over third-party ad content."
+  },
+  "plain_meaning": "The page must not contain anything that flashes more than three times per second, unless the flash is below the general-flash and red-flash area/luminance thresholds defined by WCAG. The intent is to prevent triggering photosensitive seizures.",
+  "scope_applies_to": [
+    "Animated GIFs with rapid luminance changes",
+    "Video clips containing strobe effects or rapid cuts",
+    "CSS or JS animations that toggle brightness/color more than 3 times per second",
+    "Embedded advertising or third-party media with flashing",
+    "Any visual content that crosses the flash threshold in a one-second window"
+  ],
+  "scope_does_not_apply_to": [
+    "Ordinary carousels, fades, or transitions well under 3 flashes/second",
+    "Auto-updating content that changes slowly (that is SC 2.2.2)",
+    "Motion animation that does not flash (that is SC 2.2.2 or 2.3.3)",
+    "Content with flashes smaller than the general/red flash thresholds",
+    "Static images no matter how bright"
+  ],
+  "borderline_calibration": [
+    "If there is no flashing content, this SC is N/A.",
+    "Do not flag ordinary animations, carousels, or blinking cursors as flashing.",
+    "Only content that plausibly reaches 3+ flashes per second in the danger zone should be flagged.",
+    "Size matters -- flashes occupying a small area (below the threshold) are exempt even at high frequency."
+  ]
+}

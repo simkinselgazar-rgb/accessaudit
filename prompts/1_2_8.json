@@ -1,0 +1,72 @@
+{
+  "criterion_id": "1.2.8",
+  "criterion_name": "Media Alternative (Prerecorded)",
+  "visual_checks": [
+    "Look for a link or section providing a full text transcript for prerecorded synchronized media",
+    "Check if the transcript includes descriptions of all visual information (actions, settings, expressions) in addition to dialogue",
+    "Verify the transcript is clearly associated with its corresponding media content",
+    "Check if the transcript includes speaker identification for dialogue",
+    "Look for descriptions of non-speech audio cues (music, sound effects) relevant to understanding the content",
+    "Verify the transcript is in a format accessible to assistive technologies (HTML text, not just a PDF or image)"
+  ],
+  "pass_conditions": [
+    "A full text alternative (descriptive transcript) is provided for all prerecorded synchronized media",
+    "The transcript includes all dialogue with speaker identification",
+    "The transcript includes descriptions of meaningful visual information (actions, settings, on-screen text, expressions)",
+    "Non-speech audio (sound effects, music) relevant to understanding is described in the transcript",
+    "The transcript is clearly linked to or associated with its media content",
+    "The transcript is in an accessible format (e.g., HTML text)"
+  ],
+  "fail_conditions": [
+    "Prerecorded synchronized media has no full text alternative or transcript",
+    "A transcript is provided but contains only dialogue without any visual descriptions",
+    "Visual information essential to understanding the content is missing from the transcript",
+    "The transcript is not clearly associated with its corresponding media",
+    "Speaker identification is missing, making dialogue attribution unclear",
+    "The transcript is in an inaccessible format (e.g., image of text, inaccessible PDF)"
+  ],
+  "na_conditions": [
+    "Page contains no prerecorded synchronized media",
+    "The media is live rather than prerecorded",
+    "Page contains only text content with no audio or video"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Media content and associated links failed to load so transcripts cannot be evaluated"
+  ],
+  "common_mistakes": [
+    "Providing captions but no full descriptive transcript that includes visual information",
+    "Transcript that only contains spoken dialogue without describing visual elements",
+    "Transcript placed on a separate page with no clear link from the media",
+    "Missing descriptions of on-screen text, charts, or demonstrations shown in the video",
+    "Providing a transcript as an image or scanned document instead of accessible text",
+    "Omitting non-speech audio cues that are important for understanding (e.g., alarm sounds, applause)"
+  ],
+  "examples": {
+    "pass": "A recorded lecture video has a linked HTML transcript that includes all spoken content with speaker labels, descriptions of slides shown, on-screen demonstrations, and relevant sound cues",
+    "fail": "A product demo video has auto-generated captions but no full text transcript, and the captions do not describe any of the visual demonstrations",
+    "partial": "A transcript is provided for a training video that includes all dialogue but omits descriptions of the on-screen diagrams and visual demonstrations"
+  },
+  "plain_meaning": "At Level AAA, every prerecorded synchronized media clip AND every prerecorded video-only clip must have a full text alternative for time-based media -- a document that describes all dialogue, all relevant non-speech audio, and all meaningful visual information in reading order. The intent is that a deafblind user reading with a braille display can reach the same content as a sighted hearing user.",
+  "scope_applies_to": [
+    "All prerecorded synchronized media on sites claiming AAA conformance",
+    "All prerecorded video-only content on sites claiming AAA conformance",
+    "Embedded or self-hosted prerecorded media regardless of player"
+  ],
+  "scope_does_not_apply_to": [
+    "Live content",
+    "Prerecorded audio-only content -- covered by SC 1.2.1 at Level A",
+    "Sites not claiming AAA conformance",
+    "Captions -- that belongs to SC 1.2.2",
+    "Audio description -- that belongs to SC 1.2.3 / 1.2.5",
+    "Sign language -- that belongs to SC 1.2.6",
+    "Keyboard operability of the player -- that belongs to SC 2.1.1"
+  ],
+  "borderline_calibration": [
+    "A linked transcript that covers both dialogue AND visuals satisfies the rule.",
+    "A captions-only approach is NOT a media alternative for time-based media; 1.2.8 demands a standalone text document.",
+    "This is AAA -- only evaluate when AAA is claimed or requested.",
+    "Missing text alternative on AAA-scope prerecorded media is a hard failure at medium+ within AAA context."
+  ]
+}

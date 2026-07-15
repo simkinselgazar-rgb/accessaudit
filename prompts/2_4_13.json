@@ -1,0 +1,66 @@
+{
+  "criterion_id": "2.4.13",
+  "criterion_name": "Focus Appearance",
+  "visual_checks": [
+    "Tab through interactive elements and observe whether each displays a clearly visible focus indicator",
+    "Check if the focus indicator has a contrasting outline of at least 2 CSS pixels on the perimeter",
+    "Measure or estimate whether the focus indicator color has at least 3:1 contrast against adjacent colors",
+    "Verify the focus indicator contrast between its focused and unfocused states is at least 3:1",
+    "Look for elements that use outline: none or outline: 0 without providing an equivalent custom focus style",
+    "Check if focus indicators are consistent across all interactive elements on the page"
+  ],
+  "pass_conditions": [
+    "All focusable elements have a visible focus indicator with at least a 2 CSS pixel solid outline around the full perimeter",
+    "The focus indicator has at least 3:1 contrast ratio against adjacent unfocused colors",
+    "The change between focused and unfocused states has at least 3:1 contrast",
+    "Custom focus styles meet the minimum area requirement (at least as large as a 2px perimeter outline)",
+    "Focus indicators are not removed via CSS without providing an equivalent or better replacement"
+  ],
+  "fail_conditions": [
+    "Focus indicators are suppressed with outline: none and no alternative focus style is provided",
+    "Focus indicators are present but thinner than 2 CSS pixels",
+    "Focus indicator color has less than 3:1 contrast against the adjacent background",
+    "Some interactive elements show no visible change when focused",
+    "Focus indicator only appears on some sides of the element rather than the full perimeter"
+  ],
+  "na_conditions": [
+    "Page has no interactive elements that can receive keyboard focus"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Screenshots could not be captured for visual verification",
+    "Focus indicator colors could not be measured for contrast ratio calculation"
+  ],
+  "common_mistakes": [
+    "Using a light blue or light gray focus outline that fails contrast against a white background",
+    "Applying outline: none globally for aesthetics without adding a replacement focus style",
+    "Focus indicators that use only a color change (e.g., text color) without a visible outline or border",
+    "A 1px dotted outline that does not meet the 2px solid perimeter requirement",
+    "Focus indicators that meet contrast on light backgrounds but fail on dark-themed sections of the same page"
+  ],
+  "examples": {
+    "pass": "All focusable elements display a 3px solid dark blue (#005A9C) outline on focus, providing well above 3:1 contrast against the white page background and clearly enclosing the full element perimeter",
+    "fail": "Buttons have outline: none in the CSS and no replacement focus style — when tabbing through the page, there is no visual indication of which element currently has focus",
+    "partial": "Most elements have a visible 2px focus ring, but several custom-styled dropdown triggers only show a subtle 1px light gray outline that fails the 3:1 contrast requirement against the white background"
+  },
+  "plain_meaning": "When the focus indicator is visible, it must meet minimum size and contrast thresholds defined in the normative text: the indicator area must be at least as large as a 2 CSS pixel perimeter around the component, and must have at least 3:1 contrast between focused and unfocused states. This ensures the indicator is actually perceivable, not merely present.",
+  "scope_applies_to": [
+    "The visual appearance of the focus indicator on focusable components",
+    "Thickness and area of outlines, borders, underlines, or fills used as focus indicators",
+    "Contrast between the focused and unfocused state of the indicator",
+    "Custom focus styling overriding browser defaults"
+  ],
+  "scope_does_not_apply_to": [
+    "Whether a focus indicator exists at all (that is SC 2.4.7)",
+    "Whether focus is obscured by overlays (that is SC 2.4.11 / 2.4.12)",
+    "Non-focus visual states like hover",
+    "Text contrast unrelated to focus (that is SC 1.4.3)",
+    "Controls that are not keyboard focusable"
+  ],
+  "borderline_calibration": [
+    "Do not flag under this SC when SC 2.4.7 is already failing; fix presence first.",
+    "Measurements require actual pixel-level evidence, not guesses.",
+    "Default browser outlines generally meet this SC; only flag custom styling that is demonstrably thinner or lower-contrast.",
+    "A visible but thin indicator is still a 2.4.7 pass and only a 2.4.13 concern."
+  ]
+}

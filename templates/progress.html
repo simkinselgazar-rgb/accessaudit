@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Progress - WCAG Trusted Tester</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;">Skip to main content</a>
+  <header class="app-header">
+    <div class="container">
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="/" class="header-brand">
+          <img src="/static/icon.svg" alt="WCAG Trusted Tester" width="36" height="36" style="border-radius:4px;">
+          <div class="brand-text">
+            <h1>WCAG Trusted Tester</h1>
+            <span class="brand-tool">WCAG Testing Tool</span>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="header-link">Dashboard</a>
+          <a href="/#form-heading" class="header-link">New Review</a>
+          <a href="/settings" class="header-link">Settings</a>
+        </div>
+      </nav>
+      <p class="subtitle">Section 508 &amp; WCAG Conformance Testing</p>
+    </div>
+  </header>
+
+  <main class="container" id="main-content">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Home</a>
+      <span class="sep" aria-hidden="true">&rsaquo;</span>
+      <span aria-current="page">Review Progress</span>
+    </nav>
+
+    <section class="progress-section card" aria-labelledby="progress-heading"
+             data-review-id="{{ review_id }}"
+             data-review-type="{{ meta.review_type | default('single') }}"
+             data-initial-status="{{ meta.status | default('queued') }}">
+
+      <h2 class="card-title" id="progress-heading">
+        Review: <span class="text-muted" style="font-weight:400;font-size:.9rem;">{{ review_id }}</span>
+      </h2>
+
+      {% if meta.source_url %}
+      <p class="mb-2" style="font-size:.9rem;">
+        <strong>Source:</strong>
+        <a href="{{ meta.source_url }}" target="_blank" rel="noopener">{{ meta.source_url }}</a>
+      </p>
+      {% elif meta.source_file %}
+      <p class="mb-2" style="font-size:.9rem;">
+        <strong>Source:</strong> {{ meta.source_file }}
+      </p>
+      {% endif %}
+
+      <!-- Phase Display -->
+      <div class="phase-display" id="phase-display">
+        <div class="phase-label" id="phase-label">
+          <span class="badge badge-{{ meta.status | default('queued') }}" id="phase-badge">
+            {{ meta.status | default('queued') }}
+          </span>
+        </div>
+        <div class="phase-message" id="phase-message">
+          {% if meta.status == 'queued' %}
+            Waiting for other reviews to finish...
+          {% elif meta.status =='capturing' %}
+            Capturing page content (screenshots, DOM, accessibility tree)...
+          {% elif meta.status =='testing' %}
+            Running accessibility tests...
+          {% elif meta.status =='generating_report' %}
+            Generating ACR report...
+          {% elif meta.status =='complete' %}
+            Review complete.
+          {% elif meta.status =='error' %}
+            An error occurred.
+          {% elif meta.status =='crawling' %}
+            Crawling site to discover pages...
+          {% elif meta.status =='selecting' %}
+            AI analyzing site and selecting pages for testing...
+          {% elif meta.status =='authenticating' %}
+            Login detected — please log in to the browser window that opened...
+          {% elif meta.status =='testing_documents' %}
+            Testing linked documents (PDFs, DOCX, etc.)...
+          {% elif meta.status =='aggregating' %}
+            Aggregating results across pages...
+          {% elif meta.status == 'cancelled' %}
+            Review was cancelled.
+          {% elif meta.status == 'interrupted' %}
+            Review was interrupted (server shutdown). Can be resumed.
+          {% else %}
+            Initializing...
+          {% endif %}
+        </div>
+        {% if meta.status in ('interrupted', 'error', 'cancelled') %}
+        <button id="resume-btn" onclick="resumeReview()" style="margin-top:.5rem;padding:.4rem 1rem;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem;">Resume Review</button>
+        <script>
+        function resumeReview() {
+          var btn = document.getElementById('resume-btn');
+          btn.textContent = 'Resuming...';
+          btn.disabled = true;
+          fetch('/api/review/{{ meta.review_id }}/resume', {method: 'POST'})
+            .then(function(r) { return r.json(); })
+            .then(function(d) { location.reload(); })
+            .catch(function() { btn.textContent = 'Resume failed'; btn.disabled = false; });
+        }
+        </script>
+        {% endif %}
+        {% if meta.status not in ('complete', 'error', 'cancelled', 'interrupted') %}
+        <button id="cancel-btn" onclick="cancelReview()" style="margin-top:.5rem;padding:.4rem 1rem;background:#c62828;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem;">Cancel Review</button>
+        <script>
+        function cancelReview() {
+          var btn = document.getElementById('cancel-btn');
+          btn.textContent = 'Cancelling...';
+          btn.disabled = true;
+          fetch('/api/review/{{ meta.review_id }}/cancel', {method: 'POST'})
+            .then(function(r) { return r.json(); })
+            .then(function(d) { btn.textContent = d.message || 'Cancelling...'; })
+            .catch(function() { btn.textContent = 'Cancel failed'; btn.disabled = false; });
+        }
+        </script>
+        {% endif %}
+      </div>
+
+      <!-- Crawl info (for site crawls) -->
+      <div class="crawl-info" id="crawl-info" style="display:none;" role="status" aria-live="polite">
+        <span id="crawl-message"></span>
+      </div>
+
+      <!-- Site page info -->
+      <div class="site-page-info" id="site-page-info" style="display:none;" role="status" aria-live="polite">
+        <span id="site-page-message"></span>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar-track" role="progressbar" aria-valuenow="0"
+           aria-valuemin="0" aria-valuemax="100" aria-label="Test progress"
+           id="progress-track">
+        <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+
+      <!-- Test Cards Grid -->
+      <div class="test-cards-grid" id="test-cards-grid" aria-label="Test results">
+        <!-- Populated by WebSocket -->
+      </div>
+
+      <!-- Error Display -->
+      <div class="alert alert-error" id="error-display" style="display:none;" role="alert">
+        <strong>Error:</strong> <span id="error-message"></span>
+      </div>
+
+      <!-- Pro-tier final reviewer (populated by reviewer_complete ws event) -->
+      <div id="reviewer-section" style="display:none;" role="status" aria-live="polite"></div>
+
+      <!-- Post-run quality audit (populated by audit_complete ws event) -->
+      <div id="audit-section" style="display:none;" role="status" aria-live="polite"></div>
+
+      <!-- Completion Summary -->
+      <div id="completion-summary" style="display:none;">
+        <h3 class="mb-2">Summary</h3>
+        <div class="summary-cards" id="summary-cards">
+          <div class="summary-card supports">
+            <div class="count" id="sum-supports">0</div>
+            <div class="label">Supports</div>
+          </div>
+          <div class="summary-card partially">
+            <div class="count" id="sum-partially">0</div>
+            <div class="label">Partially Supports</div>
+          </div>
+          <div class="summary-card does-not">
+            <div class="count" id="sum-does-not">0</div>
+            <div class="label">Does Not Support</div>
+          </div>
+          <div class="summary-card na">
+            <div class="count" id="sum-na">0</div>
+            <div class="label">Not Applicable</div>
+          </div>
+          <div class="summary-card ne">
+            <div class="count" id="sum-ne">0</div>
+            <div class="label">Not Evaluated</div>
+          </div>
+        </div>
+
+        <div class="mt-3 text-center">
+          <a href="/review/{{ review_id }}/report" class="btn-submit"
+             style="display:inline-block;text-decoration:none;">View Full Report</a>
+        </div>
+
+        <div class="export-links mt-2 text-center" style="justify-content:center;">
+          <strong style="font-size:.85rem;width:100%;margin-bottom:.3rem;">Internal Reports</strong>
+          <a href="/review/{{ review_id }}/export/pdf">PDF</a>
+          <a href="/review/{{ review_id }}/export/docx">DOCX</a>
+          <a href="/review/{{ review_id }}/export/xlsx">XLSX</a>
+        </div>
+        <div class="export-links mt-1 text-center" style="justify-content:center;">
+          <strong style="font-size:.85rem;width:100%;margin-bottom:.3rem;">Client Delivery</strong>
+          <a href="/review/{{ review_id }}/export/pdf/client">PDF</a>
+          <a href="/review/{{ review_id }}/export/docx/client">DOCX</a>
+          <a href="/review/{{ review_id }}/export/xlsx/client">XLSX</a>
+        </div>
+        <div class="export-links mt-1 text-center" style="justify-content:center;">
+          <a href="/review/{{ review_id }}/captures">View Captures</a>
+          <a href="/review/{{ review_id }}/report/json">JSON Data</a>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="container" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <img src="/static/icon.svg" alt="" width="20" height="20" style="height:20px;width:20px;border-radius:3px;">
+      <span>WCAG Trusted Tester v2.0.0</span>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+  <script>
+    (function() {
+      var section = document.querySelector('.progress-section');
+      var reviewId = section ? section.dataset.reviewId : null;
+      if (!reviewId) return;
+
+      // Poll current status immediately on page load (catches up after tab switch)
+      function pollStatus() {
+        fetch('/api/review/' + reviewId + '/status')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.status) {
+              updatePhase(data.status);
+              section.dataset.initialStatus = data.status;
+              if (data.status === 'complete') {
+                handleProgressMessage({
+                  type: 'complete',
+                  summary: {
+                    supports: data.supports,
+                    partially_supports: data.partially_supports,
+                    does_not_support: data.does_not_support,
+                    not_applicable: data.not_applicable,
+                    not_evaluated: data.not_evaluated,
+                    total_criteria: data.total_criteria,
+                  }
+                });
+              } else if (data.status === 'error') {
+                handleProgressMessage({ type: 'error', message: data.error || 'Unknown error' });
+              }
+            }
+          })
+          .catch(function() {});
+      }
+
+      // Backfill all previously completed results so the grid shows everything
+      function backfillResults() {
+        fetch('/api/review/' + reviewId + '/results')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.results) return;
+            var total = data.total_criteria || data.results.length;
+            var grid = document.getElementById('test-cards-grid');
+            if (!grid) return;
+
+            data.results.forEach(function(r, idx) {
+              // Simulate a test_complete message for each past result
+              handleTestComplete({
+                criterion_id: r.criterion_id,
+                criterion_name: r.criterion_name,
+                conformance_level: r.conformance_level,
+                confidence: r.confidence,
+                finding_count: r.findings_count,
+                index: idx + 1,
+                total: total,
+              });
+            });
+
+            // Update progress bar to reflect how far along we are
+            if (total > 0) {
+              var pct = Math.min(Math.round((data.results.length / total) * 100), 100);
+              updateProgressBar(pct);
+            }
+          })
+          .catch(function() {});
+      }
+
+      // Backfill immediately, poll status, then start WebSocket
+      backfillResults();
+      pollStatus();
+      var _statusPoll = setInterval(function() {
+        var currentStatus = section.dataset.initialStatus;
+        if (currentStatus === 'complete' || currentStatus === 'error') {
+          clearInterval(_statusPoll);
+          return;
+        }
+        pollStatus();
+      }, 10000);
+
+      // WebSocket for real-time updates
+      initProgressWebSocket(reviewId);
+
+      // Also reconnect WebSocket on page visibility change (tab switch back)
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+          pollStatus();
+          var currentStatus = section.dataset.initialStatus;
+          if (currentStatus !== 'complete' && currentStatus !== 'error') {
+            if (!_ws || _ws.readyState !== WebSocket.OPEN) {
+              initProgressWebSocket(reviewId);
+            }
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

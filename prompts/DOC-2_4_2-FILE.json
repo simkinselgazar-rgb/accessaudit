@@ -1,0 +1,40 @@
+{
+  "criterion_id": "DOC-2.4.2-FILE",
+  "criterion_name": "Descriptive Filename",
+  "visual_checks": [
+    "Examine the filename of the document to determine if it is meaningful and descriptive",
+    "Check whether the filename gives a user a reasonable indication of the document content before opening it",
+    "Look for patterns indicating auto-generated or scan-produced filenames such as random characters, hashes, or date-only strings"
+  ],
+  "pass_conditions": [
+    "The filename is meaningful and gives an indication of the document's content or purpose",
+    "The filename uses recognizable words or abbreviations that relate to the document topic",
+    "The filename is reasonably concise while still being descriptive"
+  ],
+  "fail_conditions": [
+    "The filename is a random hash or auto-generated string (e.g., 'a3f8b2c1d4e5.pdf', '8f14e45f-ceea.docx')",
+    "The filename is a generic placeholder (e.g., 'doc1.pdf', 'Document1.docx', 'file.pdf', 'New Document.pdf')",
+    "The filename is a scanner-generated string with only a date or scan reference (e.g., 'scan_20240101.pdf', 'IMG_20240315.pdf')",
+    "The filename is entirely numeric with no descriptive text (e.g., '20240101123045.pdf')",
+    "The filename consists of only a single non-descriptive character or abbreviation (e.g., 'x.pdf', 'temp.docx')"
+  ],
+  "na_conditions": [
+    "The filename cannot be determined from the available information",
+    "The content is delivered inline rather than as a downloadable file"
+  ],
+  "ne_conditions": [
+    "The filename was not provided or could not be extracted from the document metadata"
+  ],
+  "common_mistakes": [
+    "Uploading scanned documents with the scanner's auto-generated filename intact",
+    "Using version control suffixes as the only descriptive element (e.g., 'final_v3.pdf' with no topic)",
+    "Saving documents with the default application filename (e.g., 'Document1.docx', 'Presentation1.pptx')",
+    "Using internal codes or abbreviations that are meaningless to external users",
+    "Relying on folder structure for context while the filename itself is not descriptive"
+  ],
+  "examples": {
+    "pass": "A document about parking regulations is named 'City-Parking-Regulations-2025.pdf' which clearly describes its content",
+    "fail": "A budget report is named 'scan_20240101.pdf' giving no indication of the document's content",
+    "partial": "A document is named 'budget.pdf' which hints at the topic but lacks specificity about which budget, for what period, or which organization"
+  }
+}

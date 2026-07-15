@@ -1,0 +1,72 @@
+{
+  "criterion_id": "1.4.4",
+  "criterion_name": "Resize Text",
+  "visual_checks": [
+    "Check if text can be resized up to 200% without assistive technology using browser zoom",
+    "After zooming to 200%, verify no text is clipped, truncated, or overlapped",
+    "Look for text containers with fixed heights that cause text to overflow when enlarged",
+    "Check if horizontal scrolling is required to read text at 200% zoom (two-dimensional scrolling is a concern but see also 1.4.10)",
+    "Verify that all functionality remains available when text is zoomed to 200%",
+    "Look for images of text that cannot be resized by the browser"
+  ],
+  "pass_conditions": [
+    "Text can be resized up to 200% using standard browser zoom or text-size features without loss of content or functionality",
+    "Resized text is not clipped, truncated, or obscured by other content",
+    "All text content, including text in form controls, scales appropriately",
+    "Functionality is not lost when text is resized (buttons still work, forms still submit, navigation still functions)",
+    "Content containers expand to accommodate resized text"
+  ],
+  "fail_conditions": [
+    "Text is clipped or hidden when zoomed to 200% due to fixed-height containers with overflow:hidden",
+    "Text overlaps other text or UI elements at 200% zoom making it unreadable",
+    "Critical functionality is lost at 200% zoom (buttons hidden, navigation broken)",
+    "Text is implemented as images that do not scale with browser zoom",
+    "CSS uses absolute units (px) for container heights, preventing text containers from expanding"
+  ],
+  "na_conditions": [
+    "Page contains no text content",
+    "Content is exclusively video or audio media with no text interface"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot test zoom behavior from a single static screenshot",
+    "Browser zoom functionality could not be tested in the current environment"
+  ],
+  "common_mistakes": [
+    "Fixed-height navigation bars that clip text at larger zoom levels",
+    "Tooltip text in fixed-size containers that overflow when zoomed",
+    "Maximum font-size set in CSS preventing text from scaling",
+    "Viewport meta tag with maximum-scale=1 preventing zoom on mobile devices",
+    "Card layouts with fixed heights that truncate content when text is enlarged",
+    "Using images of text for headings or buttons instead of styled HTML text"
+  ],
+  "examples": {
+    "pass": "All body text, headings, and form labels resize proportionally to 200% using browser zoom, containers expand to accommodate the larger text, and all navigation and functionality remains intact",
+    "fail": "A navigation menu has a fixed height of 50px — when text is zoomed to 200%, the menu text is cut off and users cannot see or click on menu items below the visible area",
+    "partial": "Most content resizes properly at 200% zoom, but a sidebar widget with fixed dimensions clips its text content and a dropdown menu becomes unusable"
+  },
+  "plain_meaning": "Users must be able to enlarge text up to 200% using browser zoom or text-resize features without losing content or breaking functionality. Captions and images of text are exempt. The intent is that users with mild-to-moderate low vision can read pages without needing screen magnification software.",
+  "scope_applies_to": [
+    "Body text, headings, labels, and all rendered textual content in the main document",
+    "Form labels, button text, and link text",
+    "Navigation menus and breadcrumbs",
+    "Text inside modals, popovers, and expandable regions",
+    "Text inside iframes when part of the page experience"
+  ],
+  "scope_does_not_apply_to": [
+    "Visually-hidden / sr-only text clipped to 1px (no rendered box can overflow or clip at 200% zoom)",
+    "Elements removed from the accessibility tree (aria-hidden, display:none, visibility:hidden, hidden attribute)",
+    "Captions in synchronized media (explicitly exempt)",
+    "Images of text (explicitly exempt; covered by SC 1.4.5)",
+    "Reflow at narrow viewports (that belongs to SC 1.4.10)",
+    "Text spacing adjustments via user stylesheet (that belongs to SC 1.4.12)",
+    "Content inside canvas or third-party embeds whose text rendering is out of the author's control"
+  ],
+  "borderline_calibration": [
+    "Content that remains readable at 200% browser zoom without loss of information or functionality PASSES, even if the layout reflows or wraps.",
+    "Text clipping that only affects visually-hidden sr-only content is NOT a failure. That text has no rendered box.",
+    "Horizontal scrolling at 200% on a desktop viewport is not automatically a failure unless information or functionality is lost.",
+    "If the page provides a native text-resize widget (not zoom) that achieves 200% without loss, that also satisfies the SC.",
+    "Do NOT flag fixed pixel heights on visually-hidden boxes (1px) as resize failures."
+  ]
+}

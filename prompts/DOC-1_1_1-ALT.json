@@ -1,0 +1,54 @@
+{
+  "criterion_id": "DOC-1.1.1-ALT",
+  "criterion_name": "Image Alt Text (Documents)",
+  "visual_checks": [
+    "CRITICAL — MEANING VERIFICATION: For each image visible in the document, compare what you SEE in the screenshot against any alt text provided in the tag structure or properties. Does the alt text ACCURATELY describe the visual content?",
+    "Look at every image in the PDF, DOCX, or PPTX: does it convey meaningful information or is it purely decorative?",
+    "Check for images that contain text (charts with labels, diagrams with callouts, infographics) — the alt text must convey all text-based information within the image.",
+    "Look for organizational logos, icons, and decorative borders — these should be marked as artifacts/decorative, not given meaningless alt text.",
+    "Identify any complex images (charts, graphs, diagrams, maps) that require long descriptions beyond a short alt text.",
+    "In PDFs, check whether images appear in the tag tree with an alt text attribute or are marked as artifacts for decorative images.",
+    "In DOCX/PPTX, check whether images have alt text set in the image properties (right-click > Edit Alt Text or Format Picture > Alt Text).",
+    "Look for watermarks, background images, and repeated decorative elements — these should be artifacts, not tagged content."
+  ],
+  "pass_conditions": [
+    "All meaningful images have descriptive alt text that conveys equivalent information to what a sighted user would see",
+    "Decorative images are marked as artifacts (PDF) or marked as decorative (DOCX/PPTX) so screen readers skip them",
+    "Complex images such as charts and graphs have both a short alt text summary and a longer description or reference to a text equivalent elsewhere in the document",
+    "Images containing text have alt text that includes all the text shown in the image",
+    "Logos have alt text identifying the organization (e.g., 'Acme Corp logo') rather than a visual description",
+    "No images use filenames, placeholder text, or auto-generated descriptions as their alt text"
+  ],
+  "fail_conditions": [
+    "Images that convey information have no alt text at all",
+    "Images have alt text that is a filename (e.g., 'IMG_2034.jpg', 'chart1.png', 'scan0001.tif')",
+    "Images have generic placeholder alt text (e.g., 'image', 'photo', 'graphic', 'picture')",
+    "Decorative images are tagged as figures with empty or missing alt text instead of being marked as artifacts",
+    "Complex images like charts or data visualizations have alt text that says only 'chart' or 'graph' without describing the data or trends",
+    "Images containing text do not have that text reproduced in the alt text or elsewhere in the document",
+    "Alt text does not match what the image actually shows (e.g., alt text says 'team photo' but image shows a building)"
+  ],
+  "na_conditions": [
+    "Document contains no images, graphics, charts, or visual elements whatsoever",
+    "Document is a plain-text file with no embedded media"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Document could not be opened or rendered for evaluation",
+    "Images failed to render so their content cannot be compared against alt text",
+    "Document format does not support structured alt text evaluation"
+  ],
+  "common_mistakes": [
+    "Auto-generated alt text from Office applications that produces vague descriptions like 'A close up of text on a white surface'",
+    "Using the image caption as the alt text when the caption does not fully describe the image",
+    "Leaving the default filename as alt text after inserting an image",
+    "Marking meaningful images as decorative to pass automated checks without providing actual alt text",
+    "Providing alt text for decorative borders, spacer images, or background patterns instead of marking them as artifacts",
+    "Alt text that describes how the image looks instead of what information it conveys (e.g., 'bar chart with blue and red bars' instead of describing the data)"
+  ],
+  "examples": {
+    "pass": "A PDF contains a photo of the new community center. The image tag includes alt text: 'Exterior of the Riverside Community Center, a single-story building with glass entrance doors and an accessible ramp on the left side.'",
+    "fail": "A DOCX report contains 12 photographs. None have alt text configured in image properties — screen readers announce each as 'graphic' or read the embedded filename.",
+    "partial": "A PPTX presentation has alt text on most images, but three charts on slides 4, 7, and 10 have alt text that says only 'Chart' without describing the data trends."
+  }
+}

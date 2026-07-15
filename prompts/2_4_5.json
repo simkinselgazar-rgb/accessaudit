@@ -1,0 +1,71 @@
+{
+  "criterion_id": "2.4.5",
+  "criterion_name": "Multiple Ways",
+  "visual_checks": [
+    "Look for a site-wide navigation menu that allows users to reach this page from other pages in the site",
+    "Check if the site provides a search function (search box, search page) that can be used to find this page's content",
+    "Look for a site map page that lists all pages or major sections of the site",
+    "Check for a table of contents on long pages or within multi-page documents",
+    "Look for breadcrumb navigation that shows the page's position in the site hierarchy",
+    "Verify that the page is reachable through at least two distinct navigation mechanisms (e.g., main nav plus search, or main nav plus site map)"
+  ],
+  "pass_conditions": [
+    "The page can be reached through at least two different mechanisms from the following: navigation menu, search function, site map, table of contents, links from related pages, breadcrumb trail, A-Z index",
+    "A site search function is available and functional across the site",
+    "A site map or similar comprehensive listing of pages is available",
+    "Navigation menus provide consistent access to major site sections",
+    "Breadcrumb navigation or hierarchical links allow users to navigate to the page's position in the site structure"
+  ],
+  "fail_conditions": [
+    "The page can only be reached through a single mechanism (e.g., only through the main navigation, with no search or site map)",
+    "No search function is provided and the only way to reach pages is through the navigation menu",
+    "The site has no site map and no search function and relies solely on hierarchical menu navigation",
+    "Pages are reachable only through specific sequences of interactions with no alternative path"
+  ],
+  "na_conditions": [
+    "The page is part of or the result of a multi-step process (e.g., a checkout confirmation page, a form submission result) where providing multiple ways to reach it would disrupt the process",
+    "The page is a single standalone page with no parent site structure"
+  ],
+  "ne_conditions": [
+    "AI response could not be parsed",
+    "Cannot determine all available navigation mechanisms from a single page view — site-wide testing required",
+    "Search functionality cannot be tested from static screenshots"
+  ],
+  "common_mistakes": [
+    "Providing only a navigation menu with no search function or site map on large sites",
+    "Having a search function that does not index all pages, making some content unreachable via search",
+    "Site map exists but is outdated and does not include recently added pages",
+    "Breadcrumb navigation is present but does not link to parent pages (text-only breadcrumbs)",
+    "Search function exists but is broken or returns no results for valid queries",
+    "Relying solely on JavaScript-driven navigation with no fallback for users who navigate differently"
+  ],
+  "examples": {
+    "pass": "The site provides a main navigation menu with dropdown sub-menus, a search box in the header that searches all site content, a site map page linked from the footer, and breadcrumb navigation on every interior page",
+    "fail": "A large corporate website has a hierarchical navigation menu as the only way to find pages — there is no search function, no site map, and no breadcrumb navigation, so users must navigate the menu tree to find any page",
+    "partial": "The site has a main navigation menu and a search function, but the search only indexes blog posts and does not return results for important pages like the contact page, about page, or product pages"
+  },
+  "plain_meaning": "Within a set of related web pages, users must have more than one way to find any given page. Typical mechanisms include a site-wide navigation menu, a search feature, a site map, a table of contents, or a list of related pages. The exception is pages that are a step in a process such as a checkout, where skipping around would break the flow.",
+  "scope_applies_to": [
+    "Multi-page websites and sets of related pages",
+    "Primary navigation menus listing sections of the site",
+    "Search functionality across the site",
+    "Site maps or index pages",
+    "Tables of contents and related-page links",
+    "Breadcrumb trails when they also help users locate pages"
+  ],
+  "scope_does_not_apply_to": [
+    "Single-page applications or isolated one-off pages",
+    "Pages that are a required step in a linear process (checkout, wizard, legal agreement flow)",
+    "The visual design or styling of navigation",
+    "Whether navigation is programmatically labeled as a landmark (that is SC 1.3.1)",
+    "Whether navigation is keyboard operable (that is SC 2.1.1)",
+    "Whether link purposes are clear (that is SC 2.4.4)"
+  ],
+  "borderline_calibration": [
+    "Two mechanisms is enough; do not require three.",
+    "A working site search plus a persistent nav menu satisfies this SC.",
+    "Only flag when the page under test truly has no second way to be located.",
+    "Do not fail a checkout step page or a similar process step.",
+    "Do not fail a standalone page that is not part of a set."
+  ]
+}
