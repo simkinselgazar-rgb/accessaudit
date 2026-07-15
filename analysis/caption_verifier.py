@@ -51,7 +51,10 @@ async def _transcribe_via_gemini(audio_bytes: bytes) -> list[CaptionSegment]:
         # Gemini audio uses the native API, not OpenAI-compat -- strip
         # the suffix so we hit the right path.
         base = base[: -len("/openai")]
-    url = f"{base}/models/{WHISPER_GEMINI_MODEL}:generateContent?key={WHISPER_API_KEY}"
+    # Key goes in the x-goog-api-key header, NOT the query string: httpx
+    # exception messages embed the request URL, so a ?key= param would leak
+    # the credential into logs on any HTTP error.
+    url = f"{base}/models/{WHISPER_GEMINI_MODEL}:generateContent"
 
     payload = {
         "contents": [{
@@ -100,7 +103,9 @@ async def _transcribe_via_gemini(audio_bytes: bytes) -> list[CaptionSegment]:
     }
 
     async with httpx.AsyncClient(timeout=MEDIA_DOWNLOAD_TIMEOUT * 4) as client:
-        resp = await client.post(url, json=payload)
+        resp = await client.post(
+            url, json=payload, headers={"x-goog-api-key": WHISPER_API_KEY},
+        )
         resp.raise_for_status()
         body = resp.json()
 

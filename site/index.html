@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="WCAG Trusted Tester by Simkins & Elgazar LLC — a free, open-source, AI-powered accessibility auditing tool. Run full WCAG 2.x / Section 508 audits on your own machine.">
+<title>WCAG Trusted Tester — Simkins &amp; Elgazar LLC</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  :root {
+    --navy: #0A2540;
+    --navy-2: #10345A;
+    --gold: #C5922E;
+    --gold-dark: #8A6420;
+    --ink: #1a2430;
+    --muted: #4a5768;
+    --bg: #f7f9fb;
+    --card: #ffffff;
+    --border: #dde4ec;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.6;
+  }
+  .skip-link {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--gold); color: var(--navy); font-weight: 700;
+    padding: .75rem 1.25rem; border-radius: 0 0 6px 0; z-index: 100;
+  }
+  .skip-link:focus { left: 0; }
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 2px;
+  }
+  .container { max-width: 1060px; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* Header */
+  header.site-header { background: var(--navy); color: #fff; }
+  .header-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 0; gap: 1rem; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; color: #fff; }
+  .brand-mark {
+    width: 40px; height: 40px; border-radius: 6px; background: var(--navy-2);
+    border: 1px solid rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1rem; letter-spacing: .5px;
+  }
+  .brand-mark .g { color: var(--gold); }
+  .brand-name { font-weight: 700; font-size: 1.05rem; line-height: 1.2; }
+  .brand-sub { font-size: .78rem; color: #b8c4d2; letter-spacing: .06em; text-transform: uppercase; }
+  nav.top-nav a {
+    color: #dce4ee; text-decoration: none; font-size: .95rem; font-weight: 600;
+    margin-left: 1.5rem;
+  }
+  nav.top-nav a:hover { color: var(--gold); text-decoration: underline; }
+
+  /* Hero */
+  .hero { background: linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%); color: #fff; padding: 4.5rem 0 5rem; }
+  .hero h1 { font-size: clamp(1.9rem, 4.5vw, 3rem); line-height: 1.15; max-width: 720px; }
+  .hero h1 .accent { color: var(--gold); }
+  .hero p.lead { margin-top: 1.25rem; font-size: 1.15rem; color: #ccd6e2; max-width: 640px; }
+  .hero-cta { margin-top: 2.25rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: .85rem 1.75rem; border-radius: 6px;
+    font-weight: 700; font-size: 1rem; text-decoration: none; border: 2px solid transparent;
+  }
+  .btn-gold { background: var(--gold); color: var(--navy); }
+  .btn-gold:hover { background: #d6a53f; }
+  .btn-outline { border-color: #6c7f95; color: #fff; }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+  .hero-badges { margin-top: 2.5rem; display: flex; gap: 1.75rem; flex-wrap: wrap; font-size: .9rem; color: #b8c4d2; }
+  .hero-badges span::before { content: "✓ "; color: var(--gold); font-weight: 700; }
+
+  /* Sections */
+  section { padding: 4rem 0; }
+  section h2 { font-size: 1.8rem; color: var(--navy); margin-bottom: .5rem; }
+  .section-sub { color: var(--muted); max-width: 640px; margin-bottom: 2.25rem; }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+  .feature {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.5rem;
+  }
+  .feature h3 { font-size: 1.05rem; color: var(--navy); margin-bottom: .5rem; }
+  .feature h3::before { content: ""; display: block; width: 32px; height: 4px; background: var(--gold); border-radius: 2px; margin-bottom: .75rem; }
+  .feature p { font-size: .95rem; color: var(--muted); }
+
+  /* Steps */
+  .steps { counter-reset: step; display: grid; gap: 1rem; max-width: 720px; }
+  .step {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.25rem 1.5rem 1.25rem 4.25rem; position: relative;
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 1.25rem; top: 1.25rem;
+    width: 2rem; height: 2rem; border-radius: 50%;
+    background: var(--navy); color: var(--gold); font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step h3 { font-size: 1rem; color: var(--navy); }
+  .step p { font-size: .92rem; color: var(--muted); margin-top: .25rem; }
+  .step code {
+    background: var(--navy); color: #e8eef5; padding: .18rem .5rem; border-radius: 4px;
+    font-size: .86em; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+
+  /* Download band */
+  .download-band { background: var(--navy); color: #fff; border-radius: 14px; padding: 2.75rem 2.5rem; display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
+  .download-band h2 { color: #fff; }
+  .download-band p { color: #ccd6e2; max-width: 480px; margin-top: .4rem; }
+  .download-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+  /* Requirements */
+  ul.req { list-style: none; max-width: 720px; }
+  ul.req li { padding: .55rem 0 .55rem 1.75rem; position: relative; border-bottom: 1px solid var(--border); color: var(--ink); }
+  ul.req li::before { content: "▸"; position: absolute; left: .25rem; color: var(--gold-dark); font-weight: 700; }
+  ul.req li strong { color: var(--navy); }
+
+  /* Contact */
+  .contact-card {
+    background: var(--card); border: 1px solid var(--border); border-left: 5px solid var(--gold);
+    border-radius: 10px; padding: 1.75rem 2rem; max-width: 720px;
+  }
+  .contact-card a { color: var(--navy); font-weight: 700; }
+  .contact-card a:hover { color: var(--gold-dark); }
+
+  footer.site-footer { background: var(--navy); color: #b8c4d2; padding: 2.25rem 0; margin-top: 2rem; font-size: .9rem; }
+  .footer-inner { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
+  footer a { color: #dce4ee; }
+  footer a:hover { color: var(--gold); }
+
+  @media (max-width: 640px) {
+    nav.top-nav a { margin-left: 1rem; }
+    .download-band { padding: 2rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="#top" aria-label="Simkins and Elgazar LLC — home">
+      <span class="brand-mark" aria-hidden="true">S<span class="g">|</span>E</span>
+      <span>
+        <span class="brand-name">Simkins &amp; Elgazar LLC</span><br>
+        <span class="brand-sub">WCAG Trusted Tester</span>
+      </span>
+    </a>
+    <nav class="top-nav" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#get-started">Get Started</a>
+      <a href="#download">Download</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero" id="top">
+    <div class="container">
+      <h1>Full WCAG &amp; Section 508 audits, <span class="accent">powered by AI</span> — free and open source.</h1>
+      <p class="lead">
+        WCAG Trusted Tester runs the DHS Trusted Tester–style checks against any live web page:
+        deterministic measurements, multi-model AI analysis, and a complete evidence trail —
+        producing professional Accessibility Conformance Reports in minutes, not weeks.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-gold" href="#download">Download the tool</a>
+        <a class="btn btn-outline" href="https://github.com/YOUR-GITHUB-USERNAME/wcag-tester">View on GitHub</a>
+      </div>
+      <div class="hero-badges">
+        <span>Open source (MIT)</span>
+        <span>Runs on your machine</span>
+        <span>Bring your own AI provider</span>
+        <span>WCAG 2.x A / AA / AAA</span>
+      </div>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="container">
+      <h2>What it does</h2>
+      <p class="section-sub">
+        One tool combines the measurements auditors trust with the coverage only AI can reach.
+      </p>
+      <div class="feature-grid">
+        <div class="feature">
+          <h3>Complete WCAG coverage</h3>
+          <p>Every WCAG 2.x success criterion at A, AA, and AAA — including the hard ones: focus visibility, target size, flashing content, audio descriptions, and keyboard traps.</p>
+        </div>
+        <div class="feature">
+          <h3>Deterministic ground truth</h3>
+          <p>axe-core, contrast mathematics, target-size measurement, tab-order walks, and accessibility-tree extraction give every AI verdict hard numbers to stand on.</p>
+        </div>
+        <div class="feature">
+          <h3>Multi-model AI analysis</h3>
+          <p>Code analysis, screenshot inspection, and video/flash review run on the AI provider you choose — OpenRouter, Gemini, OpenAI, Anthropic, or your own local models.</p>
+        </div>
+        <div class="feature">
+          <h3>Professional reports</h3>
+          <p>Export complete ACR / VPAT-style conformance reports as HTML, DOCX, XLSX, or PDF — with element locations, affected user groups, and remediation guidance.</p>
+        </div>
+        <div class="feature">
+          <h3>Full audit trail</h3>
+          <p>Every AI prompt and response is saved to disk, untruncated. Every finding is tagged with the subsystem that produced it. You can verify every claim.</p>
+        </div>
+        <div class="feature">
+          <h3>Private by design</h3>
+          <p>The tool runs entirely on your hardware. Pages you audit and reports you generate never touch our servers — and with local models, nothing leaves your machine at all.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="get-started" style="background:#eef2f7;">
+    <div class="container">
+      <h2>Get started in minutes</h2>
+      <p class="section-sub">Requires Python 3.11+ and an API key from any major AI provider (or your own local model server).</p>
+      <div class="steps">
+        <div class="step">
+          <h3>Download and unzip</h3>
+          <p>Grab the package below, or <code>git clone</code> the repository.</p>
+        </div>
+        <div class="step">
+          <h3>Run setup</h3>
+          <p><code>python run.py --setup</code> — installs all dependencies, the Playwright browser, and ffmpeg automatically.</p>
+        </div>
+        <div class="step">
+          <h3>Add your AI key</h3>
+          <p>Copy <code>settings.example.json</code> to <code>settings.json</code> and paste your key — or use the in-app Settings page.</p>
+        </div>
+        <div class="step">
+          <h3>Audit</h3>
+          <p><code>python run.py</code>, open <code>http://127.0.0.1:5050</code>, paste a URL, and start your first review.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="container">
+      <div class="download-band">
+        <div>
+          <h2>Download WCAG Trusted Tester</h2>
+          <p>Free under the MIT license. The ZIP contains the full source — nothing to compile, no account required.</p>
+        </div>
+        <div class="download-actions">
+          <a class="btn btn-gold" href="https://github.com/YOUR-GITHUB-USERNAME/wcag-tester/archive/refs/heads/main.zip">Download ZIP</a>
+          <a class="btn btn-outline" href="https://github.com/YOUR-GITHUB-USERNAME/wcag-tester">Browse the source</a>
+        </div>
+      </div>
+
+      <h2 style="margin-top:3.5rem;">System requirements</h2>
+      <ul class="req">
+        <li><strong>Python 3.11 or newer</strong> — Windows, macOS, or Linux</li>
+        <li><strong>An AI provider</strong> — an API key for OpenRouter, Google Gemini, OpenAI, or Anthropic; or a local OpenAI-compatible server (vLLM, Ollama, LM&nbsp;Studio)</li>
+        <li><strong>ffmpeg</strong> — installed automatically during setup on most systems; needed for audio/video checks</li>
+        <li><strong>~2&nbsp;GB free disk</strong> — for the Playwright browser and review evidence</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="contact" style="padding-top:0;">
+    <div class="container">
+      <h2>Questions?</h2>
+      <p class="section-sub">Found a bug, want a feature, or need help with an accessibility audit?</p>
+      <div class="contact-card">
+        <p>Email us about the tool or the repository at
+          <a href="mailto:hello@simkinselgazar.com">hello@simkinselgazar.com</a> —
+          or open an issue on <a href="https://github.com/YOUR-GITHUB-USERNAME/wcag-tester/issues">GitHub</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>&copy; 2026 Simkins &amp; Elgazar LLC. WCAG Trusted Tester is released under the MIT license.</span>
+    <span>
+      <a href="https://github.com/YOUR-GITHUB-USERNAME/wcag-tester">GitHub</a> &nbsp;·&nbsp;
+      <a href="mailto:hello@simkinselgazar.com">hello@simkinselgazar.com</a>
+    </span>
+  </div>
+</footer>
+</body>
+</html>

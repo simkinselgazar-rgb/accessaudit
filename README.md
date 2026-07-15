@@ -80,8 +80,9 @@ Python processes and headless Chromium — a VM (EC2, Droplet), a container
 platform (App Runner, Fly.io, Render, ECS), or your own machine.
 
 Static-site hosts (AWS Amplify static hosting, GitHub Pages, Netlify static)
-**cannot run the backend** — they can only serve a landing page that links to
-these setup instructions.
+**cannot run the backend**. For those, this repo ships a static landing page
+in `site/` (served by the included `amplify.yml`) where visitors can download
+the tool and find these setup instructions.
 
 ## Development
 
