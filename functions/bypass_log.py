@@ -9,7 +9,7 @@ no grep-archaeology in a shared log.
 The design target: after any review finishes, a human can open
 ``bypass_log.jsonl`` and answer "did this run stay clean?" or "which
 step fell back and why?" in a few seconds, without touching the
-global ``wcag_tester.log``.
+global ``accessaudit.log``.
 
 Strict mode (``WCAG_STRICT_MODE=1`` / ``STRICT_MODE=1`` env var)
 converts every ``log_bypass()`` call into a raised exception so the

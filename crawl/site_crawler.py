@@ -80,7 +80,7 @@ def is_document_url(url: str) -> bool:
 
 CRAWLER_USER_AGENT = (
     "Mozilla/5.0 (compatible; WCAG-Trusted-Tester/4.0; "
-    "+https://github.com/anthropic/wcag-tester) accessibility-audit-bot"
+    "+https://github.com/simkinselgazar-rgb/accessaudit) accessibility-audit-bot"
 )
 _CRAWLER_HEADERS = {"User-Agent": CRAWLER_USER_AGENT}
 

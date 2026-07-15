@@ -1,4 +1,4 @@
-# WCAG Trusted Tester v6 — Documentation
+# AccessAudit — Documentation
 
 Everything that explains the system lives in this folder. The two
 load-bearing documents:

@@ -1,4 +1,4 @@
-"""Configuration for the WCAG Trusted Tester application.
+"""Configuration for the AccessAudit application.
 
 Loads settings from: environment variables > settings.json > built-in defaults.
 """

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WCAG Trusted Tester v6 -- Single entry point launcher.
+"""AccessAudit -- Single entry point launcher.
 
 Usage:
     python run.py              # Start the application
@@ -186,7 +186,7 @@ def start(args: argparse.Namespace) -> None:
     port = getattr(args, "port", 5050)
 
     print(f"\n{'=' * 60}")
-    print(f"  WCAG Trusted Tester v6.0.0")
+    print(f"  AccessAudit v1.0.0")
     print(f"  Starting on http://{host}:{port}")
     print(f"{'=' * 60}\n")
 
@@ -209,7 +209,7 @@ def start(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="WCAG Trusted Tester v6")
+    parser = argparse.ArgumentParser(description="AccessAudit")
     parser.add_argument("--setup", action="store_true", help="Install dependencies and setup")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=5050, help="Port to bind to")

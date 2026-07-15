@@ -1,4 +1,4 @@
-"""Shared reusable functions -- the central hub for the WCAG Trusted Tester.
+"""Shared reusable functions -- the central hub for the AccessAudit.
 
 Every piece of reusable logic lives here. No other module makes raw HTTP
 calls, parses tool responses, encodes images, or builds prompts. They all

@@ -1,4 +1,4 @@
-# WCAG Trusted Tester v6 — Architecture
+# AccessAudit — Architecture
 
 > Operational rules and coding conventions live in `CLAUDE.md`. This document
 > describes the system's structure, data flow, and design decisions.
@@ -11,7 +11,7 @@
 
 ## 1. Overview
 
-WCAG Trusted Tester v6 is a multi-source accessibility auditing system that
+AccessAudit is a multi-source accessibility auditing system that
 combines deterministic analysis, AI vision, AI code review, assistive
 technology simulation, and a consolidating judge to produce Accessibility
 Conformance Reports (ACR/VPAT) against WCAG 2.x and Section 508.

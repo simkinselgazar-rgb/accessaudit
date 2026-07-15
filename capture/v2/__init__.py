@@ -1,4 +1,4 @@
-"""WCAG Tester v2 — AI-Driven Capture Pipeline (package re-export shim).
+"""AccessAudit v2 capture — AI-Driven Capture Pipeline (package re-export shim).
 
 This package's public API is exactly two functions:
 

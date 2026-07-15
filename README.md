@@ -1,9 +1,9 @@
-# WCAG Trusted Tester
+# AccessAudit
 
-An AI-powered accessibility auditing tool that runs the DHS Trusted Tester–style
-WCAG 2.x checks (A / AA / AAA) against live web pages and documents, then
-produces full Accessibility Conformance Reports (ACR / VPAT-style) in HTML,
-DOCX, XLSX, and PDF.
+An AI-powered accessibility auditing tool that runs comprehensive WCAG 2.x
+checks (A / AA / AAA) against live web pages and documents, then produces
+full Accessibility Conformance Reports (ACR / VPAT-style) in HTML, DOCX,
+XLSX, and PDF.
 
 It combines deterministic checks (axe-core, ANDI-style extraction, contrast
 math, target-size measurement, tab-order walks) with multi-model AI analysis
@@ -22,8 +22,8 @@ LLM judge that consolidates every evidence source per success criterion).
 ## Quick start
 
 ```bash
-git clone <this-repo>
-cd wcag-tester
+git clone https://github.com/simkinselgazar-rgb/accessaudit.git
+cd accessaudit
 
 # One-time setup: creates a venv, installs deps + Playwright Chromium + ffmpeg
 python run.py --setup
@@ -53,6 +53,36 @@ All settings resolve in this order: **environment variables → `settings.json`
 
 `settings.json` is **gitignored** because it contains your API keys. Never
 commit it.
+
+### Recommended models
+
+Audit quality is only as good as the models you configure. Small or heavily
+quantized models have been observed hallucinating findings (e.g. reporting
+focus indicators on identical screenshots), which silently corrupts results.
+These cloud models are known-good starting points:
+
+| Provider | Text / code analysis | Vision (screenshots, video) |
+|---|---|---|
+| **OpenRouter** (one key, any model) | `google/gemini-2.5-flash` | `google/gemini-2.5-flash` |
+| **Google Gemini** | `gemini-2.5-flash` | `gemini-2.5-flash` |
+| **OpenAI** | `gpt-4o` | `gpt-4o` |
+| **Anthropic** | `claude-sonnet-4-20250514` | `claude-sonnet-4-20250514` |
+
+Guidance:
+
+- **Vision matters most.** Screenshot-bearing checks (focus visibility,
+  contrast context, reflow, target size) need a strong multimodal model —
+  never point the vision role at a text-only or small model.
+- **Budget option:** a cheap text model for code analysis plus a strong
+  multimodal model for the vision/judge roles is the best cost/quality
+  trade-off (that's what the mixed-provider example in
+  `settings.example.json` shows).
+- **A full single-page review makes hundreds of AI calls.** On flash-tier
+  cloud pricing that's typically well under a dollar per page; on
+  frontier-tier models it can be several dollars. Start with a flash-tier
+  model and upgrade the judge/reviewer roles if you need deeper analysis.
+- **Local models work** (vLLM, Ollama, LM Studio) but expect reduced
+  accuracy below ~27B parameters, especially for vision.
 
 Optional services (the tool degrades gracefully without them):
 

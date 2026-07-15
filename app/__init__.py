@@ -1,4 +1,4 @@
-"""FastAPI web application for WCAG Trusted Tester."""
+"""FastAPI web application for AccessAudit."""
 from __future__ import annotations
 
 import asyncio
@@ -74,7 +74,7 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(),
         logging.FileHandler(
-            Path(__file__).resolve().parent.parent / "wcag_tester.log",
+            Path(__file__).resolve().parent.parent / "accessaudit.log",
             encoding="utf-8",
         ),
     ],
@@ -85,7 +85,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
-app = FastAPI(title="WCAG Trusted Tester", version="6.0.0")
+app = FastAPI(title="AccessAudit", version="6.0.0")
 
 
 from app import queue as _queue_module
@@ -1368,7 +1368,7 @@ async def captures_page(request: Request, review_id: str):
 </style>
 </head>
 <body>
-<header class="app-header"><div class="container"><h1>WCAG Trusted Tester</h1></div></header>
+<header class="app-header"><div class="container"><h1>AccessAudit</h1></div></header>
 <main class="container" id="main-content">
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <a href="/">Home</a> &rsaquo; <a href="/review/{review_id}/report">Report</a> &rsaquo; <span>Captures</span>
@@ -1403,7 +1403,7 @@ async def captures_page(request: Request, review_id: str):
     html += """
 <div class="mt-2 mb-3"><a href="/review/""" + review_id + """/report">&larr; Back to Report</a></div>
 </main>
-<footer class="app-footer"><div class="container">WCAG Trusted Tester v2.0.0</div></footer>
+<footer class="app-footer"><div class="container">AccessAudit v1.0.0</div></footer>
 </body></html>"""
 
     return HTMLResponse(html)

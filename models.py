@@ -1,4 +1,4 @@
-"""Data models for the WCAG Trusted Tester application."""
+"""Data models for the AccessAudit application."""
 from __future__ import annotations
 
 import enum

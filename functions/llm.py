@@ -1,4 +1,4 @@
-"""The ONE LLM client for the entire WCAG Trusted Tester system.
+"""The ONE LLM client for the entire AccessAudit system.
 
 No other module makes raw chat/completions calls. Every AI request in the
 application -- visual AI, code AI, the judge, Phase 2 explorer, video

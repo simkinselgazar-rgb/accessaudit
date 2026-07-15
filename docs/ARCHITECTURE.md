@@ -1,4 +1,4 @@
-# WCAG Trusted Tester v6 — Complete System Architecture
+# AccessAudit — Complete System Architecture
 
 ## THIS DOCUMENT IS LAW
 
@@ -40,7 +40,7 @@ Every developer, AI agent, or contributor MUST read this document in full before
 
 ## 1. System Overview
 
-WCAG Trusted Tester v6 is an AI-augmented accessibility conformance testing system. It combines:
+AccessAudit is an AI-augmented accessibility conformance testing system. It combines:
 
 - **Deterministic programmatic analysis** (axe-core, DOM parsing, attribute validation)
 - **Multi-source AI evaluation** (visual AI, code AI, AT simulation)
