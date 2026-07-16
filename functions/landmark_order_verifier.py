@@ -78,7 +78,7 @@ def _detect_landmark_order_claim(issue_text: str) -> tuple[str, str, str] | None
     before_alt = "|".join(_BEFORE_WORDS)
     after_alt = "|".join(_AFTER_WORDS)
 
-    # Try "after" first (the verified ASU/A11Y Project failure mode).
+    # Try "after" first (the verified university / A11Y Project failure mode).
     # The non-greedy gap of up to ~120 chars allows for VPAT prose
     # ("the main content is placed after secondary navigation and
     # footer elements in the accessibility tree...") without

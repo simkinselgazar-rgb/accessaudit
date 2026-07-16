@@ -10,8 +10,8 @@ from checks.base import BaseCheck, _make_finding_id
 def _normalize_href(href: str, page_url: str = "") -> str:
     """Resolve a link href to a comparable canonical form.
 
-    /news, https://www.gmu.edu/news, www.gmu.edu/news, and #/news (when
-    page_url is gmu.edu) all collapse to the same value so that 2.4.4's
+    /news, https://www.example.edu/news, www.example.edu/news, and #/news (when
+    page_url is example.edu) all collapse to the same value so that 2.4.4's
     duplicate-text check doesn't flag links that go to the same place.
     Drops fragment, normalises trailing slash on the path, lowercases
     the host (paths + queries are case-sensitive on the server side).
@@ -205,7 +205,7 @@ class Check_2_4_1(BaseCheck):
         # CROSS-CHECK with tab_walk[0]: if the actual tab walk shows
         # the skip link IS the first stop (its text contains
         # 'skip'/'jump to'/'main content'), trust that over the probe.
-        # On 2026-04-28 ASU run, the probe reported first_tab_is_skip=
+        # On a 2026-04-28 university run, the probe reported first_tab_is_skip=
         # False with empty first_tab_selector while tab_walk[0] clearly
         # showed text="Skip to main content" — produced a false-positive
         # MEDIUM finding. Also: WCAG 2.4.1 does not strictly require the
@@ -761,13 +761,13 @@ class Check_2_4_4(BaseCheck):
 
         # Check for multiple links with same text but different targets.
         # Normalise hrefs first so that "/news" and
-        # "https://www.gmu.edu/news" — which point to the same page on
-        # gmu.edu — don't get counted as different destinations.
+        # "https://www.example.edu/news" — which point to the same page on
+        # example.edu — don't get counted as different destinations.
         # Track each matching link's selector so the finding can point
         # at the actual offending elements -- earlier this dropped the
         # selector entirely, leaving the judge unable to reference the
         # specific links and the audit script flagging "missing
-        # css_selector". Verified gap on ASU run f8d46924 SC 2.4.4 where
+        # css_selector". Verified gap on a university run f8d46924 SC 2.4.4 where
         # 10 duplicate-text findings all had empty selectors.
         page_url = getattr(capture_data, "url", "") or ""
         text_to_links: dict[str, dict[str, list[str]]] = {}
@@ -1087,7 +1087,7 @@ class Check_2_4_7(BaseCheck):
         # any element styled with `:focus { border-color: ... }` and no
         # outline gets flagged here as "no visible focus indicator" even
         # though the border IS the indicator (jQuery UI tabs are the
-        # canonical case — see ui-id-1..ui-id-13 on gmu.edu).
+        # canonical case — see ui-id-1..ui-id-13 on example.edu).
         border_focus_selectors: set[str] = set()
         for nctx in (getattr(capture_data, "nontext_contrast", None) or []):
             sel = nctx.get("selector") or ""

@@ -42,7 +42,7 @@ def _make_a11y_tree(*roles: str) -> dict:
 
 
 def test_detect_after_claim_in_visual_ai_prose():
-    """The exact ASU / A11Y Project failure-mode wording."""
+    """The exact university / A11Y Project failure-mode wording."""
     text = (
         "The main content (headings and sections) is placed AFTER "
         "secondary navigation and footer elements in the accessibility "

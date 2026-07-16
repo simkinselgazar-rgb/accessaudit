@@ -38,7 +38,7 @@ def assess_tab_walk_reliability(capture_data: CaptureData) -> dict:
     dominated by bot-challenge selectors. In that case the low coverage
     reflects the capture, not a keyboard barrier on the page, so keyboard SCs
     (2.1.1/2.1.2/2.1.3/2.4.3/2.4.7) must not infer a failure from it
-    (verified umich.edu 2026-05-29).
+    (verified on a university 2026-05-29).
     """
     tc = getattr(capture_data, "tab_coverage", None) or {}
     walk = getattr(capture_data, "tab_walk", None) or []

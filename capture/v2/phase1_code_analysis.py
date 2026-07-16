@@ -875,7 +875,7 @@ async def run_phase1(
             # AI-added element gets the same treatment as deterministic
             # ones. Without this, AI additions default to
             # exploration_priority="low" and Phase 2 skips them --
-            # observed on asu.edu 2026-04-23 where 167/240 elements
+            # observed on a university site 2026-04-23 where 167/240 elements
             # had no priority tag because the AI didn't emit one.
             added = 0
             for elem in ai_additions:

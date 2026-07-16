@@ -532,7 +532,7 @@ def extract_htmlcs_findings(
         # A type-3 message is an ADVISORY manual-check reminder, not a
         # detected violation. Label it unmistakably so the judge cannot
         # escalate it into a concrete failure finding asserting a
-        # specific defect (verified berkeley.edu SC 4.1.3: a type-3
+        # specific defect (verified on a university SC 4.1.3: a type-3
         # "check that status messages..." notice was rewritten into two
         # fabricated findings about non-existent loading indicators).
         if msg_type_int == 3:

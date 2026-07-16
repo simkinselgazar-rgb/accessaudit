@@ -3431,7 +3431,7 @@ async def _extract_elements(
             // <aside> -> complementary. <nav> and <main> are unconditional.
             // Without this gate, nested section headers/footers get
             // miscounted as duplicate banner/contentinfo landmarks (real
-            // SC 1.3.1 false positive observed on the WVU homepage).
+            // SC 1.3.1 false positive observed on a university homepage).
             const SECTIONING_ANCESTORS = ['article', 'aside', 'main', 'nav', 'section'];
             const hasSectioningAncestor = (el) => {
                 let p = el.parentElement;
@@ -3480,7 +3480,7 @@ async def _extract_elements(
             // screen, OR explicitly transparent. These elements render
             // text only to assistive tech; measuring contrast on them
             // produces meaningless ratios and creates SC 1.4.3 false
-            // positives (observed on WVU's nav sub-toggle buttons whose
+            // positives (observed on a university's nav sub-toggle buttons whose
             // ".visually-hidden" descendants gave a 1.23:1 reading).
             const isVisuallyHidden = (el) => {
                 if (!el || el.nodeType !== 1) return false;

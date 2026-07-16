@@ -186,7 +186,7 @@ async def analyze_page_code(
     # ── Pick a model for Phase 1 code-pattern calls ──────────────────
     # Route to the project's PRIMARY text model (Gemma 26B at 11805 by
     # default) rather than the fallback text model (Qwen 3.5 35B at
-    # 11801). Observed on the ASU run 2026-04-22: Qwen 3.5 returns
+    # 11801). Observed on a university run 2026-04-22: Qwen 3.5 returns
     # prose or double-encoded ``patterns`` strings on the
     # ``report_code_patterns`` schema, exhausting the cascade. Gemma
     # 26B emits clean tool calls for every other tool in the system

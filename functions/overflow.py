@@ -6,7 +6,7 @@ by design, decorative image grids crop tiles with object-fit:cover, zero-area
 and non-self-clipping boxes lose nothing, and a full-width carousel viewport
 clips its track on purpose. This module separates real content-loss overflow
 from those benign patterns so SC 1.4.4 / 1.4.10 / 1.4.12 stop emitting
-carousel/gallery false positives (verified umich.edu 2026-05-28: all 6
+carousel/gallery false positives (verified on a university 2026-05-28: all 6
 programmatic 1.4.4 findings were such FPs).
 """
 from __future__ import annotations

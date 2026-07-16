@@ -1,7 +1,7 @@
 """Regression tests for IBM EAC + HTMLCS extractor quality fixes.
 
 Three issue categories these tests pin (all discovered during the
-2026-05-09 ASU live run):
+2026-05-09 university live run):
 
 A. IBM EAC ``text_contrast_sufficient`` and ``element_textwithin_color_sufficient``
    produce 1.23:1 fallback ratios when text sits over a background
@@ -50,7 +50,7 @@ from models import CaptureData, Severity  # noqa: E402
 
 
 def test_ibm_contrast_dropped_when_andi_says_bg_image():
-    """The exact ASU SC 1.4.3 false positive: text in `<article>` over
+    """The exact university-run SC 1.4.3 false positive: text in `<article>` over
     a video background. ANDI marks the element bg_image_present=True
     (its bg-color walk hit a fallback). IBM EAC measures 1.23:1
     against the same fallback. The filter should drop it.
@@ -138,7 +138,7 @@ def test_ibm_contrast_kept_when_andi_silent():
 
 
 def test_ibm_focus_visible_dropped_when_pixels_show_visible_focus():
-    """Pre-fix ASU SC 2.4.7: 40 ibm_eac findings vs 3 from the
+    """Pre-fix university-run SC 2.4.7: 40 ibm_eac findings vs 3 from the
     byte-identical screenshot probe. The fix: if the deterministic
     focus-contrast probe records has_change=True for the element
     (pixels prove focus IS visible), drop the IBM EAC over-report.

@@ -173,7 +173,7 @@ class BaseCheck:
         "2.5.3",   # Label in Name — visible text ⊂ accessible name
         "3.3.2",   # Labels or Instructions — form label presence
         "2.3.1",   # Three Flashes — mathematical frame analysis (when data exists)
-        # ── Promoted to definitive 2026-04-29 after ASU + NVCC verification ──
+        # ── Promoted to definitive 2026-04-29 after a university + a community college verification ──
         # The AI repeatedly produced the SAME false-positive patterns on
         # both sites (carousel "no alternative" with prev/next visible,
         # orientation lock hallucinations, target-size flagging despite
@@ -519,7 +519,7 @@ class BaseCheck:
         # prog_conf was already SUPPORTS / NE / NA, which left
         # PARTIALLY_SUPPORTS verdicts stranded even after a HIGH finding
         # arrived. SC 1.3.1 / 2.1.1 / 2.4.4 / 2.4.7 were miscategorised
-        # this way on the prior ASU run. Always upgrade to the worst
+        # this way on the prior university run. Always upgrade to the worst
         # outcome the findings warrant; never downgrade a stricter
         # verdict (a programmatic DNS stays DNS even if the layer only
         # adds info findings).
@@ -664,7 +664,7 @@ class BaseCheck:
         # judge_inference (since the judge correctly retags ANDI findings
         # as "andi" based on issue text), which the FAST-PATH ENFORCEMENT
         # block then drops -- leaving Partial/DNS verdicts with 0 findings.
-        # Observed on ASU.edu f8d46924 SC 1.3.1 / 1.4.4 / 2.4.3 / 2.4.4 /
+        # Observed on a university run f8d46924 SC 1.3.1 / 1.4.4 / 2.4.3 / 2.4.4 /
         # 2.4.7 / 2.5.3 / 4.1.1 / 4.1.2 (all 0-findings DNS verdicts).
         # The Finding dataclass default (`source = "programmatic"`) covers
         # checks that don't set source explicitly; we don't need to enforce
@@ -1080,7 +1080,7 @@ class BaseCheck:
                     # result.findings. The judge had said "Supports, no
                     # findings, no rejections" but result.findings still
                     # carried 2 original input findings. Verified failure
-                    # on ASU 2026-05-09 SC 3.2.3.
+                    # on a university run 2026-05-09 SC 3.2.3.
                     #
                     # Now: trust the judge's empty list. If they said
                     # 0 findings, the report says 0 findings.
@@ -1281,7 +1281,7 @@ class BaseCheck:
         ):
             # Inverse: failing verdict with no findings is unactionable.
             # Either the judge dropped findings without recomputing the
-            # verdict (verified failure on ASU run #4 SC 2.5.1: verdict
+            # verdict (verified failure on a university run #4 SC 2.5.1: verdict
             # stayed Partially Supports after final_findings emptied),
             # or all findings got post-judge-filtered by the DOM
             # contradiction check. Either way, there's nothing to
@@ -1594,7 +1594,7 @@ class BaseCheck:
                             # PROGRAMMATIC_DEFINITIVE SC a clean deterministic
                             # measurement is authoritative, and an unmeasured
                             # judge inference cannot override it. This kills the
-                            # SC 2.5.8 "0px spacing" hallucination (verified GMU
+                            # SC 2.5.8 "0px spacing" hallucination (verified on a university
                             # run 20260502_162952_de12e630: 108 targets pass,
                             # 0 fail, judge invents failures).
                             #
@@ -2782,7 +2782,7 @@ class BaseCheck:
                 # Without this the judge wrongly demands captions or
                 # audio descriptions for a silent video, and rejects a
                 # valid scene-by-scene text description because it has
-                # "no dialogue" (verified berkeley.edu SC 1.2.1 / 1.2.8).
+                # "no dialogue" (verified on a university SC 1.2.1 / 1.2.8).
                 is_silent = bool(muted) or page_audio_type in (
                     "silence", "silent", "none"
                 )
@@ -2998,7 +2998,7 @@ class BaseCheck:
             # rendered pixels (which the deterministic check cannot do).
             # Past behaviour reported these as ``passes=False`` and the
             # judge treated them as confirmed failures, producing
-            # phantom "1.23:1" findings against ASU's hero text. We now
+            # phantom "1.23:1" findings against a university's hero text. We now
             # explicitly mark these as UNCERTAIN so the judge knows the
             # ratio is informational only and must NOT be cited as
             # evidence of an SC 1.4.3 failure without visual
@@ -3288,7 +3288,7 @@ class BaseCheck:
             # the same selector, the element DOES have an accessible name
             # and ANDI's flag is unreliable. Surface this inline so the
             # judge sees both signals on the same line, not just ANDI's.
-            # Verified bug (berkeley.edu SC 4.1.2: ANDI flagged
+            # Verified bug (a university SC 4.1.2: ANDI flagged
             # .video-control--play-pause and .modal as no_name=True; axe
             # button-name PASSED both; the prompt surfaced only ANDI's
             # wrong flag and the judge followed it).
@@ -4186,14 +4186,14 @@ class BaseCheck:
         SC 2.2.2 (Pause, Stop, Hide) is met when the page provides any
         visible single-pointer mechanism to pause/stop/hide moving
         content — that mechanism is typically a separate <button>
-        next to the moving content (ASU's #pauseHeroVid for the hero
+        next to the moving content (a university's #pauseHeroVid for the hero
         video and #play-pause-toggle for the carousel), NOT
         a native <video controls> bar. The audio_detection probe
         (has_audio_pause_button) only checks native controls; it
         misses these external buttons. Without this block the AI saw
         only the audio probe's False signal and falsely concluded the
         page had no pause mechanism, producing 2.2.2 false positives
-        on the ASU homepage.
+        on a university homepage.
 
         Used by both ``get_image_context`` (visual_ai prompt) and
         ``_build_dom_context`` (judge prompt) so both stages see the
@@ -4213,7 +4213,7 @@ class BaseCheck:
         # Scan every collection that can hold an interactive control —
         # the pause/play button is often a custom <button> that the
         # narrow nontext_contrast list misses. Verified bug
-        # (berkeley.edu SC 2.2.2): a real "Play Video / Pause Video"
+        # (a university SC 2.2.2): a real "Play Video / Pause Video"
         # button existed but, being absent from nontext_contrast, was
         # never surfaced, so the judge concluded "no pause mechanism".
         _inv = getattr(capture_data, "element_inventory", None) or []
@@ -5025,7 +5025,7 @@ class BaseCheck:
              the SC's own pass/fail rules, producing the final per-SC
              findings.
 
-        Big win vs. the prior design: ASU's ~100 code chunks are read once,
+        Big win vs. the prior design: a university's ~100 code chunks are read once,
         not 50+ times, and the per-SC call is a short judgment on a
         pre-extracted pattern list rather than a full-source re-analysis.
         """
@@ -6090,10 +6090,10 @@ class BaseCheck:
 
         - SC 4.1.2 / 1.3.1 / 3.3.2: "form control has no accessible name"
           findings against form_fields that DO have label/aria-label/
-          aria-labelledby/title (observed on WVU search radios).
+          aria-labelledby/title (observed on a university's search radios).
         - "Element X is not in the DOM": code-AI hallucinations of
           selectors that don't appear in the captured HTML (#szdebugarea
-          on WVU). The captured DOM is the ground truth.
+          on a university site). The captured DOM is the ground truth.
         """
         if not findings:
             return findings
@@ -6153,7 +6153,7 @@ class BaseCheck:
         # clip/sr-only label spans; axe's link-name/button-name/image-alt
         # rules honour them. A 'no accessible name' finding contradicted by
         # an axe name-rule pass (or a page-clean axe name rule) is a false
-        # positive (verified umich.edu 2026-05-28: ANDI flagged 4 named
+        # positive (verified on a university 2026-05-28: ANDI flagged 4 named
         # nav/infographic links no-name; axe link-name = 67 pass / 0 violation).
         from functions.axe_extract import (
             accessible_name_corroboration, axe_confirms_named,
@@ -6171,7 +6171,7 @@ class BaseCheck:
 
         # Link accessible-name -> set of destination hrefs. Used to apply the
         # WCAG H30 exception: links sharing the same name AND the same
-        # destination need no unique differentiation (verified umich.edu
+        # destination need no unique differentiation (verified on a university
         # 2026-05-28: two 'Learn more about the ceremony' links both point to
         # the same article -- a 2.4.9 false positive -- whereas two 'Learn
         # more about this research' links go to two different articles and ARE
@@ -6340,7 +6340,7 @@ class BaseCheck:
             # Rule 2: drop findings whose css_selector contains an
             # id literal that does not appear in the captured HTML.
             # Code AI occasionally invents element IDs that do not
-            # exist on the page (#szdebugarea on WVU was the canonical
+            # exist on the page (#szdebugarea on a university site was the canonical
             # case). HTML id attribute values are CASE-SENSITIVE per
             # HTML5, so we compare against the original-case DOM, not
             # a lowercased copy. (Earlier version of this rule
@@ -6529,7 +6529,7 @@ class BaseCheck:
             # A focus leak or "not keyboard reachable" finding on a
             # display:none / inert / zero-rect element describes a
             # problem that does not exist. Scoped to the SCs where this
-            # false-positive class occurs (verified berkeley.edu:
+            # false-positive class occurs (verified on a university:
             # #modal-hero-video-caption flagged under 2.1.1/2.4.3/2.4.7).
             if (sel and sel in browser_handled and self.criterion_id in (
                 "2.1.1", "2.1.2", "2.1.3", "2.4.3", "2.4.7", "2.4.11",
@@ -6577,7 +6577,7 @@ class BaseCheck:
             # registered without a keydown equivalent") on a keyboard SC. We
             # capture no event-listener data, so the claim is ungrounded --
             # only code-AI over script_content could support it, and those
-            # carry source=code_ai, not judge_inference. Verified umich.edu
+            # carry source=code_ai, not judge_inference. Verified on a university
             # 2026-05-28: a fabricated "mousedown without keydown" FP under
             # 2.1.1/2.1.3 (the page's script_content in fact has keydown).
             if (self.criterion_id in ("2.1.1", "2.1.2", "2.1.3", "2.1.4")
@@ -6608,8 +6608,8 @@ class BaseCheck:
             # graphics) that are part of a logo or brand name have NO contrast
             # requirement (WCAG 1.4.3/1.4.6 incidental exception; 1.4.11
             # logo exemption). Drop contrast findings on logo/brand elements
-            # (verified umich.edu 2026-05-28: visual_ai hallucinated 1.60:1 on
-            # the maize-on-navy "University of Michigan" brand mark in
+            # (verified on a university 2026-05-28: visual_ai hallucinated 1.60:1 on
+            # the maize-on-navy university brand mark in
             # #zone-branding > h1.logo; actual ~9:1 and exempt regardless).
             if self.criterion_id in ("1.4.3", "1.4.6", "1.4.11"):
                 _le = (
@@ -6628,7 +6628,7 @@ class BaseCheck:
             # share the same accessible name AND the same destination need no
             # unique differentiation. Drop an "ambiguous / non-unique link
             # text" finding when every link carrying that name points to ONE
-            # destination (verified umich.edu 2026-05-28: two 'Learn more
+            # destination (verified on a university 2026-05-28: two 'Learn more
             # about the ceremony' links -> same article; a real ambiguity
             # ('this research' -> 2 different articles) still survives because
             # it maps to >1 href).
@@ -6658,7 +6658,7 @@ class BaseCheck:
             # finding on a DOM element that is display:none / visibility:
             # hidden / hidden. Such an element is not rendered, not
             # interactive, and not in the accessibility tree (verified
-            # umich.edu 2026-05-28: a display:none CrazyEgg tracking iframe was
+            # a university 2026-05-28: a display:none CrazyEgg tracking iframe was
             # flagged as an interactive control lacking a role/name).
             if (self.criterion_id in ("4.1.2", "2.1.1", "1.3.1", "2.4.3", "2.4.7")
                     and element_is_display_hidden(getattr(capture_data, "html", "") or "", sel)):
@@ -6682,7 +6682,7 @@ class BaseCheck:
             # interactive elements; only focusable_but_skipped entries
             # are genuinely unreachable. A finding claiming otherwise for
             # an element not on that list is fabricated (verified
-            # berkeley.edu SC 2.1.1: a "47 elements unreachable" finding
+            # a university SC 2.1.1: a "47 elements unreachable" finding
             # vs a measured 98.6% coverage / 1 skipped element).
             if (self.criterion_id in ("2.1.1", "2.4.3")
                     and coverage_pct is not None and coverage_pct >= 90.0):
@@ -6712,7 +6712,7 @@ class BaseCheck:
             # clearly has focusable elements, or got stuck on a bot-challenge).
             # The low coverage reflects the capture, not a keyboard barrier, so
             # a "0% coverage / not keyboard accessible / N unreachable" finding
-            # is a capture artifact (verified umich.edu 2026-05-29: a Cloudflare-
+            # is a capture artifact (verified on a university 2026-05-29: a Cloudflare-
             # truncated walk produced a bogus "reached 0 of 69" 2.1.1 finding).
             if (self.criterion_id in ("2.1.1", "2.1.2", "2.1.3", "2.4.3", "2.4.7")
                     and not _walk_reliability["reliable"]):
@@ -6739,7 +6739,7 @@ class BaseCheck:
             # criteria can only fail when an author-placed fixed/sticky
             # element can overlap focused content. When the computed-
             # style scan found zero fixed/sticky elements, no obscuring
-            # is possible (verified berkeley.edu: 2.4.11/2.4.12
+            # is possible (verified on a university: 2.4.11/2.4.12
             # "Partially Supports" rested on a misclassified missing-
             # focus-indicator finding, which belongs to SC 2.4.7).
             if (self.criterion_id in ("2.4.11", "2.4.12")
@@ -6775,7 +6775,7 @@ class BaseCheck:
             # Rule 12: SC 2.5.3 — Label in Name applies only to labels
             # presented VISUALLY. A finding on a screen-reader-only
             # element (sr-only / screen-reader-text / visually-hidden) is
-            # a category error (verified berkeley.edu SC 2.5.3).
+            # a category error (verified on a university SC 2.5.3).
             if self.criterion_id == "2.5.3" and sel:
                 _sl = sel.lower()
                 if any(c in _sl for c in (
@@ -6791,7 +6791,7 @@ class BaseCheck:
 
             # Rule 13: SC 2.4.1 — drop "non-functional skip link"
             # findings on links the deterministic probe shows DO activate
-            # via the keyboard (verified berkeley.edu: working skip links
+            # via the keyboard (verified on a university: working skip links
             # called "non-functional" because click_activates was false
             # with a TimeoutError, even though keyboard_activates is True
             # — which is what 2.4.1 actually requires).
@@ -6815,7 +6815,7 @@ class BaseCheck:
             # Rule 14: SC 2.4.7 — drop "no visible focus indicator"
             # findings on elements the focus_contrast probe MEASURED with
             # a visible indicator and >=3:1 contrast (verified
-            # berkeley.edu: a finding flagged nav-li-3 as having no focus
+            # a university: a finding flagged nav-li-3 as having no focus
             # indicator, but focus_contrast measured has_change=True and
             # contrast_ratio=13.65).
             if (self.criterion_id == "2.4.7"
@@ -6839,7 +6839,7 @@ class BaseCheck:
             # the modal_interactions probe captured NO auto-open. The
             # judge sometimes infers an auto-modal from hidden-modal
             # textContent leaking into VISIBLE PAGE TEXT (verified
-            # berkeley.edu: the only modal in the DOM is class="hidden"
+            # a university: the only modal in the DOM is class="hidden"
             # / tab_reachable:false and opens only on user click).
             if self.criterion_id == "2.2.4" and not has_auto_modal:
                 _automodal = (

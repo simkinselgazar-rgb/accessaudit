@@ -585,7 +585,7 @@ def extract_ibm_eac_findings(
         # engine saw a signal but cannot definitively rule. Label it as
         # advisory so the judge cannot promote it into a concrete
         # violation claim (mirrors the htmlcs type-3 advisory marker).
-        # Verified berkeley.edu SC 3.3.2: IBM POTENTIAL input_label_visible
+        # Verified on a university SC 3.3.2: IBM POTENTIAL input_label_visible
         # was escalated into definitive "no programmatic label" findings
         # on an input that actually has <label for>, aria-label, and title.
         is_potential = str(judgment).upper() == "POTENTIAL"

@@ -2,7 +2,7 @@
 from benign overflow (carousels, decorative grids, zero-area, full-width
 carousel viewports).
 
-Verified umich.edu 2026-05-28: all 6 programmatic 1.4.4 findings were FPs --
+Verified on a university run 2026-05-28: all 6 programmatic 1.4.4 findings were FPs --
 off-screen carousel slides (x=-1280/1280/3840), the full-width #large-features
 carousel viewport, a height=0 wrapper, and uniform 304x304 gallery tiles.
 """
@@ -18,7 +18,7 @@ def _e(sel, x, w, h, ox=False, oy=False, clip=True):
             "overflowX": ox, "overflowY": oy, "clippedBySelf": clip}
 
 
-def test_umich_carousel_and_gallery_all_dropped():
+def test_carousel_and_gallery_all_dropped():
     entries = [
         _e("#large-features", 0, 1280, 4288, ox=True),                 # full-width carousel viewport
         _e("#large-features > ul > li:1", -1280, 2560, 2144, oy=True),  # off-screen left slide

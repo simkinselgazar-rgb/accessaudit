@@ -38,7 +38,7 @@ _CRITERION_AT_CHECKS: dict[str, list[str]] = {
     # a focus indicator is visible (that's 2.4.7). Previously this
     # entry pointed at ``focus_contrast`` which produced 2.4.7-style
     # findings, then shipped them under 2.4.11's bucket -- a
-    # cross-SC mislabel observed on ASU 2026-04-23 (34 findings
+    # cross-SC mislabel observed on a university 2026-04-23 (34 findings
     # showed up under 2.4.11 that should have been under 2.4.7).
     # The correct 2.4.11 check compares focused-element rects against
     # sticky/fixed-position overlay rects; implemented in
@@ -256,7 +256,7 @@ def simulate_screen_reader(
     # writes "WCAG 2.4.7 requires..."), drop it from THIS criterion's
     # bucket. The alternative -- shipping a 2.4.7-worded finding
     # under SC 2.4.11 because that's where the check was routed --
-    # produced 34 miscategorised findings on the asu.edu run
+    # produced 34 miscategorised findings on a university run
     # 2026-04-23. This filter is a belt-and-braces check on top of
     # the fixed _CRITERION_AT_CHECKS mapping.
     import re as _re

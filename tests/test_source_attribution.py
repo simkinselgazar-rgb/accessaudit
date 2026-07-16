@@ -212,7 +212,7 @@ def test_judge_consolidating_three_visual_ai_findings_keeps_source():
         {
             "source": "visual_ai",
             "css_selector": "div > div:nth-of-type(2) > picture > img",
-            "element": "ASU for You image",
+            "element": "University for You image",
             "issue": "Image marked decorative but provides meaningful context",
             "severity": "medium",
         },
@@ -277,7 +277,7 @@ def test_genuinely_invented_visual_ai_claim_still_demoted():
 def test_judge_inventing_programmatic_claim_demoted():
     """Pre-existing protection: judge claiming source='programmatic' for
     a finding no programmatic check produced. Verifies the original bug
-    that motivated this validator (GMU 2.5.8) still gets caught.
+    that motivated this validator (a university run 2.5.8) still gets caught.
     """
     inputs = [
         {

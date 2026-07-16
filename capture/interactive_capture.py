@@ -50,7 +50,7 @@ TRAP_CONSECUTIVE_THRESHOLD = 5
 # elements on every focus change (SPAs with live carousels, dynamic
 # iframes) can keep producing *new* selectors every iteration, which
 # evades the trap detectors and burns the full 1800s outer timeout.
-# Observed on asu.edu 2026-04-23: tab_walk ran 30 min without tripping
+# Observed on a university run, 2026-04-23: tab_walk ran 30 min without tripping
 # any existing trap detector. Iteration cap is the backstop.
 MAX_TAB_ITERATIONS = 1000
 TRAP_CYCLE_LENGTH = 2
@@ -281,7 +281,7 @@ async def run_interactive_tests(
         a different URL -- activating a skip link, submitting a form, or
         following a link as part of its probe. Every later capture
         (focus_contrast, widget_keyboard, focus_content, ...) would then
-        read the WRONG page. Verified bug (berkeley.edu run 20260519):
+        read the WRONG page. Verified bug (a university run 20260519):
         focus_contrast captured a different site's DOM after a
         mid-sequence navigation. _verify_or_recover_page only re-navigates
         on a dead bridge, not on URL drift -- this closes that gap.
@@ -453,7 +453,7 @@ async def run_interactive_tests(
     # page settled or while a focus-capturing interstitial (e.g. a bot
     # challenge) was up. A second pass after a short settle usually succeeds
     # and prevents keyboard SCs from resting on a 0%-coverage walk (verified
-    # umich.edu 2026-05-29: a Cloudflare interstitial yielded a 0-real-stop walk).
+    # a university run, 2026-05-29: a Cloudflare interstitial yielded a 0-real-stop walk).
     _non_body = [t for t in (capture_data.tab_walk or []) if t.get("tag") != "body"]
     if not _non_body:
         try:
@@ -852,7 +852,7 @@ async def _tab_walk(
             # consecutive_body never reaches 3 yet the walk clearly has
             # finished enumerating focusable elements and is now looping.
             # A density-based stop (body >= 30% of last 20 tabs) catches
-            # this pattern immediately. Observed on asu.edu 2026-04-23:
+            # this pattern immediately. Observed on a university run, 2026-04-23:
             # tab_walk ran 7000+ iterations in 30 min without tripping any
             # existing detector.
             if info["tag"] == "body":
@@ -990,7 +990,7 @@ async def _tab_walk(
                     # walk. If it fails after one attempt, only THEN
                     # mark the walk halted-by-trap. This produces real
                     # tab-coverage data on pages that have a single
-                    # cycle followed by reachable content (the WVU
+                    # cycle followed by reachable content (the university
                     # Lorem-Ipsum-ID cycle is the canonical case).
                     pre_recovery_count = len(tab_order)
                     recovery_succeeded = False
@@ -1601,7 +1601,7 @@ async def _tab_coverage_comparison(
             # interface — aria-hidden=true subtree, or inert ancestor —
             # is NOT a 2.1.1 failure. The author has explicitly excluded
             # it; classifying it as "focusable but skipped" produces a
-            # false positive (verified berkeley.edu: a decorative
+            # false positive (verified on a university site: a decorative
             # <video tabindex=-1 aria-hidden=true muted> was being
             # surfaced as a 2.1.1 keyboard violation).
             if entry.get("aria_hidden") or entry.get("inert"):
@@ -2094,7 +2094,7 @@ async def _recorded_keyboard_walkthrough(
                 # leaves focus momentarily lost. Treating a single
                 # body-hit as end-of-walkthrough terminates the walk
                 # prematurely after exploring one widget (observed on
-                # ASU 2026-04-24: walkthrough stopped at 15 actions
+                # a university run, 2026-04-24: walkthrough stopped at 15 actions
                 # right after entering a widget, Arrow-Down-exploring,
                 # and Escape-ing out). Give focus several chances to
                 # recover; only call the walk done when we've been on
@@ -2709,7 +2709,7 @@ async def _focus_indicator_screenshots(
     both screenshots, producing byte-identical pairs. The downstream
     visual AI was then asked "is the focus visible?" looking at two
     copies of the same image and would hallucinate "yes" most of the
-    time (observed: 34/38 pairs identical on GMU, 26 of which had a
+    time (observed: 34/38 pairs identical on a university site, 26 of which had a
     real outline that was cropped, 8 were genuine SC 2.4.7 failures).
 
     Fix:
@@ -3194,8 +3194,8 @@ async def _text_spacing_overflow(
             // through. WCAG 1.4.12 only fails when text-spacing causes
             // "loss of content or functionality"; carousels still scroll
             // and still display the same content with text spacing applied,
-            // so flagging them produces FALSE POSITIVES (observed on ASU
-            // glide.js main-slider sW=3156 cW=526 and the campus
+            // so flagging them produces FALSE POSITIVES (observed on a
+            // university glide.js main-slider sW=3156 cW=526 and the campus
             // carousel sW=9808 cW=1280).
             // We climb up looking for ARIA carousel signals or the
             // glide/swiper/slick class names; if any ancestor matches,
@@ -3345,7 +3345,7 @@ async def _media_playback(
                 // Mute and attempt playback for 2 seconds. Race el.play()
                 // against a 25s timer — a misbehaving custom player that
                 // never resolves play() would otherwise hang the whole
-                // evaluate() call (seen on the ASU homepage hero video).
+                // evaluate() call (seen on a university homepage hero video).
                 el.muted = true;
                 el.volume = 0;
                 try {
@@ -3389,7 +3389,7 @@ async def _media_playback(
         # Search the entire page for transcript / caption buttons and links.
         # Word-boundary regex required: the previous substring match on
         # 'cc' fired on every "Accept" / "access" / "ACcessibility" link
-        # (Cassie cookie-consent buttons matched 6×6 on ASU). 'cc' is the
+        # (Cassie cookie-consent buttons matched 6×6 on a university site). 'cc' is the
         # canonical "closed caption" abbreviation, but only as a whole
         # token. Other keywords stay as substring matches because they're
         # long enough to be safe (transcript / caption / subtitle / etc.).
@@ -6119,7 +6119,7 @@ async def _probe_one_keyboard_roundtrip(
     # tab_stays_inside=None so the SC 2.1.2 finding extractor skips
     # this candidate. Earlier behaviour: treated empty open_target as
     # "perpetually inside" and produced HIGH 2.1.2 false positives on
-    # ASU's #pauseHeroVid (toggles the video's play state without
+    # a university's #pauseHeroVid (toggles the video's play state without
     # opening any UI) and the inline header search button.
     if not open_target:
         entry["tab_steps_inside"] = 0

@@ -1,7 +1,7 @@
 """Regression for the server-side false-positive filters in
 BaseCheck._filter_findings_contradicted_by_capture.
 
-Each rule kills a verified umich.edu 2026-05-28 false positive while leaving
+Each rule kills a verified 2026-05-28 university-run false positive while leaving
 genuine findings intact. The method only reads self.criterion_id, so we drive
 it with a SimpleNamespace stub.
 """
@@ -95,13 +95,13 @@ def test_browser_handled_visibility_hidden_dropped():
 def _links_capture():
     return _capture(links=[
         {"text": "Learn more about the ceremony",
-         "href": "https://record.umich.edu/articles/1-million-memories/"},
+         "href": "https://record.example.edu/articles/1-million-memories/"},
         {"text": "Learn more about the ceremony",
-         "href": "https://record.umich.edu/articles/1-million-memories/"},
+         "href": "https://record.example.edu/articles/1-million-memories/"},
         {"text": "Learn more about this research",
-         "href": "https://news.umich.edu/studying-bird-flu/"},
+         "href": "https://news.example.edu/studying-bird-flu/"},
         {"text": "Learn more about this research",
-         "href": "https://news.umich.edu/microplastics/"},
+         "href": "https://news.example.edu/microplastics/"},
     ])
 
 

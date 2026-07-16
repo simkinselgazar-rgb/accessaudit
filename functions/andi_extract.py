@@ -95,7 +95,7 @@ def extract_andi_contrast_findings(capture_data: CaptureData, criterion_id: str)
 
         # Skip visually-hidden text (icon-only links with sr-only
         # labels rendered in the same colour as their background, the
-        # standard "George Mason University on Bluesky" / "Skip to
+        # standard "Example University on Bluesky" / "Skip to
         # main content" pattern). When fg and bg are bit-identical
         # the user literally cannot see the text — it's intentionally
         # invisible for screen-reader-only consumption — so 1.4.3 /
@@ -141,7 +141,7 @@ def extract_andi_contrast_findings(capture_data: CaptureData, criterion_id: str)
             # ("Computed ratio: 1.23:1") and the fast-path judge in
             # VPAT-synthesis mode re-quoted that number in HIGH-severity
             # output findings, treating the unreliable fallback ratio as
-            # ground truth (verified on ASU 2026-05-09 SC 1.4.3 where
+            # ground truth (verified on a university 2026-05-09 SC 1.4.3 where
             # 3 HIGH findings citing 1.23:1 emerged from INFO-only
             # input). Removing the number from the prose physically
             # prevents that pattern: if the model never sees the

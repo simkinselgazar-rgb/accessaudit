@@ -97,8 +97,8 @@ class InventoryElement:
     parent_role: str = ""       # Parent element role
     # For links / buttons — does the element wrap an <img>/<svg>/[role=img]?
     # Set by the deterministic phase 1 extractor; the link mapper used to
-    # hard-code False here, which made every logo link (e.g. ASU's
-    # endorsed-logo <a><img alt="Arizona State University."></a>) look
+    # hard-code False here, which made every logo link (e.g. a university's
+    # endorsed-logo <a><img alt="Example University."></a>) look
     # like a nameless link. The image_alt field captures the wrapped
     # image's alt so per-SC checks can apply ARIA 1.2 step 5 (wrapper's
     # accessible name = wrapped img alt).
@@ -372,7 +372,7 @@ def map_inventory_to_capture_data(inventory: ElementInventory, capture_data: Any
     # textContent-only read missed the heading's accessible name. The
     # canonical accname rule (ARIA accname §4.3.7): if textContent is
     # empty, walk descendants for [aria-label] / <img alt> / <svg><title>.
-    # Reading raw textContent on <h1><a class="logo"><img alt="UC Berkeley
+    # Reading raw textContent on <h1><a class="logo"><img alt="Example University
     # home"></a></h1> returns "" and produced fabricated "empty h1"
     # findings on 1.3.1/1.3.2 — this recompute closes that gap for the
     # v2 path. Mirrors v1's __headingName JS in capture/web_capture.py.

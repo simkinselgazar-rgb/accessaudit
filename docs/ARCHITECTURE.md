@@ -1348,7 +1348,7 @@ for [BROWSER-HANDLED] entries under SC 2.1.1, 2.1.2, 2.4.3, 2.4.7,
 actually exist."
 
 This eliminates the cross-SC false-positive cluster from cookie
-banners / preference modals / tracking pixels. Observed on GMU: 76 of
+banners / preference modals / tracking pixels. Observed on a university site: 76 of
 76 hidden-content entries are marked browser-handled, so the judge
 has no legitimate grounds to flag any of them as focus leaks.
 
@@ -1371,7 +1371,7 @@ Why "lenient": the judge legitimately rewords inputs into VPAT prose,
 shortens selectors, and merges related findings. The validator should
 recognize the descendant-of-input case and only flag genuine fabrications.
 
-Why this exists: observed on GMU SC 2.5.8 — the deterministic check
+Why this exists: observed on a university site SC 2.5.8 — the deterministic check
 correctly applied the WCAG spacing exception and produced 0 findings,
 but the judge looked at the screenshot of the utility menu, decided the
 links were too small, and emitted 9 findings labeled
@@ -1399,7 +1399,7 @@ backed by deterministic measurement.
 Built from Playwright's STRUCTURED extraction (not regex on raw HTML). Includes:
 
 ```
-PAGE TITLE: "West Virginia University"
+PAGE TITLE: "Example University"
 LANGUAGE: html lang="en-us" (valid=True)
 
 HEADINGS:
@@ -1411,7 +1411,7 @@ HEADINGS:
 
 IMAGES (9 total):
     hero.jpg: alt=(EMPTY alt="")
-    logo.svg: alt="Flying WV"
+    logo.svg: alt="University Logo"
     spacer.gif: alt=(EMPTY alt="") [decorative]
 
 LANDMARKS (5):
@@ -1423,7 +1423,7 @@ LANDMARKS (5):
 FORM FIELDS (3):
     search name="q" label="Search"
     radio name="scope" label="Search this site" [in-fieldset]
-    radio name="scope" label="Search WVU" [in-fieldset]
+    radio name="scope" label="Search Example University" [in-fieldset]
   Radio inputs: 2, in <fieldset>: YES
 
 LINKS (138 total):
@@ -1620,7 +1620,7 @@ FastAPI server with:
   `_probe_autoplay_media` DOM check for SC 1.4.2 / 2.2.2 and layer
   optional cloud AI corroboration only when `AI_VIDEO_*` points at a
   cloud model that actually handles audio (Gemini Flash non-lite, etc.).
-- Estimated cost for a 51-SC run on a Penn State-sized page: ~$2-3.
+- Estimated cost for a 51-SC run on a large-university-sized page: ~$2-3.
 
 ### Gemini 2.5 Flash (non-lite, optional upgrade for judge)
 - Same context window + tool-call behavior as Lite.

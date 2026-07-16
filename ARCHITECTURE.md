@@ -393,7 +393,7 @@ Debugging hallucinations also requires seeing what evidence was — and wasn't �
 in the prompt.
 
 **Why is accuracy chosen over speed for image calls?**
-Observed on WVU Phase 2 testing: a 4B model ran 2× faster but hallucinated
+Observed during Phase 2 testing on a university site: a 4B model ran 2× faster but hallucinated
 focus indicators on 8 of 17 claimed `focus_visible` elements where before/after
 screenshots were byte-for-byte identical. That directly feeds SC 2.4.7 findings.
 Wrong audits are worse than slow audits.

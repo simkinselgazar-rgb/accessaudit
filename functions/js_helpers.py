@@ -5,7 +5,7 @@ capture/interactive_capture.py, capture/v2/__init__.py,
 capture/v2/phase1_code_analysis.py) that historically each computed
 ``selector`` differently — some fell back to ``el.tagName.toLowerCase()``
 when the element had no id, others used ``tag + '.' + first-class``.
-Both produce non-unique selectors: ASU's homepage has 22 ``<a>`` elements
+Both produce non-unique selectors: a university's homepage has 22 ``<a>`` elements
 without ids that all collapsed to selector="a" in focus_contrast,
 making the AI prompt's contrast lines indistinguishable.
 

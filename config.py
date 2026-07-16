@@ -110,7 +110,7 @@ AI_MAX_TOKENS = int(_setting("ai_max_tokens", "WCAG_AI_MAX_TOKENS", "16384"))
 #   N  = up to N calls in flight at once. ONLY safe with cloud providers
 #        (Gemini, OpenAI, Anthropic, OpenRouter). Phase 4 SC checks +
 #        Phase 5 judge benefit most -- ~3x wall-clock speedup at N=10
-#        on Penn State-sized runs. Set via settings.json key
+#        on large-university-sized runs. Set via settings.json key
 #        "ai_max_concurrent" or env var WCAG_AI_MAX_CONCURRENT.
 #
 # Defaults to 1 for ALL backends until operator opts in, because

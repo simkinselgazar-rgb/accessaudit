@@ -573,7 +573,7 @@ class Check_1_4_4(BaseCheck):
         # carousels/sliders position slides off-screen by design, decorative
         # image grids crop tiles with object-fit:cover, and zero-area / non-
         # self-clipping boxes lose nothing. Filter those out before flagging
-        # (verified umich.edu 2026-05-28: all 6 programmatic 1.4.4 findings
+        # (verified on a university run 2026-05-28: all 6 programmatic 1.4.4 findings
         # were FPs -- off-screen carousel slides, the full-width carousel
         # viewport, a h=0 wrapper, and uniform 304x304 gallery tiles).
         _ovs = capture_data.overflow_200pct or []
@@ -633,7 +633,7 @@ class Check_1_4_4(BaseCheck):
         # The deterministic check covers all SC 1.4.4 mechanisms:
         # viewport meta scaling restrictions + overflow:hidden ancestors
         # at 200% zoom. AI input has only added duplicate findings or
-        # carousel false positives across both ASU and NVCC. SC promoted
+        # carousel false positives across both a university and a community college. SC promoted
         # to PROGRAMMATIC_DEFINITIVE 2026-04-29.
         confidence = 0.9
         return conformance, confidence, findings
@@ -753,7 +753,7 @@ class Check_1_4_5(BaseCheck):
         # corpus, the check flagged the element as "text likely baked
         # into the image."
         #
-        # Verified false positive on ASU run 20260506_112508_bb25cbfd:
+        # Verified false positive on a university run 20260506_112508_bb25cbfd:
         # the SELECT#edit-interestarea element has option text in
         # textContent ("Select one...Architecture & Construction..."),
         # the bg-image is a decorative chevron icon, and the OPTIONS
@@ -1036,7 +1036,7 @@ class Check_1_4_11(BaseCheck):
             # border is decorative -- the component is delimited by
             # its bg vs the page, not by the border. Flagging
             # border_contrast < 3:1 in that case is a FALSE POSITIVE
-            # (observed on ASU's maroon submit/radio buttons and the
+            # (observed on a university's maroon submit/radio buttons and the
             # "Aprender más en Español" dark button — bg vs white
             # page is 18+:1, the border is purely styling). We DEMOTE
             # these to INFO so the auditor still sees them for manual

@@ -517,7 +517,7 @@ async def capture_web_page_v2(
         # only does computed_styles / colors / language / landmarks,
         # so media autoplay / muted / loop / controls and form_field
         # in_fieldset / group_label / placeholder were missing on
-        # every v2 run. Without these, ASU's <video autoplay muted loop>
+        # every v2 run. Without these, a university's <video autoplay muted loop>
         # was reported with all four attrs inverted, and radios inside
         # real <fieldset> elements all reported in_fieldset=None.
         # The element_inventory mapper merges these in via
@@ -817,7 +817,7 @@ async def capture_web_page_v2(
     # <body> hit, and can get stuck on a bot-challenge interstitial. Letting a
     # truncated Phase 3 walk overwrite a good v1 walk made the judge see "TAB
     # WALK: 5 reached" next to "TAB COVERAGE: 72 reached (104%)" and report a
-    # bogus 0%-coverage keyboard failure (verified umich.edu 2026-05-29: a
+    # bogus 0%-coverage keyboard failure (verified on a university run 2026-05-29: a
     # 5-stop Cloudflare Phase 3 walk clobbered a 72-stop v1 walk).
     twp = os.path.join(captures_dir, "tab_walk.json")
     if os.path.exists(twp):

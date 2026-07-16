@@ -18,7 +18,7 @@ def element_is_display_hidden(html: str, selector: str) -> bool:
 
     Such an element is not rendered, not interactive, and not in the
     accessibility tree, so 'interactive control' / 'no role or name' findings
-    on it are false positives (verified umich.edu 2026-05-28:
+    on it are false positives (verified on a university 2026-05-28:
     ``<iframe id="ce_proto_iframe" ... style="display: none;">`` was flagged
     as an interactive control lacking a role/name). Only handles id-based
     selectors (``#foo``); returns False for anything else or if not found.

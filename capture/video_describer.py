@@ -439,7 +439,7 @@ async def _describe_one_clip(
     # the audio track) -- but only when it is NOT the plain text endpoint. A
     # text-only explorer (e.g. deepseek on OpenRouter) cannot process video
     # and would 401/error (mirrors functions/llm.py:_select_model; verified
-    # the audio_probe variant of this bug on umich 2026-05-28). Otherwise use
+    # the audio_probe variant of this bug on a university run, 2026-05-28). Otherwise use
     # the dedicated cloud video model, then vision as a last resort.
     if (AI_EXPLORER_URL and AI_EXPLORER_MODEL
             and AI_EXPLORER_URL.rstrip("/") != (AI_API_BASE_URL or "").rstrip("/")):

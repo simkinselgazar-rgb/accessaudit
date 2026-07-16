@@ -248,7 +248,7 @@ def test_gemma_native_with_inner_literal_quotes_in_css_selector():
                 "content": (
                     '<|tool_call>call:report_element_inventory{'
                     'priority_updates:[{'
-                    'selector:<|"|>button[data-bs-target="#wvuNavSearchCollapse"]<|"|>,'
+                    'selector:<|"|>button[data-bs-target="#navSearchCollapse"]<|"|>,'
                     'exploration_priority:<|"|>high<|"|>'
                     '}],'
                     'elements:[],'
@@ -262,7 +262,7 @@ def test_gemma_native_with_inner_literal_quotes_in_css_selector():
     assert parsed is not None
     assert len(parsed["priority_updates"]) == 1
     pu = parsed["priority_updates"][0]
-    assert pu["selector"] == 'button[data-bs-target="#wvuNavSearchCollapse"]'
+    assert pu["selector"] == 'button[data-bs-target="#navSearchCollapse"]'
     assert pu["exploration_priority"] == "high"
 
 
@@ -326,7 +326,7 @@ def test_empty_choices_returns_none():
 
 
 def test_qwen_invents_wrong_tool_name_with_empty_args_is_rejected():
-    """Real Qwen 35B restructure failure observed on WVU run 1 main section.
+    """Real Qwen 35B restructure failure observed on a university run 1 main section.
 
     Qwen returned a tool_calls entry with ``function.name="link"`` (made
     up, not in our schema) and ``arguments="{}"`` (empty). The actual

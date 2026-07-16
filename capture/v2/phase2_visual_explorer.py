@@ -190,7 +190,7 @@ async def run_phase2(
             # hangs we abort Phase 2 cleanly with a partial result
             # rather than letting the whole capture stall for the
             # full PHASE2_TIMEOUT window (60 minutes). Observed on
-            # NVCC carousel elem_0065 — Phase 2 hung 28+ minutes
+            # a community-college carousel elem_0065 — Phase 2 hung 28+ minutes
             # past the 120s per-element timeout because Playwright
             # itself was unresponsive.
             try:
@@ -604,7 +604,7 @@ async def _explore_element(
                 result.state_change_detected = ai_result.get("state_change_detected", False)
                 result.accessibility_observations = ai_result.get("accessibility_observations", [])
 
-                # Reconcile contradiction: observed 2026-04-23 on asu.edu
+                # Reconcile contradiction: observed 2026-04-23 on a university site
                 # that the AI sometimes picks ``interaction_response=
                 # "focus_visible"`` (categorical) but sets
                 # ``focus_indicator_visible=false`` (boolean) in the

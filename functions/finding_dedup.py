@@ -23,7 +23,7 @@ async def _llm_dedupe_findings(
     Replaces the prior fuzzy (selector + 80-char issue prefix) match
     that missed obvious duplicates whenever sources phrased the same
     issue differently or pointed at the same element via different
-    selector paths (observed on ASU SC 1.1.1: 3 sources flagged the
+    selector paths (observed on a university SC 1.1.1: 3 sources flagged the
     'grad-ranking-poster.jpg' filename-as-alt issue with 3 different
     selectors and 3 different wordings, none of which collapsed).
 
@@ -133,11 +133,11 @@ async def _llm_dedupe_findings(
         "[0] severity=high source=programmatic\n"
         "    selector: div:nth-of-type(6) > div:nth-of-type(2) > div:nth-of-type(2) > a\n"
         "    element: a\n"
-        "    issue: The accessible name (aria-label) 'ASU named a top producer of prestigious Gilman awards' does not contain the visible text label 'Read more', violating WCAG 2.5.3.\n\n"
+        "    issue: The accessible name (aria-label) 'University named a top producer of prestigious Gilman awards' does not contain the visible text label 'Read more', violating WCAG 2.5.3.\n\n"
         "[1] severity=high source=programmatic\n"
         "    selector: div.bg > div.container > div.row > div.col-12 > div.layout__region > div.spacing-top-72 > div.container > div.col-12 > a.btn-default\n"
         "    element: a.btn-default\n"
-        "    issue: The accessible name 'ASU named a top producer of prestigious Gilman awards' does not contain the visible text label 'Read more', violating WCAG 2.5.3.\n"
+        "    issue: The accessible name 'University named a top producer of prestigious Gilman awards' does not contain the visible text label 'Read more', violating WCAG 2.5.3.\n"
         "</input_findings>\n"
         "<output_clusters>\n"
         "{ \"clusters\": [\n"
@@ -145,7 +145,7 @@ async def _llm_dedupe_findings(
         "] }\n"
         "</output_clusters>\n"
         "<reasoning>\n"
-        "Both findings cite the identical aria-label string ('ASU named "
+        "Both findings cite the identical aria-label string ('University named "
         "a top producer of prestigious Gilman awards') and the identical "
         "visible text ('Read more') and the identical violation (Label "
         "in Name, SC 2.5.3). The selectors LOOK different but encode the "

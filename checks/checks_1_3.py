@@ -784,7 +784,7 @@ class Check_1_3_4(BaseCheck):
         # Earlier code checked "orientation" and "rotate" anywhere in the
         # html — a rotate animation in one CSS block plus an
         # orientation-aware fix in a totally different block both fired
-        # the rule, producing false positives on NVCC and most marketing
+        # the rule, producing false positives on a community college and most marketing
         # sites. The correct check: scan each `@media (orientation:...)
         # { ... }` block and confirm a `transform:rotate(...)` lives
         # inside that block. Only such an in-query rotation can lock

@@ -1,7 +1,7 @@
 """Regression: the judge DOM-context annotation and the server-side finding
 filter must agree on which ANDI hidden entries are [BROWSER-HANDLED].
 
-Verified false-positive (umich.edu 2026-05-28): a `visibility:hidden`
+Verified false-positive (a university run 2026-05-28): a `visibility:hidden`
 "Academic Calendar" quick-link whose ANDI `tab_reachable` heuristic wrongly
 read True got annotated [BROWSER-HANDLED] but its findings were NOT dropped,
 producing repeat focus-leak false positives across 1.3.1/2.1.1/2.1.3/2.4.3/
@@ -11,7 +11,7 @@ from functions.andi_extract import is_browser_handled
 
 
 def test_visibility_hidden_with_true_tab_reachable_is_browser_handled():
-    # The exact umich FP shape: browser skips visibility:hidden regardless of
+    # The exact FP shape: browser skips visibility:hidden regardless of
     # ANDI's tab_reachable heuristic.
     entry = {
         "selector": "ul#quick-links-content > li > a",

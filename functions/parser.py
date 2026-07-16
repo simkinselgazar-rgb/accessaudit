@@ -838,7 +838,7 @@ def _normalize_selector(s: str) -> str:
     different upstream sources emit different forms (the SC 4.1.1
     duplicate-id check uses ``[id="foo"]``, the judge rewrites to
     ``#foo``), and a literal-string match demoted legitimate findings
-    to judge_inference until this normalization landed (ASU run
+    to judge_inference until this normalization landed (a university run
     f8765656 SC 4.1.1).
     """
     if not s:
@@ -885,7 +885,7 @@ def _findings_match(out_sel: str, out_elem: str, out_issue: str,
     attribute-form vs id-form divergence: SC 4.1.1's duplicate-id check
     emits ``[id="X"]`` while the judge rewrites to ``#X``. Both reference
     the same DOM node; without normalization the validator treats them as
-    different and demotes legitimate findings. Verified on ASU runs
+    different and demotes legitimate findings. Verified on university runs
     f8d46924 (SC 1.3.1) and f8765656 (SC 4.1.1).
 
     What we explicitly REJECT (relative to the prior implementation):
@@ -1021,7 +1021,7 @@ def validate_source_attribution(
     accuracy bug we're fixing: the judge sometimes EMITS new findings — its
     own inferences from the screenshots / DOM context — and labels them
     "programmatic", giving them deterministic gravitas they haven't earned
-    (observed on GMU 2.5.8: deterministic check returned 0 findings, judge
+    (observed on a university 2.5.8: deterministic check returned 0 findings, judge
     emitted 9 with source="programmatic").
 
     This validator does NOT suppress the judge's autonomy to add findings

@@ -239,7 +239,7 @@ but are not measured (e.g. "2.36:1 between the button border and
 its background") even when the prompt says not to. We trust
 captured measurements; we do NOT trust unsupported AI numbers.
 
-Example: a visual AI finding says "The border of the 'Visit ASU'
+Example: a visual AI finding says "The border of the 'Visit University'
 button has a contrast ratio of 2.36:1" with empty evidence.
 ANDI CONTRAST has no entry for this selector (it's a UI border,
 not text). pixel_contrast and nontext_contrast also have no
@@ -666,7 +666,7 @@ async def judge_criterion(
         return None
 
     # Cross-source dedup. The fuzzy version (selector + issue-prefix
-    # match) failed on ASU's SC 1.1.1 -- 3 sources flagged the same
+    # match) failed on a university's SC 1.1.1 -- 3 sources flagged the same
     # hero image with 3 different selector paths and 3 different
     # wordings. Replaced with a focused LLM call that decides the
     # grouping semantically; merging is then mechanical. Failure

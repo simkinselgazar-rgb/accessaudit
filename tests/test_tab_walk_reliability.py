@@ -1,7 +1,7 @@
 """Regression: keyboard SCs must not rest on a 0%-coverage tab walk when the
 page clearly has focusable elements.
 
-Root cause (umich.edu 2026-05-29): the Phase 3 video walk got stuck on a
+Root cause (a university run 2026-05-29): the Phase 3 video walk got stuck on a
 Cloudflare interstitial (5 stops) and the orchestrator overwrote the good
 72-stop v1 walk, so the judge saw "TAB WALK: 5 reached" beside "TAB COVERAGE:
 72 reached (104%)" and reported a bogus 0%-coverage 2.1.1 failure.

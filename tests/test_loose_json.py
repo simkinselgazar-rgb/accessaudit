@@ -70,7 +70,7 @@ def test_inner_empty_quotes_in_string_value():
 
 
 def test_gemma_native_tool_call_with_inner_empty_quotes():
-    """Real Gemma 26B output observed on WVU SC 1.1.1 visual AI call.
+    """Real Gemma 26B output observed on a university run SC 1.1.1 visual AI call.
 
     The model wraps every string in ``<|"|>`` tokens. The cleaner strips
     those to ``"``, leaving ``(alt="")`` inside a longer string value.
@@ -144,8 +144,8 @@ def test_gemma_native_with_inner_literal_quotes_in_value():
     """Gemma's <|"|> wrapping must be distinguishable from literal " inside
     the value content.
 
-    Real failure observed on WVU run1 nav-section inventory audit: Gemma
-    returned a CSS attribute selector ``button[data-bs-target="#wvuNavSearchCollapse"]``
+    Real failure observed on a university run 1 nav-section inventory audit: Gemma
+    returned a CSS attribute selector ``button[data-bs-target="#navSearchCollapse"]``
     inside a <|"|>...<|"|> string. Naive replacement of <|"|> with bare "
     destroys the distinction and corrupts the JSON. The pair-aware splitter
     in ``_convert_gemma_quote_pairs`` preserves it.
@@ -153,7 +153,7 @@ def test_gemma_native_with_inner_literal_quotes_in_value():
     raw = (
         '<|tool_call>call:report_element_inventory{'
         'priority_updates:[{'
-        'selector:<|"|>button[data-bs-target="#wvuNavSearchCollapse"]<|"|>,'
+        'selector:<|"|>button[data-bs-target="#navSearchCollapse"]<|"|>,'
         'exploration_priority:<|"|>high<|"|>'
         '}],'
         'elements:[],'
@@ -168,7 +168,7 @@ def test_gemma_native_with_inner_literal_quotes_in_value():
     assert len(args["priority_updates"]) == 1
     pu = args["priority_updates"][0]
     # The CSS selector must be preserved verbatim including the inner quotes
-    assert pu["selector"] == 'button[data-bs-target="#wvuNavSearchCollapse"]'
+    assert pu["selector"] == 'button[data-bs-target="#navSearchCollapse"]'
     assert pu["exploration_priority"] == "high"
 
 
