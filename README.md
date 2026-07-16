@@ -121,8 +121,8 @@ python -m pytest tests/          # run the test suite
 python audit_sc.py <review_id> --all   # validate a completed review's artifacts
 ```
 
-See `docs/ARCHITECTURE.md` for the full system spec and `CLAUDE.md` for the
-working rules that govern changes.
+See `docs/ARCHITECTURE.md` for the full system spec and the working rules
+that govern changes.
 
 ## License
 

@@ -31,3 +31,6 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Internal working notes — keep local, not published
+CLAUDE.md
