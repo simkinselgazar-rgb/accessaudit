@@ -12,6 +12,7 @@ the original functions previously colocated in ``app.py``.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -21,7 +22,7 @@ from pathlib import Path
 from config import REVIEWS_DIR
 from models import ConformanceLevel, ReviewMeta
 
-from app.cancellation import check_cancelled
+from app.cancellation import ReviewCancelled, check_cancelled
 from app.summary import _compute_summary, _compute_summary_from_dicts
 from app.websocket_manager import broadcast
 
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 async def process_review(review_id: str) -> None:
     """Process a single review end-to-end."""
     review_dir = REVIEWS_DIR / review_id
-    from storage.review_store import load_meta, save_meta
+    from storage.review_store import load_meta, save_meta, save_test_result
     meta = load_meta(review_dir)
 
     # Import here to avoid circular imports
@@ -98,19 +99,16 @@ async def process_review(review_id: str) -> None:
             logger.warning("RESUMING: Reload failed (%s), re-capturing", e)
             can_resume_capture = False
 
-    if not can_resume_capture:
+    # Document captures are cheap local parses, so a resumed document
+    # review simply re-captures (capture_data is still None here).
+    if capture_data is None:
         try:
             if file_type == "pdf":
                 from capture.pdf_capture import capture_pdf
                 capture_data = capture_pdf(meta.source_file, str(review_dir))
             elif file_type in ("docx", "xlsx", "pptx"):
-                from capture.office_capture import capture_docx, capture_xlsx, capture_pptx
-                if file_type == "docx":
-                    capture_data = capture_docx(meta.source_file, str(review_dir))
-                elif file_type == "xlsx":
-                    capture_data = capture_xlsx(meta.source_file, str(review_dir))
-                else:
-                    capture_data = capture_pptx(meta.source_file, str(review_dir))
+                from capture.office_capture import capture_office
+                capture_data = capture_office(meta.source_file, str(review_dir))
             else:
                 from config import CAPTURE_PIPELINE
                 async def _auth_cb(msg):
@@ -124,6 +122,7 @@ async def process_review(review_id: str) -> None:
                     capture_data = await capture_web_page_v2(
                         meta.source_url, str(review_dir), meta.user_context,
                         auth_callback=_auth_cb, progress_callback=_progress_cb,
+                        cancel_check=lambda: check_cancelled(review_id),
                     )
                 else:
                     from capture.web_capture import capture_web_page
@@ -131,6 +130,11 @@ async def process_review(review_id: str) -> None:
                         meta.source_url, str(review_dir), meta.user_context,
                         auth_callback=_auth_cb,
                     )
+        except ReviewCancelled:
+            # A cancel during capture must abort cleanly, not be recorded
+            # as a capture error. Re-raise so the queue worker's
+            # ReviewCancelled handler marks the review "cancelled".
+            raise
         except Exception as e:
             logger.error(f"Capture failed: {e}\n{traceback.format_exc()}")
             meta.status = "error"
@@ -138,6 +142,13 @@ async def process_review(review_id: str) -> None:
             save_meta(review_dir, meta)
             await broadcast(review_id, {"type": "error", "message": f"Capture failed: {e}"})
             return
+
+    if capture_data is None:
+        meta.status = "error"
+        meta.error = "Capture returned no data"
+        save_meta(review_dir, meta)
+        await broadcast(review_id, {"type": "error", "message": "Capture returned no data"})
+        return
 
     # Attach product context to capture_data so every AI call sees it
     if meta.product_context:
@@ -167,13 +178,6 @@ async def process_review(review_id: str) -> None:
             "Target-size measurement computation failed (non-fatal)",
             exc_info=True,
         )
-
-    if capture_data is None:
-        meta.status = "error"
-        meta.error = "Capture returned no data"
-        save_meta(review_dir, meta)
-        await broadcast(review_id, {"type": "error", "message": "Capture returned no data"})
-        return
 
     # Resume: finish any interactive tests that weren't completed when a
     # prior process exited. Without this step, a server restart during
@@ -357,6 +361,7 @@ async def process_review(review_id: str) -> None:
 
     # Resume support: load already-completed test results
     skipped = 0
+    corrupt_result_ids = set()
     for check in checks:
         sc_dir = review_dir / "tests" / check.criterion_id.replace(".", "_")
         result_file = sc_dir / "result.json"
@@ -364,10 +369,11 @@ async def process_review(review_id: str) -> None:
             try:
                 existing = json.loads(result_file.read_text(encoding="utf-8"))
                 from models import TestResult as _TR
-                r = _TR.from_dict(existing) if hasattr(_TR, "from_dict") else type("R", (), existing)()
+                r = _TR.from_dict(existing)
                 results.append(r)
                 skipped += 1
             except Exception:
+                corrupt_result_ids.add(check.criterion_id)
                 logger.exception(
                     "Resume failed to load existing result %s; will re-run %s",
                     result_file, check.criterion_id,
@@ -381,9 +387,10 @@ async def process_review(review_id: str) -> None:
         })
 
     for idx, check in enumerate(checks):
-        # Skip already-completed tests (resume support)
+        # Skip already-completed tests (resume support); a result.json
+        # that failed to parse above must still re-run.
         sc_dir = review_dir / "tests" / check.criterion_id.replace(".", "_")
-        if (sc_dir / "result.json").exists():
+        if (sc_dir / "result.json").exists() and check.criterion_id not in corrupt_result_ids:
             continue
 
         check_cancelled(review_id)
@@ -579,21 +586,22 @@ async def process_review(review_id: str) -> None:
                                 meta.wcag_version, meta.coverage_level, file_type=doc_file_type,
                             )
 
-                            if ext == "pdf" or doc_file_type == "pdf":
+                            if doc_file_type == "pdf":
                                 from capture.pdf_capture import capture_pdf
                                 doc_capture = capture_pdf(str(doc_path), str(doc_dir))
                             else:
                                 from capture.office_capture import capture_office
-                                doc_capture = await capture_office(str(doc_path), str(doc_dir))
+                                doc_capture = capture_office(str(doc_path), str(doc_dir))
 
                             if doc_capture:
                                 if meta.product_context:
                                     doc_capture.product_context = ProductContext.from_dict(meta.product_context)
                                 from models import TestResult as _TR
+                                doc_results = []
                                 for check in doc_checks:
                                     try:
                                         result = await check.run(doc_capture, ai_client)
-                                        doc_results_list.append(result.to_dict())
+                                        doc_results.append(result.to_dict())
                                     except Exception as e:
                                         logger.error(
                                             "Doc check %s failed on %s: %s\n%s",
@@ -607,11 +615,29 @@ async def process_review(review_id: str) -> None:
                                             conformance_level=ConformanceLevel.NOT_EVALUATED,
                                             error=str(e),
                                         )
-                                        doc_results_list.append(err.to_dict())
+                                        doc_results.append(err.to_dict())
+                                (doc_dir / "results.json").write_text(
+                                    json.dumps(
+                                        {"url": doc_url, "results": doc_results},
+                                        indent=2,
+                                    ),
+                                    encoding="utf-8",
+                                )
+                                doc_results_list.append({"url": doc_url, "results": doc_results})
                                 logger.info("Document tested: %s (%d criteria)",
-                                            doc_filename, len(doc_results_list))
+                                            doc_filename, len(doc_results))
                 except Exception as e:
                     logger.warning("Document %s failed: %s", doc_url, e)
+
+            if doc_results_list:
+                (review_dir / "document_results.json").write_text(
+                    json.dumps(doc_results_list, indent=2), encoding="utf-8",
+                )
+                logger.info(
+                    "Linked-document testing complete: %d/%d documents tested; "
+                    "results saved to document_results.json",
+                    len(doc_results_list), len(discovered_docs),
+                )
 
     # Feature C: AI cross-criterion synthesis — generates executive summary,
     # identifies patterns, and writes VPAT-style remarks for each criterion
@@ -675,15 +701,21 @@ async def process_review(review_id: str) -> None:
     await broadcast(review_id, {"type": "phase", "phase": "generating_report"})
 
     try:
-        generate_acr_report(results, meta, str(review_dir))
-        generate_acr_report(results, meta, str(review_dir), client_mode=True)
+        await asyncio.to_thread(generate_acr_report, results, meta, str(review_dir))
+        await asyncio.to_thread(generate_acr_report, results, meta, str(review_dir), client_mode=True)
     except Exception as e:
         logger.error(f"Report generation failed: {e}\n{traceback.format_exc()}")
 
     # Complete
     summary = _compute_summary(results)
     meta.status = "complete"
-    meta.overall_summary = summary
+    # Merge, don't clobber: the synthesis phase already stored
+    # executive_summary / systemic_issues / priority_order on
+    # overall_summary — keep them and add the count keys.
+    if isinstance(meta.overall_summary, dict):
+        meta.overall_summary = {**meta.overall_summary, **summary}
+    else:
+        meta.overall_summary = summary
     meta.supports = summary["supports"]
     meta.partially_supports = summary["partially_supports"]
     meta.does_not_support = summary["does_not_support"]
@@ -743,7 +775,10 @@ async def process_multi_review(review_id: str, meta: ReviewMeta, review_dir: Pat
         await broadcast(review_id, {
             "type": "site_page_start",
             "page_url": page_url,
+            # Both spellings: legacy consumers read page_num, the site
+            # path (and the JS) uses page_number.
             "page_num": page_num,
+            "page_number": page_num,
             "total_pages": len(pages),
         })
 
@@ -761,6 +796,7 @@ async def process_multi_review(review_id: str, meta: ReviewMeta, review_dir: Pat
                 capture_data = await capture_web_page_v2(
                     page_url, str(page_dir), {},
                     auth_callback=_auth_cb, progress_callback=_progress_cb,
+                    cancel_check=lambda: check_cancelled(review_id),
                 )
             else:
                 from capture.web_capture import capture_web_page
@@ -836,11 +872,18 @@ async def process_multi_review(review_id: str, meta: ReviewMeta, review_dir: Pat
             await broadcast(review_id, {
                 "type": "site_page_complete",
                 "page_url": page_url,
+                # Both spellings: legacy consumers read page_num /
+                # results_count, the site path (and the JS) uses
+                # page_number / criteria_tested.
                 "page_num": page_num,
+                "page_number": page_num,
                 "total_pages": len(pages),
                 "results_count": len(page_results),
+                "criteria_tested": len(page_results),
             })
 
+        except ReviewCancelled:
+            raise  # cancel aborts the whole review, not just this page
         except Exception as e:
             logger.error(f"Multi-page capture failed for {page_url}: {e}")
             page_results_list.append({"url": page_url, "results": [], "error": str(e)})
@@ -848,9 +891,9 @@ async def process_multi_review(review_id: str, meta: ReviewMeta, review_dir: Pat
     # Discover and test linked documents from all tested pages
     doc_extensions = {".pdf", ".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt"}
     all_doc_urls: list[str] = []
-    for pr in page_results_list:
+    for page_num, pr in enumerate(page_results_list, 1):
         # Check if capture_data had links with document extensions
-        page_dir_check = review_dir / f"page_{page_results_list.index(pr) + 1}"
+        page_dir_check = review_dir / f"page_{page_num}"
         inv_path = page_dir_check / "captures" / "element_inventory.json"
         if inv_path.exists():
             try:
@@ -893,12 +936,12 @@ async def process_multi_review(review_id: str, meta: ReviewMeta, review_dir: Pat
                         doc_checks = get_checks_for_version(
                             meta.wcag_version, meta.coverage_level, file_type=doc_file_type,
                         )
-                        if ext == "pdf" or doc_file_type == "pdf":
+                        if doc_file_type == "pdf":
                             from capture.pdf_capture import capture_pdf
                             doc_capture = capture_pdf(str(doc_path), str(doc_dir))
                         else:
                             from capture.office_capture import capture_office
-                            doc_capture = await capture_office(str(doc_path), str(doc_dir))
+                            doc_capture = capture_office(str(doc_path), str(doc_dir))
                         if doc_capture:
                             if meta.product_context:
                                 from models import ProductContext
@@ -943,9 +986,18 @@ async def process_multi_review(review_id: str, meta: ReviewMeta, review_dir: Pat
         for agg in aggregated:
             cid = agg.get("criterion_id", "")
             if cid in ("3.2.3", "3.2.4"):
+                # Route each cross-page finding to ITS criterion only --
+                # a nav-order inconsistency (3.2.3) must not downgrade
+                # 3.2.4's verdict, and vice versa. Untagged findings
+                # (legacy shape) still apply to both.
+                matched = [
+                    cpf for cpf in cross_page_findings
+                    if cpf.get("criterion_id", cid) == cid
+                ]
+                if not matched:
+                    continue
                 existing = agg.get("findings", [])
-                for cpf in cross_page_findings:
-                    existing.append(cpf)
+                existing.extend(matched)
                 agg["findings"] = existing
                 high = sum(1 for f in existing if f.get("severity") == "high")
                 med = sum(1 for f in existing if f.get("severity") == "medium")
@@ -985,8 +1037,8 @@ async def process_multi_review(review_id: str, meta: ReviewMeta, review_dir: Pat
     await broadcast(review_id, {"type": "phase", "phase": "generating_report"})
 
     try:
-        generate_acr_report(aggregated, meta, str(review_dir))
-        generate_acr_report(aggregated, meta, str(review_dir), client_mode=True)
+        await asyncio.to_thread(generate_acr_report, aggregated, meta, str(review_dir))
+        await asyncio.to_thread(generate_acr_report, aggregated, meta, str(review_dir), client_mode=True)
     except Exception as e:
         logger.error("Report generation failed: %s", e)
 
@@ -1155,15 +1207,23 @@ async def process_site_review(review_id: str, meta: ReviewMeta, review_dir: Path
     except Exception as exc:
         import random as _rand
         logger.warning("AI site analysis/selection failed: %s — falling back to random 10", exc)
+        discovered_count = meta.pages_discovered or len(pages)
         if len(pages) > 10:
             homepage = pages[0]
             rest = pages[1:]
             _rand.shuffle(rest)
             pages = [homepage] + rest[:9]
         meta.page_rationale = (
-            f"AI page selection failed. Testing homepage + 9 random pages "
-            f"from {len(pages)} discovered."
+            f"AI page selection failed. Testing homepage + {len(pages) - 1} "
+            f"random pages from {discovered_count} discovered."
         )
+        # Discard any partial AI selection recorded before the failure;
+        # page_sample must describe the pages actually being tested.
+        meta.page_sample = [
+            {"url": u, "reason": "Random fallback after AI page selection failed"}
+            for u in pages
+        ]
+        save_meta(review_dir, meta)
 
     # Phase: Testing each page
     logger.info("=" * 70)
@@ -1204,10 +1264,13 @@ async def process_site_review(review_id: str, meta: ReviewMeta, review_dir: Path
                 capture_data = await capture_web_page_v2(
                     page_url, str(page_dir), {},
                     auth_callback=_auth_cb, progress_callback=_progress_cb,
+                    cancel_check=lambda: check_cancelled(review_id),
                 )
             else:
                 from capture.web_capture import capture_web_page
                 capture_data = await capture_web_page(page_url, str(page_dir), auth_callback=_auth_cb)
+        except ReviewCancelled:
+            raise  # cancel aborts the whole review, not just this page
         except Exception as e:
             logger.warning(f"Capture failed for {page_url}: {e}")
             # Recover from whatever was saved before the crash
@@ -1358,12 +1421,12 @@ async def process_site_review(review_id: str, meta: ReviewMeta, review_dir: Path
                             meta.wcag_version, meta.coverage_level, file_type=file_type,
                         )
 
-                        if ext == ".pdf" or file_type == "pdf":
+                        if file_type == "pdf":
                             from capture.pdf_capture import capture_pdf
-                            capture_data = await capture_pdf(str(doc_path), str(doc_dir))
+                            capture_data = capture_pdf(str(doc_path), str(doc_dir))
                         else:
                             from capture.office_capture import capture_office
-                            capture_data = await capture_office(str(doc_path), str(doc_dir))
+                            capture_data = capture_office(str(doc_path), str(doc_dir))
 
                         if capture_data:
                             if meta.product_context:
@@ -1399,9 +1462,18 @@ async def process_site_review(review_id: str, meta: ReviewMeta, review_dir: Path
         for agg in aggregated:
             cid = agg.get("criterion_id", "")
             if cid in ("3.2.3", "3.2.4"):
+                # Route each cross-page finding to ITS criterion only --
+                # a nav-order inconsistency (3.2.3) must not downgrade
+                # 3.2.4's verdict, and vice versa. Untagged findings
+                # (legacy shape) still apply to both.
+                matched = [
+                    cpf for cpf in cross_page_findings
+                    if cpf.get("criterion_id", cid) == cid
+                ]
+                if not matched:
+                    continue
                 existing = agg.get("findings", [])
-                for cpf in cross_page_findings:
-                    existing.append(cpf)
+                existing.extend(matched)
                 agg["findings"] = existing
                 # Update conformance if cross-page issues found
                 high = sum(1 for f in existing if f.get("severity") == "high")
@@ -1440,8 +1512,8 @@ async def process_site_review(review_id: str, meta: ReviewMeta, review_dir: Path
     await broadcast(review_id, {"type": "phase", "phase": "generating_report"})
 
     try:
-        generate_acr_report(aggregated, meta, str(review_dir))
-        generate_acr_report(aggregated, meta, str(review_dir), client_mode=True)
+        await asyncio.to_thread(generate_acr_report, aggregated, meta, str(review_dir))
+        await asyncio.to_thread(generate_acr_report, aggregated, meta, str(review_dir), client_mode=True)
     except Exception as e:
         logger.error(f"Report generation failed: {e}")
 

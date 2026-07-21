@@ -424,6 +424,9 @@ img { max-width: 100%; height: auto; }
 .badge-testing_documents { background: #e0f2f1;                 color: #00695c; }
 .badge-crawling       { background: var(--phase-crawling-bg);   color: var(--phase-crawling-fg); }
 .badge-aggregating    { background: var(--phase-aggregating-bg); color: var(--phase-aggregating-fg); }
+.badge-interrupted    { background: #fff8e1;                    color: #b26a00; }
+.badge-reviewing      { background: #ede7f6;                    color: #4527a0; }
+.badge-selected       { background: #e1f5fe;                    color: #0277bd; }
 
 /* --- Conformance Badges --- */
 .conf-supports            { color: var(--supports); font-weight: 600; }

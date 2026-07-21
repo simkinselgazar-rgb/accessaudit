@@ -10,7 +10,9 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 import logging
 import os
+import re
 from datetime import datetime, timezone
+from html import escape as html_escape
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile, WebSocket, WebSocketDisconnect
@@ -93,7 +95,7 @@ from app.cancellation import (
     _cancelled_reviews,
     _cancelled_reviews_lock,
 )
-from app.queue import _review_queue, queue_worker
+from app.queue import _review_queue, enqueue_review, queue_worker
 from app.websocket_manager import (
     _active_websockets,
     _active_websockets_lock,
@@ -149,6 +151,27 @@ _shutting_down = False
 async def startup():
     _queue_module._queue_worker_task = asyncio.create_task(queue_worker())
     logger.info("Queue worker started")
+    # Re-enqueue reviews that were queued when the server last stopped —
+    # the asyncio queue is in-memory, so without this they sit at
+    # status "queued" forever.
+    try:
+        if REVIEWS_DIR.exists():
+            for review_dir in sorted(REVIEWS_DIR.iterdir()):
+                if not review_dir.is_dir():
+                    continue
+                try:
+                    meta = load_meta(review_dir)
+                except Exception:
+                    logger.warning(
+                        "Startup queue recovery: could not read meta for %s",
+                        review_dir, exc_info=True,
+                    )
+                    continue
+                if meta.status == "queued":
+                    enqueue_review(meta.review_id)
+                    logger.info("Re-enqueued queued review %s after restart", meta.review_id)
+    except Exception:
+        logger.exception("Startup queue recovery failed")
     # Probe every AI I/O service up front so a dead/misconfigured endpoint
     # (the embeddings-fleet class of failure) is visible before any review.
     try:
@@ -176,7 +199,7 @@ async def shutdown():
 
     # Mark any in-progress reviews as interrupted (resumable, not error)
     active_statuses = {"capturing", "testing", "generating_report", "crawling", "aggregating",
-                       "selecting", "authenticating", "testing_documents"}
+                       "reviewing", "selecting", "authenticating", "testing_documents"}
     try:
         reviews_dir = REVIEWS_DIR
         if reviews_dir.exists():
@@ -197,14 +220,18 @@ async def shutdown():
     except Exception:
         logger.exception("Failed to scan reviews dir during shutdown")
 
-    # Close all WebSocket connections
-    for review_id, clients in _active_websockets.items():
+    # Close all WebSocket connections. Snapshot under the lock — the
+    # websocket endpoint's finally-block mutates the dict under the same
+    # lock, and iterating live state would race with it.
+    with _active_websockets_lock:
+        websocket_snapshot = {rid: list(clients) for rid, clients in _active_websockets.items()}
+        _active_websockets.clear()
+    for review_id, clients in websocket_snapshot.items():
         for ws in clients:
             try:
                 await ws.close(code=1001, reason="Server shutting down")
             except Exception:
                 logger.debug("WebSocket close on shutdown failed for review %s", review_id)
-    _active_websockets.clear()
 
     logger.info("Shutdown complete")
 
@@ -215,12 +242,44 @@ async def shutdown():
 
 _SETTINGS_FILE = PROJECT_DIR / "settings.json"
 
+# API-key-shaped keys that always get a *_masked companion in _load_settings,
+# even when absent from settings.json, so the settings form can render an
+# empty field for them and round-trip safely.
+_KNOWN_SECRET_KEYS = (
+    "api_key", "ai_judge_api_key", "ai_reviewer_api_key", "ai_video_api_key",
+    "ai_vision_api_key", "ai_local_judge_api_key", "embeddings_api_key",
+    "whisper_api_key",
+)
+
+
+def _is_secret_key(key: str) -> bool:
+    return key == "api_key" or key.endswith("_api_key")
+
+
+def _mask_secret(value) -> str:
+    v = str(value or "")
+    if len(v) > 8:
+        return v[:4] + "*" * (len(v) - 8) + v[-4:]
+    return ""
+
+
+def _read_settings_file() -> dict:
+    """Raw parse of settings.json — no defaults, no masking."""
+    if not _SETTINGS_FILE.exists():
+        return {}
+    try:
+        saved = json.loads(_SETTINGS_FILE.read_text(encoding="utf-8"))
+        return saved if isinstance(saved, dict) else {}
+    except Exception:
+        logger.exception("Failed to parse %s", _SETTINGS_FILE)
+        return {}
+
 
 def _load_settings() -> dict:
     """Load saved settings from settings.json, with defaults."""
     from config import AI_MAX_CONCURRENT, AI_RPM
     defaults = {
-        "ai_backend": AI_BACKEND if 'AI_BACKEND' in dir() else "vllm",
+        "ai_backend": AI_BACKEND,
         "api_key": "",
         "api_base_url": AI_API_BASE_URL,
         "ai_model": AI_MODEL,
@@ -235,22 +294,11 @@ def _load_settings() -> dict:
         "ai_max_concurrent": AI_MAX_CONCURRENT,
         "ai_rpm": AI_RPM,
     }
-    if _SETTINGS_FILE.exists():
-        try:
-            saved = json.loads(_SETTINGS_FILE.read_text())
-            defaults.update(saved)
-        except Exception:
-            logger.exception("Failed to parse %s; showing built-in defaults", _SETTINGS_FILE)
-    def _mask(k: str) -> str:
-        v = defaults.get(k, "")
-        if v and len(v) > 8:
-            return v[:4] + "*" * (len(v) - 8) + v[-4:]
-        return ""
-
-    defaults["api_key_masked"] = _mask("api_key")
-    defaults["ai_judge_api_key_masked"] = _mask("ai_judge_api_key")
-    defaults["ai_reviewer_api_key_masked"] = _mask("ai_reviewer_api_key")
-    defaults["ai_video_api_key_masked"] = _mask("ai_video_api_key")
+    defaults.update(_read_settings_file())
+    secret_keys = set(_KNOWN_SECRET_KEYS)
+    secret_keys.update(k for k in defaults if _is_secret_key(k))
+    for key in sorted(secret_keys):
+        defaults[f"{key}_masked"] = _mask_secret(defaults.get(key, ""))
     return defaults
 
 
@@ -266,22 +314,46 @@ async def settings_page(request: Request):
 async def save_settings(request: Request):
     try:
         data = await request.json()
-        current = _load_settings()
+        if not isinstance(data, dict):
+            return JSONResponse(
+                {"status": "error", "error": "Expected a JSON object"},
+                status_code=400,
+            )
+        stored = _read_settings_file()
+        # Display-only *_masked fields must never be persisted.
+        for key in [k for k in data if k.endswith("_masked")]:
+            data.pop(key)
         # Preserve existing secrets when the form submits the masked
-        # placeholder ("****" pattern) instead of a real new value.
-        for key in ("api_key", "ai_judge_api_key", "ai_reviewer_api_key", "ai_video_api_key"):
-            value = data.get(key, "")
-            if not value or "*" in value:
-                data[key] = current.get(key, "")
+        # placeholder (first4 + "*"/"..." + last4) or an empty value
+        # instead of a real new key.
+        for key in list(data.keys()):
+            if not _is_secret_key(key):
+                continue
+            value = str(data.get(key) or "")
+            existing = str(stored.get(key) or "")
+            is_masked = bool(value) and (
+                "*" in value or "..." in value or value == _mask_secret(existing)
+            )
+            if existing and (not value or is_masked):
+                data[key] = existing
+            elif is_masked:
+                # Masked placeholder with nothing stored — never persist it.
+                data[key] = ""
+        # Merge over the stored file so keys the form does not submit
+        # (embeddings_*, whisper_*, capture_pipeline, ...) survive a save.
+        merged = dict(stored)
+        merged.update(data)
         # Strip per-role keys that just duplicate the master api_key, so
         # the file stays the single source of truth. config.py cascades
         # ai_judge_api_key / ai_reviewer_api_key / ai_video_api_key down
         # to api_key automatically when they're empty.
-        master = data.get("api_key", "")
+        master = merged.get("api_key", "")
         for key in ("ai_judge_api_key", "ai_reviewer_api_key", "ai_video_api_key"):
-            if data.get(key, "") == master:
-                data.pop(key, None)
-        _SETTINGS_FILE.write_text(json.dumps(data, indent=2))
+            if merged.get(key, "") == master:
+                merged.pop(key, None)
+        tmp_path = _SETTINGS_FILE.with_suffix(".json.tmp")
+        tmp_path.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+        tmp_path.replace(_SETTINGS_FILE)
         return JSONResponse({"status": "ok"})
     except Exception as e:
         logger.exception("save_settings failed")
@@ -294,6 +366,12 @@ async def home(request: Request):
     # Support ?rerun=<review_id> to pre-fill form
     rerun_id = request.query_params.get("rerun", "")
     rerun_data = {}
+    if rerun_id:
+        try:
+            validate_review_id(rerun_id)
+        except InvalidReviewIdError:
+            logger.warning("Ignoring invalid ?rerun= review id: %r", rerun_id)
+            rerun_id = ""
     if rerun_id:
         try:
             review_dir = REVIEWS_DIR / rerun_id
@@ -397,7 +475,7 @@ async def start_review(
         meta.company_name = COMPANY_NAME
         save_meta(REVIEWS_DIR / meta.review_id, meta)
 
-    await _review_queue.put(meta.review_id)
+    enqueue_review(meta.review_id)
     return JSONResponse({
         "review_id": meta.review_id,
         "redirect": f"/review/{meta.review_id}/progress",
@@ -489,7 +567,7 @@ async def start_site_review(
         meta.company_name = COMPANY_NAME
         save_meta(REVIEWS_DIR / meta.review_id, meta)
 
-    await _review_queue.put(meta.review_id)
+    enqueue_review(meta.review_id)
     return JSONResponse({
         "review_id": meta.review_id,
         "redirect": f"/review/{meta.review_id}/progress",
@@ -586,7 +664,7 @@ async def start_multi_review(
         meta.company_name = COMPANY_NAME
         save_meta(REVIEWS_DIR / meta.review_id, meta)
 
-    await _review_queue.put(meta.review_id)
+    enqueue_review(meta.review_id)
     return JSONResponse({
         "review_id": meta.review_id,
         "redirect": f"/review/{meta.review_id}/progress",
@@ -669,11 +747,29 @@ async def report_page(request: Request, review_id: str):
             logger.exception("Failed to parse %s", reviewer_p)
             reviewer_data = None
 
+    # Linked-document results (single-page path writes document_results.json)
+    # so the report page can surface how many documents were tested.
+    linked_documents: list[dict] = []
+    doc_results_path = review_dir / "document_results.json"
+    if doc_results_path.exists():
+        try:
+            doc_results = json.loads(doc_results_path.read_text(encoding="utf-8"))
+            for entry in doc_results:
+                if isinstance(entry, dict):
+                    linked_documents.append({
+                        "url": entry.get("url", ""),
+                        "criteria_count": len(entry.get("results", []) or []),
+                    })
+        except Exception:
+            logger.exception("Failed to parse %s", doc_results_path)
+
     common_ctx = {
         "review_id": review_id,
         "meta": meta.to_dict(),
         "audit_data": audit_data,
         "reviewer_data": reviewer_data,
+        "documents_tested": len(linked_documents),
+        "linked_documents": linked_documents,
     }
 
     if report_html.exists():
@@ -698,7 +794,14 @@ async def report_json(review_id: str):
     review_dir = REVIEWS_DIR / review_id
     report_json_path = review_dir / "report" / "acr_report.json"
     if report_json_path.exists():
-        return JSONResponse(json.loads(report_json_path.read_text()))
+        try:
+            return JSONResponse(json.loads(report_json_path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Malformed JSON in %s: %s", report_json_path, exc)
+            return JSONResponse(
+                {"error": f"Malformed report file: {report_json_path.name}"},
+                status_code=500,
+            )
     results = load_all_test_results(review_dir)
     return JSONResponse(results)
 
@@ -715,50 +818,83 @@ async def test_detail(request: Request, review_id: str, criterion_id: str):
 
     decisions = load_user_decisions(review_dir, criterion_id)
 
-    # Load programmatic data and all AI prompts/responses
-    criterion_dir = review_dir / "tests" / criterion_id.replace(".", "_")
+    # Load programmatic data and all AI prompts/responses.
+    # Single-page reviews save per-SC artifacts under review_dir/tests/<sc>/;
+    # site/multi reviews save them per page under page_N/tests/<sc>/ (and
+    # doc_NNN/tests/<sc>/). Fall back to the first page that has each
+    # artifact so the detail page isn't empty for site runs.
+    sc_dirname = criterion_id.replace(".", "_")
+    criterion_dir = review_dir / "tests" / sc_dirname
+    page_test_dirs: list[tuple[str, Path]] = []
+    for sub in sorted(review_dir.iterdir()):
+        if sub.is_dir() and re.fullmatch(r"(page|doc)_\d+", sub.name):
+            cand = sub / "tests" / sc_dirname
+            if cand.is_dir():
+                page_test_dirs.append((sub.name, cand))
+
+    artifact_pages_used: list[str] = []
+
+    def _find_artifact(name: str) -> Path | None:
+        p = criterion_dir / name
+        if p.exists():
+            return p
+        for page_label, page_dir in page_test_dirs:
+            p = page_dir / name
+            if p.exists():
+                if page_label not in artifact_pages_used:
+                    artifact_pages_used.append(page_label)
+                return p
+        return None
+
     prog_data = None
     ai_prompt = ""
     ai_response = ""
     code_ai_prompt = ""
     code_ai_response = ""
 
-    prog_path = criterion_dir / "programmatic_data.json"
-    if prog_path.exists():
-        prog_data = json.loads(prog_path.read_text(encoding="utf-8", errors="replace"))
+    prog_path = _find_artifact("programmatic_data.json")
+    if prog_path is not None:
+        try:
+            prog_data = json.loads(prog_path.read_text(encoding="utf-8", errors="replace"))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Malformed JSON in %s: %s", prog_path, exc)
+            return JSONResponse(
+                {"error": f"Malformed data file: {prog_path.name} for {criterion_id}"},
+                status_code=500,
+            )
 
     # Visual AI prompt and response
-    prompt_path = criterion_dir / "prompt.txt"
-    if prompt_path.exists():
+    prompt_path = _find_artifact("prompt.txt")
+    if prompt_path is not None:
         ai_prompt = prompt_path.read_text(encoding="utf-8", errors="replace")
 
     for resp_name in ("visual_ai_response.json", "ai_response.txt"):
-        resp_path = criterion_dir / resp_name
-        if resp_path.exists():
+        resp_path = _find_artifact(resp_name)
+        if resp_path is not None:
             ai_response = resp_path.read_text(encoding="utf-8", errors="replace")
             break
 
     # Code AI prompt and response
-    code_prompt_path = criterion_dir / "code_ai_prompt.txt"
-    if code_prompt_path.exists():
+    code_prompt_path = _find_artifact("code_ai_prompt.txt")
+    if code_prompt_path is not None:
         code_ai_prompt = code_prompt_path.read_text(encoding="utf-8", errors="replace")
 
-    code_resp_path = criterion_dir / "code_ai_response.json"
-    if code_resp_path.exists():
+    code_resp_path = _find_artifact("code_ai_response.json")
+    if code_resp_path is not None:
         code_ai_response = code_resp_path.read_text(encoding="utf-8", errors="replace")
 
     # Judge AI response
     judge_response = ""
-    judge_path = criterion_dir / "judge_response.json"
-    if judge_path.exists():
+    judge_path = _find_artifact("judge_response.json")
+    if judge_path is not None:
         judge_response = judge_path.read_text(encoding="utf-8", errors="replace")
 
     # Judge DOM context — the deterministic ground-truth block the judge
     # received. Critical for forensic review when an operator needs to
     # see exactly what the judge "knew" before reaching a verdict.
     judge_dom_context = ""
-    judge_ctx_path = criterion_dir / "judge_dom_context.txt"
-    if judge_ctx_path.exists():
+    judge_ctx_path = _find_artifact("judge_dom_context.txt")
+    if judge_ctx_path is not None:
         judge_dom_context = judge_ctx_path.read_text(encoding="utf-8", errors="replace")
 
     # Merge user decisions into findings so the template shows saved state
@@ -795,13 +931,36 @@ async def test_detail(request: Request, review_id: str, criterion_id: str):
     # artifact relevant to this SC so operators can verify findings
     # against the actual captured ground truth without rummaging through
     # the filesystem. Each entry has {label, kind, path} where path is
-    # relative to /review/{id}/captures/file/.
+    # relative to /review/{id}/captures/file/. Site/multi reviews keep
+    # captures under page_N/captures — search those when the review-level
+    # captures dir lacks the artifact.
     captures_dir = review_dir / "captures"
+    evidence_roots: list[tuple[str, Path]] = []
+    if captures_dir.is_dir():
+        evidence_roots.append(("", captures_dir))
+    evidence_roots.extend(_page_capture_roots(review_dir))
     evidence: list[dict] = []
+
+    def _add_evidence_at(prefix: str, label: str, kind: str, rel_path: str) -> None:
+        evidence.append({
+            "label": f"{label} ({prefix})" if prefix else label,
+            "kind": kind,
+            "path": f"{prefix}/captures/{rel_path}" if prefix else rel_path,
+        })
+
     def _add_evidence(label: str, kind: str, rel_path: str) -> None:
-        full = captures_dir / rel_path
-        if full.exists() and full.is_file():
-            evidence.append({"label": label, "kind": kind, "path": rel_path})
+        for prefix, root in evidence_roots:
+            full = root / rel_path
+            if full.exists() and full.is_file():
+                _add_evidence_at(prefix, label, kind, rel_path)
+                return
+
+    def _find_capture_subdir(name: str) -> tuple[str, Path | None]:
+        for prefix, root in evidence_roots:
+            d = root / name
+            if d.is_dir():
+                return prefix, d
+        return "", None
 
     # Always-relevant page-wide artifacts
     _add_evidence("Full page screenshot", "image", "full_page.png")
@@ -820,30 +979,30 @@ async def test_detail(request: Request, review_id: str, criterion_id: str):
         _add_evidence("Tab walk (keyboard order)", "json", "tab_walk.json")
         _add_evidence("Keyboard traps", "json", "keyboard_traps.json")
         # Keyboard walkthrough video (first .webm in the directory)
-        kw_dir = captures_dir / "keyboard_walkthrough"
-        if kw_dir.is_dir():
+        kw_prefix, kw_dir = _find_capture_subdir("keyboard_walkthrough")
+        if kw_dir is not None:
             for vf in sorted(kw_dir.iterdir()):
                 if vf.suffix.lower() in (".webm", ".mp4"):
-                    _add_evidence(f"Keyboard walkthrough video: {vf.name}", "video", f"keyboard_walkthrough/{vf.name}")
+                    _add_evidence_at(kw_prefix, f"Keyboard walkthrough video: {vf.name}", "video", f"keyboard_walkthrough/{vf.name}")
                     break
     if criterion_id in ("3.3.1", "3.3.2", "3.3.3", "3.3.4"):
-        fe_dir = captures_dir / "form_error_captures"
-        if fe_dir.is_dir():
+        fe_prefix, fe_dir = _find_capture_subdir("form_error_captures")
+        if fe_dir is not None:
             for img in sorted(fe_dir.iterdir()):
                 if img.suffix.lower() == ".png":
-                    _add_evidence(f"Form error: {img.name}", "image", f"form_error_captures/{img.name}")
+                    _add_evidence_at(fe_prefix, f"Form error: {img.name}", "image", f"form_error_captures/{img.name}")
     if criterion_id in ("1.2.2", "1.2.3", "1.2.4", "1.2.5"):
-        tr_dir = captures_dir / "transcripts"
-        if tr_dir.is_dir():
+        tr_prefix, tr_dir = _find_capture_subdir("transcripts")
+        if tr_dir is not None:
             for tf in sorted(tr_dir.iterdir()):
                 if tf.is_file():
-                    _add_evidence(f"Transcript: {tf.name}", "text", f"transcripts/{tf.name}")
+                    _add_evidence_at(tr_prefix, f"Transcript: {tf.name}", "text", f"transcripts/{tf.name}")
     if sc_prefix == "2.3" or criterion_id == "2.3.1":
-        ff_dir = captures_dir / "flash_frames"
-        if ff_dir.is_dir():
+        ff_prefix, ff_dir = _find_capture_subdir("flash_frames")
+        if ff_dir is not None:
             for img in sorted(ff_dir.iterdir()):
                 if img.suffix.lower() == ".png":
-                    _add_evidence(f"Flash frame: {img.name}", "image", f"flash_frames/{img.name}")
+                    _add_evidence_at(ff_prefix, f"Flash frame: {img.name}", "image", f"flash_frames/{img.name}")
 
     return templates.TemplateResponse(request, "test_detail.html", context={
         "review_id": review_id,
@@ -860,6 +1019,10 @@ async def test_detail(request: Request, review_id: str, criterion_id: str):
         "judge_dom_context": judge_dom_context,
         "evidence": evidence,
         "normative_text": normative_text,
+        # Site/multi reviews: which page_N/doc_NNN dirs the artifacts above
+        # were loaded from ("" for single-page reviews). The template MAY
+        # render this; it degrades gracefully if ignored.
+        "artifact_page_label": ", ".join(artifact_pages_used),
     })
 
 
@@ -907,7 +1070,8 @@ async def api_queue_status():
     running = []
     queued_list = []
     for review in list_reviews():
-        if review.status in ("capturing", "testing", "generating_report", "crawling", "aggregating"):
+        if review.status in ("capturing", "testing", "generating_report", "crawling", "aggregating",
+                             "reviewing", "selecting", "authenticating", "testing_documents"):
             running.append(review.review_id)
         elif review.status == "queued":
             queued_list.append(review.review_id)
@@ -961,10 +1125,16 @@ async def api_resume_review(review_id: str):
         return JSONResponse({"error": "not found"}, status_code=404)
 
     meta = load_meta(review_dir)
-    if meta.status not in ("interrupted", "error", "cancelled"):
+    if meta.status not in ("interrupted", "error", "cancelled", "reviewing", "queued"):
         return JSONResponse(
             {"error": f"Cannot resume review in status '{meta.status}'"},
             status_code=400,
+        )
+    from app.queue import is_active
+    if is_active(review_id):
+        return JSONResponse(
+            {"error": "Review is already queued or running -- nothing to resume"},
+            status_code=409,
         )
 
     # Count how many tests already completed
@@ -980,7 +1150,7 @@ async def api_resume_review(review_id: str):
     save_meta(review_dir, meta)
 
     # Re-queue the review — process_review will skip completed tests
-    await _review_queue.put(meta.review_id)
+    enqueue_review(meta.review_id)
 
     logger.info("Review %s resumed (%d tests already completed)", review_id, completed)
     return JSONResponse({
@@ -1040,6 +1210,30 @@ async def api_review_results(review_id: str):
     })
 
 
+@app.get("/api/review/{review_id}/documents")
+async def api_review_documents(review_id: str):
+    """Return linked-document test results (document_results.json)."""
+    review_dir = REVIEWS_DIR / review_id
+    if not review_dir.exists():
+        return JSONResponse({"error": "Review not found"}, status_code=404)
+    doc_path = review_dir / "document_results.json"
+    if not doc_path.exists():
+        return JSONResponse(
+            {"error": "No linked-document results for this review "
+                      "(document_results.json not found — no documents were "
+                      "discovered or tested)"},
+            status_code=404,
+        )
+    try:
+        return JSONResponse(json.loads(doc_path.read_text(encoding="utf-8")))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Malformed JSON in %s: %s", doc_path, exc)
+        return JSONResponse(
+            {"error": f"Malformed document results file: {doc_path.name}"},
+            status_code=500,
+        )
+
+
 @app.get("/api/health")
 async def api_health(deep: bool = False):
     """Health probe. By default does a light text-LLM check (fast, for the UI
@@ -1058,7 +1252,10 @@ async def api_health(deep: bool = False):
             })
         except Exception:
             logger.warning("Deep AI health check failed", exc_info=True)
-            return JSONResponse({"status": "ok", "ai_api": "disconnected", "all_ok": False})
+            return JSONResponse({
+                "status": "ok", "ai_api": "disconnected", "all_ok": False,
+                "services": {},
+            })
 
     ai_status = "disconnected"
     try:
@@ -1072,16 +1269,39 @@ async def api_health(deep: bool = False):
     return JSONResponse({"status": "ok", "ai_api": ai_status})
 
 
+async def _ensure_acr_html(review_dir, client_mode: bool) -> None:
+    """Generate the ACR HTML on demand when it doesn't exist yet.
+
+    Cancelled/partial reviews never reach report generation, but their
+    saved per-SC results are still exportable — DOCX/XLSX regenerate
+    from results directly, so the PDF path must too.
+    """
+    suffix = "_client" if client_mode else ""
+    html_path = review_dir / "report" / f"acr_report{suffix}.html"
+    if html_path.exists():
+        return
+    from report.acr_generator import generate_acr_report
+    results = load_all_test_results(review_dir)
+    if not results:
+        return
+    meta = load_meta(review_dir)
+    await asyncio.to_thread(
+        generate_acr_report, results, meta, str(review_dir), client_mode=client_mode,
+    )
+
+
 @app.get("/review/{review_id}/export/pdf")
 async def export_pdf(review_id: str):
     review_dir = REVIEWS_DIR / review_id
     html_path = review_dir / "report" / "acr_report.html"
     pdf_path = review_dir / "report" / "acr_report.pdf"
 
-    if not pdf_path.exists() and html_path.exists():
+    if not pdf_path.exists():
         try:
-            from report.pdf_exporter import export_pdf as do_export
-            await do_export(str(html_path), str(pdf_path))
+            await _ensure_acr_html(review_dir, client_mode=False)
+            if html_path.exists():
+                from report.pdf_exporter import export_pdf as do_export
+                await do_export(str(html_path), str(pdf_path))
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1101,7 +1321,7 @@ async def export_xlsx(review_id: str):
             from report.xlsx_exporter import export_xlsx as do_export
             results = load_all_test_results(review_dir)
             meta = load_meta(review_dir)
-            do_export(results, meta, str(xlsx_path))
+            await asyncio.to_thread(do_export, results, meta, str(xlsx_path))
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1122,7 +1342,7 @@ async def export_docx(review_id: str):
             from report.docx_exporter import export_docx as do_export
             results = load_all_test_results(review_dir)
             meta = load_meta(review_dir)
-            do_export(results, meta, str(docx_path))
+            await asyncio.to_thread(do_export, results, meta, str(docx_path))
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1140,10 +1360,12 @@ async def export_pdf_client(review_id: str):
     html_path = review_dir / "report" / "acr_report_client.html"
     pdf_path = review_dir / "report" / "acr_report_client.pdf"
 
-    if not pdf_path.exists() and html_path.exists():
+    if not pdf_path.exists():
         try:
-            from report.pdf_exporter import export_pdf as do_export
-            await do_export(str(html_path), str(pdf_path))
+            await _ensure_acr_html(review_dir, client_mode=True)
+            if html_path.exists():
+                from report.pdf_exporter import export_pdf as do_export
+                await do_export(str(html_path), str(pdf_path))
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1164,7 +1386,7 @@ async def export_xlsx_client(review_id: str):
             from report.xlsx_exporter import export_xlsx as do_export
             results = load_all_test_results(review_dir)
             meta = load_meta(review_dir)
-            do_export(results, meta, str(xlsx_path), client_mode=True)
+            await asyncio.to_thread(do_export, results, meta, str(xlsx_path), client_mode=True)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1186,7 +1408,7 @@ async def export_docx_client(review_id: str):
             from report.docx_exporter import export_docx as do_export
             results = load_all_test_results(review_dir)
             meta = load_meta(review_dir)
-            do_export(results, meta, str(docx_path), client_mode=True)
+            await asyncio.to_thread(do_export, results, meta, str(docx_path), client_mode=True)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1216,7 +1438,14 @@ async def export_internal_summary(review_id: str):
     synthesis = {}
     synthesis_path = review_dir / "synthesis.json"
     if synthesis_path.exists():
-        synthesis = json.loads(synthesis_path.read_text())
+        try:
+            synthesis = json.loads(synthesis_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Malformed JSON in %s: %s", synthesis_path, exc)
+            return JSONResponse(
+                {"error": f"Malformed synthesis file: {synthesis_path.name}"},
+                status_code=500,
+            )
 
     # Build internal summary
     internal = {
@@ -1260,7 +1489,8 @@ async def export_internal_summary(review_id: str):
                     "issue": f.get("issue", ""),
                     "impact": f.get("impact", ""),
                     "severity": f.get("severity", ""),
-                    "remediation_note": f.get("recommendation", ""),
+                    "remediation_note": f.get("internal_remediation_note")
+                                        or f.get("recommendation", ""),
                 })
             else:
                 criterion_entry["findings_with_remediation"].append({
@@ -1268,7 +1498,8 @@ async def export_internal_summary(review_id: str):
                     "issue": f.issue if hasattr(f, 'issue') else "",
                     "impact": f.impact if hasattr(f, 'impact') else "",
                     "severity": f.severity.value if hasattr(f.severity, 'value') else str(f.severity) if hasattr(f, 'severity') else "",
-                    "remediation_note": f.recommendation if hasattr(f, 'recommendation') else "",
+                    "remediation_note": getattr(f, 'internal_remediation_note', "")
+                                        or getattr(f, 'recommendation', ""),
                 })
 
         internal["criteria"].append(criterion_entry)
@@ -1317,6 +1548,21 @@ async def download_evidence_zip(review_id: str):
     return Response(content=buf.getvalue(), media_type="application/zip", headers=headers)
 
 
+def _page_capture_roots(review_dir: Path) -> list[tuple[str, Path]]:
+    """Per-page/per-doc capture directories for site/multi reviews.
+
+    Returns ``[(prefix, captures_dir), ...]`` where prefix is the
+    ``page_N`` / ``doc_NNN`` directory name.
+    """
+    roots: list[tuple[str, Path]] = []
+    for sub in sorted(review_dir.iterdir()):
+        if sub.is_dir() and re.fullmatch(r"(page|doc)_\d+", sub.name):
+            sub_captures = sub / "captures"
+            if sub_captures.is_dir():
+                roots.append((sub.name, sub_captures))
+    return roots
+
+
 @app.get("/review/{review_id}/captures", response_class=HTMLResponse)
 async def captures_page(request: Request, review_id: str):
     """Browse all captured screenshots, videos, and images."""
@@ -1324,30 +1570,44 @@ async def captures_page(request: Request, review_id: str):
     if not review_dir.exists():
         return HTMLResponse("<h1>Review not found</h1>", status_code=404)
 
-    captures_dir = review_dir / "captures"
-    if not captures_dir.exists():
+    # Single-page reviews store artifacts in review_dir/captures; site and
+    # multi reviews store them per page/document in page_N/captures and
+    # doc_NNN/captures. Walk every capture root that exists.
+    capture_roots: list[tuple[str, Path]] = []
+    root_captures = review_dir / "captures"
+    if root_captures.is_dir():
+        capture_roots.append(("", root_captures))
+    capture_roots.extend(_page_capture_roots(review_dir))
+    if not capture_roots:
         return HTMLResponse("<h1>No captures found</h1>", status_code=404)
 
-    # Collect all media files organized by category
+    # Collect all media files organized by category (grouped by page/doc
+    # for site/multi reviews — the displayed path keeps the page_N prefix)
     categories: dict[str, list[dict]] = {}
-    for root, dirs, files in os.walk(str(captures_dir)):
-        rel_root = Path(root).relative_to(captures_dir)
-        category = str(rel_root).replace("\\", "/")
-        if category == ".":
-            category = "screenshots"
-        for f in sorted(files):
-            ext = Path(f).suffix.lower()
-            if ext not in (".png", ".jpg", ".jpeg", ".webm", ".mp4", ".json", ".html", ".txt"):
-                continue
-            if category not in categories:
-                categories[category] = []
-            media_type = "image" if ext in (".png", ".jpg", ".jpeg") else "video" if ext in (".webm", ".mp4") else "text"
-            categories[category].append({
-                "name": f,
-                "path": f"/review/{review_id}/captures/file/{category}/{f}",
-                "type": media_type,
-                "size": os.path.getsize(os.path.join(root, f)),
-            })
+    for prefix, captures_dir in capture_roots:
+        for root, dirs, files in os.walk(str(captures_dir)):
+            rel_root = str(Path(root).relative_to(captures_dir)).replace("\\", "/")
+            rel_root = "" if rel_root == "." else rel_root
+            if prefix:
+                url_base = f"{prefix}/captures" + (f"/{rel_root}" if rel_root else "")
+                category = url_base
+            else:
+                url_base = rel_root
+                category = rel_root or "screenshots"
+            for f in sorted(files):
+                ext = Path(f).suffix.lower()
+                if ext not in (".png", ".jpg", ".jpeg", ".webm", ".mp4", ".json", ".html", ".txt"):
+                    continue
+                if category not in categories:
+                    categories[category] = []
+                media_type = "image" if ext in (".png", ".jpg", ".jpeg") else "video" if ext in (".webm", ".mp4") else "text"
+                rel_url = f"{url_base}/{f}" if url_base else f
+                categories[category].append({
+                    "name": f,
+                    "path": f"/review/{review_id}/captures/file/{rel_url}",
+                    "type": media_type,
+                    "size": os.path.getsize(os.path.join(root, f)),
+                })
 
     meta = load_meta(review_dir)
 
@@ -1373,7 +1633,7 @@ async def captures_page(request: Request, review_id: str):
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <a href="/">Home</a> &rsaquo; <a href="/review/{review_id}/report">Report</a> &rsaquo; <span>Captures</span>
 </nav>
-<h2>Captured Evidence — {meta.source_url or review_id}</h2>
+<h2>Captured Evidence — {html_escape(str(meta.source_url or review_id))}</h2>
 <p style="color:#616161;font-size:0.9rem;">All screenshots, videos, and data captured during the accessibility review. Click images to view full size. Videos can be played inline.</p>
 """
 
@@ -1411,12 +1671,25 @@ async def captures_page(request: Request, review_id: str):
 
 @app.get("/review/{review_id}/captures/file/{path:path}")
 async def serve_capture_file(review_id: str, path: str):
-    """Serve a captured file (image, video, JSON, etc.)."""
-    review_dir = REVIEWS_DIR / review_id
-    captures_dir = (review_dir / "captures").resolve()
-    file_path = (review_dir / "captures" / path).resolve()
+    """Serve a captured file (image, video, JSON, etc.).
 
-    if not file_path.exists() or not file_path.is_relative_to(captures_dir):
+    Accepts paths relative to review_dir/captures (single-page reviews)
+    and page_N/captures/... or doc_NNN/captures/... paths (site/multi
+    reviews). Everything must resolve inside the review's own capture
+    directories — traversal outside is rejected.
+    """
+    review_dir = (REVIEWS_DIR / review_id).resolve()
+    norm = path.replace("\\", "/")
+    parts = norm.split("/")
+    if len(parts) >= 3 and re.fullmatch(r"(page|doc)_\d+", parts[0]) and parts[1] == "captures":
+        base = review_dir
+        jail = (review_dir / parts[0] / "captures").resolve()
+    else:
+        base = review_dir / "captures"
+        jail = base.resolve()
+    file_path = (base / norm).resolve()
+
+    if not file_path.is_file() or not file_path.is_relative_to(jail):
         return JSONResponse({"error": "File not found"}, status_code=404)
 
     ext = file_path.suffix.lower()

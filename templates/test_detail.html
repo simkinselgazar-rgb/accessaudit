@@ -44,6 +44,21 @@
     <section class="card">
       <h2 class="card-title">{{ result.criterion_id }} {{ result.criterion_name }}</h2>
 
+      {% if result.needs_review %}
+      <div role="alert" style="background:#fff8e1;border:2px solid #f9a825;border-radius:6px;padding:.75rem 1rem;margin:.75rem 0;">
+        <strong style="color:#b26a00;font-size:1rem;">&#9888; Needs human review</strong>
+        {% if result.needs_review_reasons %}
+        <ul style="margin:.4rem 0 0;padding-left:1.25rem;color:#5d4037;font-size:.88rem;">
+          {% for reason in result.needs_review_reasons %}
+          <li>{{ reason }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="margin:.4rem 0 0;color:#5d4037;font-size:.88rem;">This result was flagged for human review.</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
       <!-- Quad Verdict Boxes -->
       <div class="verdict-row" style="flex-wrap:wrap;">
         <div class="verdict-box">
@@ -182,10 +197,14 @@
         <select id="source-filter" onchange="filterFindings()" style="padding:.35rem .5rem;">
           <option value="">All</option>
           <option value="programmatic">Programmatic</option>
-          <option value="ai">Visual AI</option>
+          <option value="axe">Axe</option>
+          <option value="andi">ANDI</option>
+          <option value="htmlcs">HTML_CS</option>
+          <option value="ibm_eac">IBM EAC</option>
+          <option value="visual_ai">Visual AI</option>
           <option value="code_ai">Code AI</option>
           <option value="at_sim">AT Sim</option>
-          <option value="judge">Judge</option>
+          <option value="judge_inference">Judge Inference</option>
         </select>
         <span id="finding-count" style="font-size:.8rem;color:#666;margin-left:auto;"></span>
       </div>
@@ -200,9 +219,14 @@
           {% endif %}
         </div>
 
-        {% if finding.element %}
+        {% if finding.element or finding.location %}
         <div class="finding-element">
-          <strong>Location:</strong> {{ finding.element }}
+          {% if finding.element %}
+          <strong>Element:</strong> {{ finding.element }}
+          {% endif %}
+          {% if finding.location %}
+          {% if finding.element %}<br>{% endif %}<strong>Location on page:</strong> {{ finding.location }}
+          {% endif %}
           {% if finding.css_selector %}
           <br><strong>Selector:</strong> <code>{{ finding.css_selector }}</code>
           {% endif %}
@@ -217,6 +241,38 @@
         {% endif %}
         <div class="finding-detail"><strong>Impact:</strong> {{ finding.impact }}</div>
         <div class="finding-detail"><strong>Recommendation:</strong> {{ finding.recommendation }}</div>
+
+        {% if finding.cited_measurements %}
+        <div class="finding-detail" style="margin:.3rem 0;">
+          <strong>Cited Measurements:</strong>
+          <table style="border-collapse:collapse;font-size:.82rem;margin-top:.25rem;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:2px 8px;border-bottom:1px solid #ccc;">Selector</th>
+                <th style="text-align:left;padding:2px 8px;border-bottom:1px solid #ccc;">Metric</th>
+                <th style="text-align:left;padding:2px 8px;border-bottom:1px solid #ccc;">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in finding.cited_measurements %}
+              <tr>
+                <td style="padding:2px 8px;border-bottom:1px solid #eee;"><code>{{ m.selector }}</code></td>
+                <td style="padding:2px 8px;border-bottom:1px solid #eee;">{{ m.metric }}</td>
+                <td style="padding:2px 8px;border-bottom:1px solid #eee;">{{ m.value }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        {% if finding.internal_remediation_note %}
+        <div class="finding-detail" style="background:#fff3e0;border-left:4px solid #ef6c00;padding:.45rem .6rem;border-radius:4px;font-size:.85rem;margin:.3rem 0;">
+          <strong>Internal remediation note</strong> <span style="font-size:.75rem;color:#e65100;">(internal use only — stripped from client reports)</span><br>
+          {{ finding.internal_remediation_note }}
+        </div>
+        {% endif %}
+
         <div class="finding-severity {{ finding.severity }}">Severity: {{ finding.severity }}</div>
         {% if finding.screenshot_path %}
         <div class="finding-screenshot" style="margin:.5rem 0;">
@@ -227,7 +283,7 @@
         {% endif %}
 
         {% if finding.decision_reason %}
-        <div class="finding-detail mt-1"><strong>Decision Reason:</strong> {{ finding.decision_reason }}</div>
+        <div class="finding-detail mt-1 decision-reason"><strong>Decision Reason:</strong> {{ finding.decision_reason }}</div>
         {% endif %}
 
         <!-- Decision Buttons -->

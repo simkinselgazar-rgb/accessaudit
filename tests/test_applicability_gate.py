@@ -6,7 +6,7 @@ applicability depends on page meaning (ai_judged_applicability = True), a
 False keyword/regex scan is advisory — the SC still runs and the AI judge
 decides, so a brittle keyword miss cannot silently bury a real violation
 (verified-broken pattern: SC 2.5.4 / 3.3.8 / 3.3.9 keyword-gated to N/A on
-the fairfaxva.gov run 20260515_230613_ff643865).
+a municipal-government-site run 20260515_230613_ff643865).
 
 Run with:
     python tests/test_applicability_gate.py

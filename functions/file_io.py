@@ -78,6 +78,22 @@ def dump_json(
         json.dump(data, fh, indent=indent, ensure_ascii=ensure_ascii, default=default)
 
 
+def get_review_root(review_dir: str) -> str:
+    """Return the review root for a page/document directory.
+
+    Multi-page reviews store each page under ``<review>/page_NNN`` (and
+    documents under ``doc_NNN``); review-level artifacts such as the
+    saved auth state live one level up. For a single-page review the
+    directory IS the root. Use this everywhere a review-level artifact
+    is looked up from a per-page path — passing the page dir directly
+    misses review-level auth state on multi-page reviews.
+    """
+    base = os.path.basename(review_dir)
+    if base.startswith("page_") or base.startswith("doc_"):
+        return os.path.dirname(review_dir)
+    return review_dir
+
+
 def read_text_or(path: PathLike, default: str = "") -> str:
     """Read a UTF-8 text file if it exists, else `default`. Logs malformed
     reads (rare for plain text, but covers permission / encoding issues).

@@ -51,7 +51,7 @@ def _video_has_audio(media: dict, capture_data: CaptureData) -> bool:
     "video-only" content covered ONLY by SC 1.2.1, not by 1.2.2/1.2.3/1.2.5.
 
     The bug being fixed: the prior is_applicable() for these three SCs
-    only checked "is there a <video>?" and flagged the silent university hero
+    only checked "is there a <video>?" and flagged the silent university-site hero
     video as missing captions / audio descriptions. The hero has
     muted="" and the audio_detection probe reports audio_type="silence",
     so unmuting plays no audio either — there is nothing to caption,
@@ -120,7 +120,7 @@ def _iframe_is_media_candidate(iframe: dict) -> bool:
     makes the real applicability call from full-page evidence. It must
     err toward INCLUDING an iframe: a missed media iframe silently skips
     the SC entirely (verified bug — the embed.repd.us video iframe on
-    loudoun.gov was auto-marked Not Applicable because repd.us is not a
+    a county-government site was auto-marked Not Applicable because repd.us is not a
     hardcoded video host, so 7 media SCs were never judged). Any one
     signal qualifies:
       - src on a known video-embed host (_VIDEO_EMBED_DOMAINS)
@@ -476,7 +476,7 @@ class Check_1_2_2(BaseCheck):
 
     def is_applicable(self, capture_data: CaptureData) -> bool:
         # SC 1.2.2 / 1.2.3 / 1.2.5 apply to "synchronized media" — audio
-        # combined with video. A silent muted video (e.g. a university's hero) is
+        # combined with video. A silent muted video (e.g. a university site's hero) is
         # video-only content; SC 1.2.1 covers it, these three do not.
         # _video_has_audio returns True for video embeds (we cannot probe
         # remote players' audio reliably) so YouTube/Vimeo iframes still
@@ -997,7 +997,7 @@ class Check_1_2_3(BaseCheck):
 
     def is_applicable(self, capture_data: CaptureData) -> bool:
         # SC 1.2.2 / 1.2.3 / 1.2.5 apply to "synchronized media" — audio
-        # combined with video. A silent muted video (e.g. a university's hero) is
+        # combined with video. A silent muted video (e.g. a university site's hero) is
         # video-only content; SC 1.2.1 covers it, these three do not.
         # _video_has_audio returns True for video embeds (we cannot probe
         # remote players' audio reliably) so YouTube/Vimeo iframes still
@@ -1273,7 +1273,7 @@ class Check_1_2_5(BaseCheck):
 
     def is_applicable(self, capture_data: CaptureData) -> bool:
         # SC 1.2.2 / 1.2.3 / 1.2.5 apply to "synchronized media" — audio
-        # combined with video. A silent muted video (e.g. a university's hero) is
+        # combined with video. A silent muted video (e.g. a university site's hero) is
         # video-only content; SC 1.2.1 covers it, these three do not.
         # _video_has_audio returns True for video embeds (we cannot probe
         # remote players' audio reliably) so YouTube/Vimeo iframes still

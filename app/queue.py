@@ -27,6 +27,37 @@ logger = logging.getLogger(__name__)
 _review_queue: asyncio.Queue = asyncio.Queue()
 _queue_worker_task: asyncio.Task | None = None
 
+# Dedupe state: ids waiting in _review_queue plus the id being processed
+# right now. Without this, resuming a review that is already queued (or
+# re-enqueueing on startup while a resume request races in) would put the
+# same review through the pipeline twice back-to-back.
+_enqueued_ids: set[str] = set()
+_current_review_id: str | None = None
+
+
+def enqueue_review(review_id: str) -> bool:
+    """Enqueue a review unless it is already queued or currently running.
+
+    Returns True when enqueued, False when skipped as a duplicate. All
+    call sites (submission endpoints, startup recovery, resume) must go
+    through here rather than putting on ``_review_queue`` directly.
+    """
+    if review_id in _enqueued_ids or review_id == _current_review_id:
+        logger.info(
+            "Review %s already %s -- not enqueueing again",
+            review_id,
+            "running" if review_id == _current_review_id else "queued",
+        )
+        return False
+    _enqueued_ids.add(review_id)
+    _review_queue.put_nowait(review_id)
+    return True
+
+
+def is_active(review_id: str) -> bool:
+    """True when the review is queued or currently being processed."""
+    return review_id in _enqueued_ids or review_id == _current_review_id
+
 
 async def _run_final_reviewer(review_id: str, review_dir: Path) -> dict | None:
     """Pro-tier holistic review of the completed ACR.
@@ -106,8 +137,11 @@ def _run_post_review_audit(review_id: str) -> dict | None:
 async def queue_worker():
     """Process reviews from the queue one at a time."""
     from app.orchestrators import process_review
+    global _current_review_id
     while True:
         review_id = await _review_queue.get()
+        _enqueued_ids.discard(review_id)
+        _current_review_id = review_id
         review_finished_cleanly = False
         try:
             await process_review(review_id)
@@ -138,7 +172,7 @@ async def queue_worker():
             # Run the post-review audit whether the review completed
             # cleanly or errored -- partial results are still worth
             # inspecting, and the audit itself is cheap and sandboxed.
-            report = _run_post_review_audit(review_id)
+            report = await asyncio.to_thread(_run_post_review_audit, review_id)
             if report and not report.get("fatal"):
                 try:
                     await broadcast(review_id, {
@@ -150,4 +184,5 @@ async def queue_worker():
                     })
                 except Exception:
                     logger.exception("Failed to broadcast audit_complete for review %s", review_id)
+            _current_review_id = None
             _review_queue.task_done()

@@ -354,6 +354,7 @@ async def check_cross_page_consistency(
                     "severity": "medium",
                     "recommendation": "WCAG 3.2.3 requires consistent navigation order.",
                     "source": "cross_page",
+                    "criterion_id": "3.2.3",
                 })
 
     if findings:
@@ -411,6 +412,7 @@ async def _nav_consistency_findings(summaries: list[dict]) -> list[dict]:
                     "severity": "medium",
                     "recommendation": "WCAG 3.2.3 requires consistent navigation order across pages.",
                     "source": "cross_page",
+                    "criterion_id": "3.2.3",
                 }]
             return []
     except Exception as exc:
@@ -433,6 +435,7 @@ async def _nav_consistency_findings(summaries: list[dict]) -> list[dict]:
             "severity": "medium",
             "recommendation": "WCAG 3.2.3 requires consistent navigation order across pages.",
             "source": "cross_page",
+            "criterion_id": "3.2.3",
         }]
     return []
 
@@ -476,6 +479,7 @@ def _landmark_consistency_findings(summaries: list[dict]) -> list[dict]:
         "severity": "low",
         "recommendation": "Use consistent landmark roles across all pages.",
         "source": "cross_page",
+        "criterion_id": "3.2.3",
     }]
 
 
@@ -527,6 +531,7 @@ async def _label_consistency_findings(summaries: list[dict]) -> list[dict]:
             "severity": "medium",
             "recommendation": "WCAG 3.2.4 requires consistent identification of same-function components.",
             "source": "cross_page",
+            "criterion_id": "3.2.4",
         })
 
     return findings

@@ -35,9 +35,9 @@ def get_auth_state_path(review_dir: str, url: str = "") -> str | None:
     1. Domain-level persistent state (survives across reviews)
     2. Review-level state (current review only)
 
-    Auth states are stored by domain so logging into shelleyschools.org
-    once works for every future review of that domain until the session
-    expires.
+    Auth states are stored by domain so logging into a given district's
+    school site once works for every future review of that domain until
+    the session expires.
     """
     # Check domain-level persistent state first
     if url:

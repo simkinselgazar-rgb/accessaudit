@@ -1,7 +1,7 @@
 """Regression tests for HTMLCS rule corroboration filters.
 
 Two HCS rules over-fire on real pages, producing the SC 1.3.1
-false-positive cluster verified on A11Y Project run 20260511:
+false-positive cluster verified on a public accessibility-resource site run 20260511:
 
   - H48 "if this <p> contains navigation, mark it up as a list":
     fires on author-bio paragraphs and copyright lines that have
@@ -50,7 +50,7 @@ def test_class_inside_nav_returns_true_when_class_in_nav():
 
 
 def test_class_inside_nav_returns_false_when_class_outside_nav():
-    """The A11Y Project failure: a <p class='c-footer__copyright'>
+    """The verified failure: a <p class='c-footer__copyright'>
     NOT inside any <nav> -- it's the copyright line in <footer>.
     """
     html = (
@@ -121,7 +121,7 @@ def test_class_word_boundary_no_partial_match():
 
 
 def test_svg_with_only_paths_returns_false():
-    """The A11Y Project hero illustration: SVG with role=presentation
+    """The verified hero-illustration case: SVG with role=presentation
     and only <path> primitives is correctly decoration.
     """
     html = (
@@ -199,7 +199,7 @@ def test_empty_html_returns_true_conservative():
 
 
 def test_h48_filter_drops_finding_when_paragraph_not_in_nav():
-    """Replay the A11Y Project SC 1.3.1 false positive: HCS reports
+    """Replay the verified SC 1.3.1 false positive: HCS reports
     H48 on a <p class='c-footer__copyright'> that's actually in the
     footer credits, not a nav. Post-fix the finding is dropped at
     extractor time.
@@ -263,7 +263,7 @@ def test_h48_filter_keeps_finding_when_paragraph_in_nav():
 
 
 def test_f92_filter_drops_finding_when_svg_is_decorative_primitives():
-    """A11Y Project hero illustration: SVG with role=presentation and
+    """Verified hero-illustration case: SVG with role=presentation and
     only <path> children. Pre-fix: HIGH severity false positive
     against generic 'svg' selector. Post-fix: dropped at extractor.
     """
@@ -333,7 +333,7 @@ def test_h48_filter_reads_dom_from_disk_when_html_field_empty():
     conservative "keep finding" path even when the disk has data that
     would clearly disprove the finding.
 
-    Verified gap on A11Y Project run 20260511 SC 1.3.1 where 3 H48
+    Verified gap on a public accessibility-resource site run 20260511 SC 1.3.1 where 3 H48
     false positives flowed through because capture_data.html was 0
     chars even though dom.html on disk was 29k chars.
     """

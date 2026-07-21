@@ -6,10 +6,10 @@ parser regression would silently drop findings from that model's output
 in production.
 
 Models covered:
-- Qwen3.5-35B-A3B-4bit         (text, via vLLM at port 11801)
-- Qwen3-VL-32B-Instruct-4bit   (vision, via vLLM at port 11802)
-- gemma-4-e4b-it-4bit          (explorer, via vLLM at port 11804)
-- gemma-4-26b-a4b-it-4bit      (local judge, via vLLM at port 11805)
+- Qwen3.5-35B-A3B-4bit         (text, via vLLM at port 8001)
+- Qwen3-VL-32B-Instruct-4bit   (vision, via vLLM at port 8002)
+- gemma-4-e4b-it-4bit          (explorer, via vLLM at port 8004)
+- gemma-4-26b-a4b-it-4bit      (local judge, via vLLM at port 8005)
 - gemini-2.5-flash-lite        (video, via OpenAI-compat endpoint)
 
 Run with:  python tests/test_all_model_formats.py
@@ -248,7 +248,7 @@ def test_gemma_native_with_inner_literal_quotes_in_css_selector():
                 "content": (
                     '<|tool_call>call:report_element_inventory{'
                     'priority_updates:[{'
-                    'selector:<|"|>button[data-bs-target="#navSearchCollapse"]<|"|>,'
+                    'selector:<|"|>button[data-bs-target="#mainNavSearchCollapse"]<|"|>,'
                     'exploration_priority:<|"|>high<|"|>'
                     '}],'
                     'elements:[],'
@@ -262,7 +262,7 @@ def test_gemma_native_with_inner_literal_quotes_in_css_selector():
     assert parsed is not None
     assert len(parsed["priority_updates"]) == 1
     pu = parsed["priority_updates"][0]
-    assert pu["selector"] == 'button[data-bs-target="#navSearchCollapse"]'
+    assert pu["selector"] == 'button[data-bs-target="#mainNavSearchCollapse"]'
     assert pu["exploration_priority"] == "high"
 
 
@@ -326,7 +326,7 @@ def test_empty_choices_returns_none():
 
 
 def test_qwen_invents_wrong_tool_name_with_empty_args_is_rejected():
-    """Real Qwen 35B restructure failure observed on a university run 1 main section.
+    """Real Qwen 35B restructure failure observed on a university-site run 1 main section.
 
     Qwen returned a tool_calls entry with ``function.name="link"`` (made
     up, not in our schema) and ``arguments="{}"`` (empty). The actual

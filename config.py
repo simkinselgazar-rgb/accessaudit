@@ -47,19 +47,16 @@ def _setting(key: str, env_var: str, default: str) -> str:
     return default
 
 
-def reload_settings() -> None:
-    """Reload settings from disk (called after settings page saves)."""
-    global _saved
-    _saved = _load_settings_file()
-
-
 # ── Backend defaults by provider ─────────────────────────────────────────────
 _BACKEND_DEFAULTS: dict[str, dict[str, str]] = {
+    # Self-hosted OpenAI-compatible stack (vLLM, llama.cpp, LM Studio,
+    # Ollama, MLX...). No default URLs are assumed -- set api_base_url /
+    # ai_vision_api_url in settings.json to your own endpoints.
     "vllm": {
-        "base_url": "http://localhost:11801/v1",
+        "base_url": "",
         "model": "Qwen/Qwen3-32B",
         "vision_model": "Qwen/Qwen2.5-VL-32B-Instruct",
-        "vision_url": "http://localhost:11802/v1",
+        "vision_url": "",
     },
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
@@ -88,7 +85,11 @@ _BACKEND_DEFAULTS: dict[str, dict[str, str]] = {
 }
 
 # ── AI backend ───────────────────────────────────────────────────────────────
-AI_BACKEND = _setting("ai_backend", "WCAG_AI_BACKEND", "vllm")
+# Default backend is an API provider: a fresh install only needs one
+# API key. Self-hosting is fully supported -- set ai_backend to "vllm"
+# and point api_base_url (and any per-role URLs) at your own
+# OpenAI-compatible servers in settings.json.
+AI_BACKEND = _setting("ai_backend", "WCAG_AI_BACKEND", "openrouter")
 AI_API_KEY = _setting("api_key", "WCAG_AI_API_KEY", "")
 
 _defaults = _BACKEND_DEFAULTS.get(AI_BACKEND, _BACKEND_DEFAULTS["vllm"])
@@ -110,7 +111,7 @@ AI_MAX_TOKENS = int(_setting("ai_max_tokens", "WCAG_AI_MAX_TOKENS", "16384"))
 #   N  = up to N calls in flight at once. ONLY safe with cloud providers
 #        (Gemini, OpenAI, Anthropic, OpenRouter). Phase 4 SC checks +
 #        Phase 5 judge benefit most -- ~3x wall-clock speedup at N=10
-#        on large-university-sized runs. Set via settings.json key
+#        on large-university-site-sized runs. Set via settings.json key
 #        "ai_max_concurrent" or env var WCAG_AI_MAX_CONCURRENT.
 #
 # Defaults to 1 for ALL backends until operator opts in, because
@@ -152,15 +153,24 @@ AI_FALLBACK_VISION_MODEL = _setting(
     "ai_fallback_vision_model", "WCAG_AI_FALLBACK_VISION_MODEL", "",
 )
 
-# Gemma 4 E4B -- fast multimodal (Phase 2 explorer, audio detection)
-AI_EXPLORER_URL = _setting("ai_explorer_url", "WCAG_AI_EXPLORER_URL", "http://localhost:11804/v1")
+# Optional dedicated endpoints for specialist roles. These default to
+# empty -- when unset, model routing falls through to the configured
+# vision/text endpoints. Operators running a multi-model self-hosted
+# stack set them explicitly in settings.json.
+
+# Fast multimodal explorer (Phase 2 exploration, audio detection)
+AI_EXPLORER_URL = _setting(
+    "ai_explorer_url", "WCAG_AI_EXPLORER_URL", "",
+)
 AI_EXPLORER_MODEL = _setting(
     "ai_explorer_model", "WCAG_AI_EXPLORER_MODEL",
     "google/gemma-3n-E4B-it",
 )
 
 # Gemma 4 26B -- local image analysis + local judge
-AI_LOCAL_JUDGE_URL = _setting("ai_local_judge_url", "WCAG_AI_LOCAL_JUDGE_URL", "http://localhost:11805/v1")
+AI_LOCAL_JUDGE_URL = _setting(
+    "ai_local_judge_url", "WCAG_AI_LOCAL_JUDGE_URL", "",
+)
 AI_LOCAL_JUDGE_MODEL = _setting(
     "ai_local_judge_model", "WCAG_AI_LOCAL_JUDGE_MODEL",
     "google/gemma-3-27b-it",
@@ -170,11 +180,25 @@ AI_LOCAL_JUDGE_API_KEY = _setting(
 ) or AI_VISION_API_KEY
 
 # ── Rate limiting ────────────────────────────────────────────────────────────
-_rpm = int(os.environ.get("WCAG_AI_RPM", "0"))
+_rpm = int(_setting("ai_rpm", "WCAG_AI_RPM", "0"))
 if not _rpm and AI_BACKEND == "gemini":
     _rpm = 10
 AI_RPM = _rpm
-AI_MAX_IMAGES = int(os.environ.get("WCAG_AI_MAX_IMAGES", "10"))
+AI_MAX_IMAGES = int(_setting("ai_max_images", "WCAG_AI_MAX_IMAGES", "10"))
+
+# ── Image encoding for vision calls ──────────────────────────────────────────
+# Target dimension for images sent to vision models (see
+# functions/media.py:encode_image for how elongated screenshots are
+# handled). Raise for stronger models / lower for tight local memory.
+AI_IMAGE_MAX_DIM = int(_setting("ai_image_max_dim", "WCAG_AI_IMAGE_MAX_DIM", "1280"))
+AI_IMAGE_QUALITY = int(_setting("ai_image_quality", "WCAG_AI_IMAGE_QUALITY", "85"))
+
+# Allow auditing private/loopback/tailnet URLs (intranet apps, staging
+# servers, local fixtures). Default off: it re-opens SSRF, so enable it
+# only on a trusted single-operator deployment.
+ALLOW_PRIVATE_URLS = _setting(
+    "allow_private_urls", "WCAG_ALLOW_PRIVATE_URLS", "",
+).lower() in ("true", "1", "yes")
 
 # ── Verification ─────────────────────────────────────────────────────────────
 VERIFICATION_ENABLED = os.environ.get("WCAG_VERIFICATION_ENABLED", "false").lower() in ("true", "1", "yes")
@@ -196,9 +220,13 @@ AI_FRAME_INTERVAL = int(os.environ.get("WCAG_AI_FRAME_INTERVAL", "5"))
 #   - Cross-page finding deduplication: cluster semantically identical
 #     findings (e.g. "missing alt on logo" reported 10 times -> one
 #     entry with 10 affected URLs) without requiring identical strings
+# No default endpoint: when unset, embedding-based dedup/consistency
+# degrade gracefully (zero-vector fallback, logged + bypass-logged).
+# Point at any OpenAI-compatible /embeddings endpoint
+# (embeddings_format=openai) or an Ollama /api/embeddings endpoint
+# (embeddings_format=ollama).
 EMBEDDINGS_API_URL = _setting(
-    "embeddings_api_url", "WCAG_EMBEDDINGS_API_URL",
-    "http://localhost:11434/api/embeddings",
+    "embeddings_api_url", "WCAG_EMBEDDINGS_API_URL", "",
 )
 EMBEDDINGS_MODEL = _setting("embeddings_model", "WCAG_EMBEDDINGS_MODEL", "bge-m3")
 EMBEDDINGS_DIM = int(_setting("embeddings_dim", "WCAG_EMBEDDINGS_DIM", "1024"))
@@ -221,7 +249,9 @@ EMBEDDINGS_API_KEY = _setting(
     "embeddings_api_key", "WCAG_EMBEDDINGS_API_KEY", "",
 ) or AI_VISION_API_KEY
 
-WHISPER_API_URL = _setting("whisper_api_url", "WCAG_WHISPER_API_URL", "http://localhost:11803/v1")
+# No default endpoint: when unset, audio transcription (caption
+# verification) is skipped with a logged capture gap.
+WHISPER_API_URL = _setting("whisper_api_url", "WCAG_WHISPER_API_URL", "")
 # Whisper API format. Three transcription paths are supported:
 #   "local"  (default): faster-whisper HTTP at {WHISPER_API_URL}/transcribe
 #   "openai": OpenAI Whisper at {WHISPER_API_URL}/audio/transcriptions
@@ -242,9 +272,8 @@ WHISPER_GEMINI_MODEL = _setting(
 # large-v3-turbo is a distilled version of large-v3 -- near-large-v3
 # accuracy with meaningful speedup. Much better than medium on accented
 # English, lecture audio, and overlapping-speaker panels (common on
-# university lecture recordings and event videos). The local fleet at
-# port 11803 hosts this model; override the env var if you point at a
-# different Whisper endpoint.
+# lecture recordings and event videos). Override the env var if your
+# Whisper endpoint hosts a different model size.
 WHISPER_MODEL_SIZE = os.environ.get("WCAG_WHISPER_MODEL_SIZE", "large-v3-turbo")
 WHISPER_COMPUTE_TYPE = os.environ.get("WCAG_WHISPER_COMPUTE_TYPE", "int8")
 WHISPER_DEVICE = os.environ.get("WCAG_WHISPER_DEVICE", "cpu")

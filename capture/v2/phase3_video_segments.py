@@ -58,29 +58,6 @@ class VideoSegment:
     error: str = ""
 
 
-# Tool for AI to signal planning is complete
-_PLAN_DONE_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "planning_complete",
-        "description": (
-            "Call this ONLY when you have planned ALL necessary video segments. "
-            "Do NOT call this until every interaction type on the page has been covered."
-        ),
-        "parameters": {
-            "type": "object",
-            "required": ["total_segments"],
-            "properties": {
-                "total_segments": {"type": "integer"},
-                "summary": {
-                    "type": "string",
-                    "description": "Brief summary of what was planned and why.",
-                },
-            },
-        },
-    },
-}
-
 # Tool schema for AI video planner
 _VIDEO_PLAN_TOOL = {
     "type": "function",
@@ -562,9 +539,14 @@ async def _record_segment(
                 ignore_https_errors=True,
             )
 
-            # Check for auth state
+            # Check for auth state. Auth lives at the REVIEW root, one
+            # level above page_NNN dirs — resolve it the same way the
+            # orchestrator does or multi-page reviews miss it.
             from capture.auth import get_auth_state_path
-            auth_state = get_auth_state_path(os.path.dirname(captures_dir), url=url)
+            from functions.file_io import get_review_root
+            auth_state = get_auth_state_path(
+                get_review_root(os.path.dirname(captures_dir)), url=url,
+            )
             if auth_state:
                 # Re-create context with auth
                 await context.close()
@@ -702,6 +684,14 @@ async def _extract_tab_walk_data(page: Page) -> dict:
     """
     TRAP_CONSECUTIVE_THRESHOLD = 5
     TRAP_CYCLE_REPEATS = 5
+    # Native inputs whose internal segments/spinners each consume a Tab
+    # press while resolving to the same host selector — not a keyboard
+    # trap. Mirrors capture.interactive_capture._SEGMENTED_INPUT_TYPES;
+    # both tab-walk detectors must exempt these or a native
+    # <input type="date"> is falsely flagged under SC 2.1.2.
+    SEGMENTED_INPUT_TYPES = frozenset({
+        "date", "time", "datetime-local", "week", "month", "number", "range",
+    })
 
     try:
         # Focus body first
@@ -711,7 +701,6 @@ async def _extract_tab_walk_data(page: Page) -> dict:
         tab_walk = []
         traps = []
         recent_selectors = []
-        seen_selectors = set()
         max_tabs = 300
 
         for i in range(max_tabs):
@@ -722,20 +711,60 @@ async def _extract_tab_walk_data(page: Page) -> dict:
                 const el = document.activeElement;
                 if (!el || el === document.body) return null;
                 const rect = el.getBoundingClientRect();
-                const cs = window.getComputedStyle(el);
-                const outline = cs.outline || '';
-                const outlineWidth = cs.outlineWidth || '0px';
-                const outlineStyle = cs.outlineStyle || 'none';
-                const outlineColor = cs.outlineColor || '';
-                const boxShadow = cs.boxShadow || '';
-                const borderColor = cs.borderColor || '';
-                const borderWidth = cs.borderWidth || '';
-                const backgroundColor = cs.backgroundColor || '';
-                // Check multiple focus indicator CSS properties
-                const hasOutline = outlineStyle !== 'none' && outlineWidth !== '0px';
-                const hasShadow = boxShadow !== 'none' && boxShadow !== '';
-                const hasBorder = borderWidth !== '0px' && borderColor !== '';
-                const isVisible = hasOutline || hasShadow || hasBorder;
+                const readStyles = () => {
+                    const cs = window.getComputedStyle(el);
+                    return {
+                        outline: cs.outline || '',
+                        outlineWidth: cs.outlineWidth || '0px',
+                        outlineStyle: cs.outlineStyle || 'none',
+                        outlineColor: cs.outlineColor || '',
+                        boxShadow: cs.boxShadow || '',
+                        borderColor: cs.borderColor || '',
+                        borderWidth: cs.borderWidth || '',
+                        backgroundColor: cs.backgroundColor || '',
+                    };
+                };
+                // SC 2.4.7: a focus indicator only exists if something
+                // CHANGES on focus. Reading the focused style alone
+                // counted static borders/shadows as indicators. Capture
+                // the unfocused baseline by blurring, then re-focus.
+                // Transitions are disabled during the probe so the
+                // computed style snaps instantly instead of returning
+                // the mid-transition (still-focused) value.
+                const focusedStyles = readStyles();
+                const prevTransition = el.style.transition;
+                el.style.transition = 'none';
+                el.blur();
+                const unfocusedStyles = readStyles();
+                try { el.focus({preventScroll: true}); } catch (e) {}
+                el.style.transition = prevTransition;
+                const outline = focusedStyles.outline;
+                const outlineWidth = focusedStyles.outlineWidth;
+                const outlineStyle = focusedStyles.outlineStyle;
+                const outlineColor = focusedStyles.outlineColor;
+                const boxShadow = focusedStyles.boxShadow;
+                const borderColor = focusedStyles.borderColor;
+                const borderWidth = focusedStyles.borderWidth;
+                const backgroundColor = focusedStyles.backgroundColor;
+                const outlinePresent = outlineStyle !== 'none' && outlineWidth !== '0px';
+                const hasOutline = outlinePresent && (
+                    outline !== unfocusedStyles.outline
+                    || outlineStyle !== unfocusedStyles.outlineStyle
+                    || outlineWidth !== unfocusedStyles.outlineWidth
+                    || outlineColor !== unfocusedStyles.outlineColor);
+                const shadowPresent = boxShadow !== 'none' && boxShadow !== '';
+                const hasShadow = shadowPresent && boxShadow !== unfocusedStyles.boxShadow;
+                const borderPresent = borderWidth !== '0px' && borderColor !== '';
+                const hasBorder = borderPresent && (
+                    borderColor !== unfocusedStyles.borderColor
+                    || borderWidth !== unfocusedStyles.borderWidth);
+                const hasBgChange = backgroundColor !== unfocusedStyles.backgroundColor;
+                const delta = [];
+                if (hasOutline) delta.push('outline');
+                if (hasShadow) delta.push('box-shadow');
+                if (hasBorder) delta.push('border');
+                if (hasBgChange) delta.push('background-color');
+                const isVisible = hasOutline || hasShadow || hasBorder || hasBgChange;
                 // Build unique selector by walking up DOM
                 let selector = '';
                 if (el.id) {
@@ -758,12 +787,13 @@ async def _extract_tab_walk_data(page: Page) -> dict:
                 const tabindex = el.getAttribute('tabindex');
                 return {
                     tag: el.tagName.toLowerCase(),
+                    type: (el.getAttribute('type') || '').toLowerCase(),
                     role: el.getAttribute('role') || '',
                     text: (el.textContent || '').trim(),
                     selector: selector,
                     tabindex: tabindex !== null ? tabindex : undefined,
                     has_visible_indicator: isVisible,
-                    indicator_type: hasOutline ? 'outline' : hasShadow ? 'box-shadow' : hasBorder ? 'border' : 'none',
+                    indicator_type: hasOutline ? 'outline' : hasShadow ? 'box-shadow' : hasBorder ? 'border' : hasBgChange ? 'background-color' : 'none',
                     css: {
                         outline: outline,
                         outlineWidth: outlineWidth,
@@ -774,6 +804,8 @@ async def _extract_tab_walk_data(page: Page) -> dict:
                         borderWidth: borderWidth,
                         backgroundColor: backgroundColor,
                     },
+                    css_unfocused: unfocusedStyles,
+                    focus_style_delta: delta,
                     rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
                 };
             }""")
@@ -787,6 +819,13 @@ async def _extract_tab_walk_data(page: Page) -> dict:
 
             tab_walk.append(info)
             recent_selectors.append(info["selector"])
+
+            # Native segmented/spinner inputs repeat the host selector
+            # across their internal segments — not a keyboard trap. Skip
+            # all trap detectors for this iteration (mirrors the guard in
+            # capture/interactive_capture.py).
+            if info.get("tag") == "input" and info.get("type") in SEGMENTED_INPUT_TYPES:
+                continue
 
             # --- Trap detection (ported from v1 interactive_capture) ---
 
@@ -838,20 +877,28 @@ async def _extract_tab_walk_data(page: Page) -> dict:
                     pos_keys.append(f"{tw_entry.get('selector', '')}@{px},{py}")
                 counts = Counter(pos_keys)
                 most_common_key, most_common_count = counts.most_common(1)[0]
-                if most_common_count >= 4:
+                most_common_sel = most_common_key.split("@")[0]
+                # Exempt native segmented/spinner inputs: their internal
+                # segments repeat the host selector+position but continued
+                # Tab leaves the field — not a keyboard trap.
+                is_segmented = any(
+                    e.get("selector") == most_common_sel
+                    and e.get("tag") == "input"
+                    and e.get("type") in SEGMENTED_INPUT_TYPES
+                    for e in last_8
+                )
+                if most_common_count >= 4 and not is_segmented:
                     traps.append({
                         "type": "frequency_cycle",
-                        "selector": most_common_key.split("@")[0],
+                        "selector": most_common_sel,
                         "tab_index": i,
                         "description": (
-                            f"Element {most_common_key.split('@')[0]} at position "
+                            f"Element {most_common_sel} at position "
                             f"{most_common_key.split('@')[1]} received focus "
                             f"{most_common_count} times in the last 8 steps"
                         ),
                     })
                     break
-
-            seen_selectors.add(info["selector"])
 
         logger.info("PHASE 3: Tab walk extracted %d elements, %d traps",
                      len(tab_walk), len(traps))

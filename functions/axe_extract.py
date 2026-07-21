@@ -29,7 +29,7 @@ def accessible_name_corroboration(axe_results: dict) -> dict:
     ``violation`` counts both ``violations`` and ``incomplete`` nodes. A rule
     with ``violation == 0 and pass > 0`` means axe found NO unnamed element of
     that kind anywhere on the page -- so an ANDI 'no accessible name' finding
-    for that element type is contradicted by axe (verified on a university
+    for that element type is contradicted by axe (verified on a university site
     2026-05-28: ANDI flagged 4 named nav/infographic links as no-name; axe
     link-name had 67 passes and 0 violations).
     """
@@ -98,7 +98,7 @@ def extract_axe_findings(capture_data: CaptureData, criterion_id: str) -> list[F
       unavailable). These are MANUAL-REVIEW signals, not failures.
       Always severity INFO regardless of what axe reported as
       ``impact`` for the underlying rule. Without this distinction
-      the university runs surface 30+ "couldn't measure" entries
+      university-site runs surface 30+ "couldn't measure" entries
       at HIGH severity, bloating the report and hiding real issues.
     """
     if not getattr(capture_data, "axe_results", None):

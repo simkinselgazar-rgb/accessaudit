@@ -54,7 +54,7 @@ class Check_2_5_7(BaseCheck):
         # 2.5.7 is met regardless of whether the carousel ALSO accepts
         # swipe. Earlier code didn't recognise these alternatives and
         # produced false positives every run on Bootstrap / Glide /
-        # Swiper sites (a university and a community college both flagged despite obvious
+        # Swiper sites (a university site and a community college site both flagged despite obvious
         # carousel-control-prev / carousel-control-next buttons).
         #
         # Detect drag patterns AND carousel-style alternatives. If any

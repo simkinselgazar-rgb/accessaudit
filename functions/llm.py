@@ -30,7 +30,6 @@ from functions.media import encode_image, encode_video
 from functions.parser import (
     describe_response_shape,
     get_content_text,
-    parse_ai_response,
     parse_tool_response,
 )
 
@@ -294,6 +293,15 @@ def _save_llm_exchange(
 
         base_dir = _os.environ.get("WCAG_LLM_TRANSCRIPT_DIR")
         if not base_dir:
+            # Prefer the review dir bound by the orchestrator for THIS
+            # asyncio task. The mtime heuristic below misfiles
+            # transcripts as soon as two reviews overlap (a new review's
+            # dir becomes "latest" while the old review is still calling
+            # the LLM), so it is only a fallback for callers outside a
+            # review context (scripts, tests).
+            from functions.bypass_log import current_review_dir
+            base_dir = current_review_dir()
+        if not base_dir:
             cwd = _os.getcwd()
             reviews_dir = _os.path.join(cwd, "reviews")
             if _os.path.isdir(reviews_dir):
@@ -477,7 +485,10 @@ class LLMClient:
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
-                "content": self._build_user_content(user_prompt, images, video, has_images, has_video),
+                "content": self._build_user_content(
+                    user_prompt, images, video, has_images, has_video,
+                    target_url=target_url,
+                ),
             },
         ]
 
@@ -532,10 +543,15 @@ class LLMClient:
             # save is in a finally so a network failure or LLMError still
             # writes the prompt to disk -- the user must always be able
             # to see what was sent.
+            served_url = target_url
+            if isinstance(response, dict) and "_served_by" in response:
+                # A fallback endpoint answered -- attribute the transcript
+                # to the server that actually replied.
+                served_url = response.pop("_served_by")
             _save_llm_exchange(
                 request_payload=payload,
                 raw_response=response,
-                target_url=target_url,
+                target_url=served_url,
                 label=label,
                 error=error,
             )
@@ -1014,9 +1030,11 @@ class LLMClient:
         # Token-bucket RPM enforcement. No-op when AI_RPM <= 0.
         await LLMClient._get_bucket().acquire()
         # Legacy fallback: honor per-call min_delay as a hard floor for
-        # serial mode only. Under concurrent mode this gets ignored
-        # because the bucket is the real limiter.
-        if self.min_delay > 0:
+        # serial mode only. Under concurrent mode the bucket is the real
+        # limiter, so the floor must not apply -- otherwise every task
+        # serializes on _last_call_time and concurrency buys nothing.
+        from config import AI_MAX_CONCURRENT
+        if self.min_delay > 0 and AI_MAX_CONCURRENT <= 1:
             now = time.monotonic()
             elapsed = now - LLMClient._last_call_time
             if elapsed < self.min_delay:
@@ -1043,7 +1061,7 @@ class LLMClient:
         Priority order:
         1. Per-call ``model_override`` / ``endpoint_override``
         2. Audio-capable video → prefer local ``AI_EXPLORER_*`` (Gemma 4
-           E4B at port 11804) because the local mlx-vlm server hosting
+           E4B) because the local multimodal server hosting
            E4B DOES process the audio track. Cloud ``AI_VIDEO_*`` is a
            secondary option for redundancy only.
         3. Any video → ``AI_VIDEO_*`` (cloud) then vision fallback.
@@ -1054,10 +1072,11 @@ class LLMClient:
             return model_override, endpoint_override.rstrip("/")
         if model_override:
             return model_override, self.base_url
+        if endpoint_override:
+            return self.model, endpoint_override.rstrip("/")
 
         from config import (
             AI_API_BASE_URL,
-            AI_BACKEND,
             AI_EXPLORER_MODEL,
             AI_EXPLORER_URL,
             AI_LOCAL_JUDGE_MODEL,
@@ -1087,16 +1106,20 @@ class LLMClient:
                 return AI_VIDEO_MODEL, AI_VIDEO_API_URL.rstrip("/")
             return self.vision_model, self.vision_url
 
-        if has_images and AI_LOCAL_JUDGE_MODEL and AI_LOCAL_JUDGE_URL:
-            # Image-bearing calls always go to the local judge (Gemma
-            # 26B by default). Works for every backend -- removing
-            # the former ``AI_BACKEND == "vllm"`` guard which silently
-            # shipped images to ``self.vision_model`` on "openai"
-            # backends (that was how Qwen3-VL kept getting image
-            # traffic despite the rest of the project running on
-            # Gemma). Now one policy: if it has images, Gemma sees
-            # it.
-            return AI_LOCAL_JUDGE_MODEL, AI_LOCAL_JUDGE_URL.rstrip("/")
+        if has_images:
+            if AI_LOCAL_JUDGE_MODEL and AI_LOCAL_JUDGE_URL:
+                # Image-bearing calls always go to the local judge (Gemma
+                # 26B by default). Works for every backend -- removing
+                # the former ``AI_BACKEND == "vllm"`` guard which silently
+                # shipped images to ``self.vision_model`` on "openai"
+                # backends (that was how Qwen3-VL kept getting image
+                # traffic despite the rest of the project running on
+                # Gemma). Now one policy: if it has images, Gemma sees
+                # it.
+                return AI_LOCAL_JUDGE_MODEL, AI_LOCAL_JUDGE_URL.rstrip("/")
+            # No local fleet configured (cloud backend): images go to
+            # the configured vision endpoint.
+            return self.vision_model, self.vision_url
 
         return self.model, self.base_url
 
@@ -1109,6 +1132,7 @@ class LLMClient:
         video: str | None,
         has_images: bool,
         has_video: bool,
+        target_url: str | None = None,
     ) -> list[dict[str, Any]] | str:
         if not has_images and not has_video:
             return text
@@ -1121,16 +1145,15 @@ class LLMClient:
 
         if video:
             data_uri = encode_video(video)
-            from config import AI_VIDEO_API_URL
 
-            vid_target = AI_VIDEO_API_URL or self.vision_url
-            # Route content-part type by TARGET URL, not by nominal
-            # backend setting. Operators commonly point an openai-compat
-            # client at a local MLX server -- those servers expect the
+            # Route content-part type by the URL this call ACTUALLY
+            # targets (as resolved by _select_model), not by nominal
+            # backend setting. Local MLX servers expect the
             # ``video_url`` content-part type per Qwen/Gemma VLM API
             # conventions. Only true cloud providers (Gemini's OpenAI-
             # compat shim, OpenAI, Anthropic, OpenRouter) expect video
             # to be wrapped in ``image_url`` with a video data URI.
+            vid_target = target_url or self.vision_url
             if _is_cloud_url(vid_target):
                 parts.append({"type": "image_url", "image_url": {"url": data_uri}})
             else:
@@ -1186,14 +1209,13 @@ class LLMClient:
                 payload["response_format"] = {"type": "json_object"}
 
         if has_video:
-            from config import AI_VIDEO_API_URL
-
-            vid_url = AI_VIDEO_API_URL or self.vision_url
             # Local MLX servers accept optional ``video_fps`` and
             # ``video_max_frames`` payload hints; cloud providers reject
-            # those fields. Gate strictly by URL so an operator running
-            # a local server with ``AI_BACKEND=openai`` (common when
-            # reusing OpenAI SDK code) still gets the local hints.
+            # those fields. Gate strictly by the URL this call actually
+            # targets so an operator running a local server with
+            # ``AI_BACKEND=openai`` (common when reusing OpenAI SDK
+            # code) still gets the local hints.
+            vid_url = target_url or self.vision_url
             if not _is_cloud_url(vid_url):
                 payload["video_fps"] = 1.0
                 payload["video_max_frames"] = 30
@@ -1258,6 +1280,7 @@ class LLMClient:
                             video,
                             user_prompt,
                             call_timeout,
+                            tools,
                         )
                     raise LLMError(
                         f"Payload too large for model (413): {body_text}",
@@ -1459,7 +1482,14 @@ class LLMClient:
             await self._wait_for_availability(AI_FALLBACK_URL)
             resp = await self._post_chat_completion(AI_FALLBACK_URL, fallback_payload, timeout)
             resp.raise_for_status()
-            return resp.json()
+            raw = resp.json()
+            if isinstance(raw, dict):
+                # Transcript attribution: the outer call() saves the
+                # exchange under the endpoint it targeted; mark that the
+                # fallback actually answered so the transcript names the
+                # real server. call() pops this key before saving.
+                raw["_served_by"] = AI_FALLBACK_URL
+            return raw
         except httpx.HTTPStatusError as exc:
             try:
                 body_text = exc.response.text
@@ -1527,20 +1557,29 @@ class LLMClient:
         video: str | None,
         user_prompt: str,
         timeout: float,
+        tools: list[dict] | None = None,
     ) -> dict[str, Any]:
         """Split an oversized image payload into smaller batches and merge results.
 
-        The merged response mimics a single ``report_wcag_assessment`` tool
-        call so the caller never sees the split.
+        The merged response mimics a single tool call under the SAME tool
+        the original request asked for, so the caller never sees the
+        split. Merge rules: list fields concatenate across batches,
+        ``conformance_level`` keeps the worst verdict, ``confidence``
+        keeps the minimum, and other scalars keep the first non-empty
+        value. Findings pass through verbatim so their ``source`` tags
+        survive the merge.
         """
-        all_findings: list[dict] = []
+        tool_name = ""
+        if tools:
+            tool_name = (tools[0].get("function") or {}).get("name", "")
         conf_order = {
             "Not Applicable": -1,
+            "Not Evaluated": -1,
             "Supports": 0,
             "Partially Supports": 1,
             "Does Not Support": 2,
         }
-        worst_conformance = "Supports"
+        batch_args: list[dict[str, Any]] = []
 
         async def _run_batch(batch: list[str], label: str) -> dict[str, Any]:
             parts: list[dict[str, Any]] = []
@@ -1567,7 +1606,17 @@ class LLMClient:
             }
 
             await self._wait_for_availability(target_url)
-            resp = await self._post_chat_completion(target_url, batch_payload, timeout)
+            try:
+                resp = await self._post_chat_completion(target_url, batch_payload, timeout)
+            except Exception as exc:
+                _save_llm_exchange(
+                    request_payload=batch_payload,
+                    raw_response=None,
+                    target_url=target_url,
+                    label=f"batch_split_{label}",
+                    error=exc,
+                )
+                raise
 
             if resp.status_code == 413 and len(batch) > 1:
                 mid = len(batch) // 2
@@ -1581,26 +1630,50 @@ class LLMClient:
 
             if resp.status_code != 200:
                 full_body = resp.text
-                raise LLMError(
+                err = LLMError(
                     f"Batch '{label}' returned HTTP {resp.status_code}: {full_body}",
                     status_code=resp.status_code,
                     response_body=full_body,
                 )
-            return resp.json()
+                _save_llm_exchange(
+                    request_payload=batch_payload,
+                    raw_response={
+                        "error": True,
+                        "status_code": resp.status_code,
+                        "response_body": full_body,
+                    },
+                    target_url=target_url,
+                    label=f"batch_split_{label}",
+                    error=err,
+                )
+                raise err
+            raw = resp.json()
+            _save_llm_exchange(
+                request_payload=batch_payload,
+                raw_response=raw,
+                target_url=target_url,
+                label=f"batch_split_{label}",
+            )
+            return raw
 
         async def _collect(raw: dict[str, Any]) -> None:
-            nonlocal worst_conformance
             if "_merged" in raw:
                 for sub in raw["_merged"]:
                     await _collect(sub)
                 return
-            parsed = parse_ai_response(raw)
-            for f in parsed.get("findings", []):
-                all_findings.append(f.to_dict() if hasattr(f, "to_dict") else f)
-            level = parsed.get("conformance_level", "Supports")
-            level_str = level.value if hasattr(level, "value") else str(level)
-            if conf_order.get(level_str, 0) > conf_order.get(worst_conformance, 0):
-                worst_conformance = level_str
+            parsed = parse_tool_response(raw, tool_name or None)
+            # parse_tool_response can surface a bare JSON *array* from
+            # freeform content (Pass 4); the merge below needs keyed
+            # arguments, so anything non-dict counts as unparsed and
+            # goes through the same per-batch retry path as None.
+            if not isinstance(parsed, dict):
+                raise LLMError(
+                    "Batch response could not be parsed as a "
+                    f"'{tool_name or 'tool'}' call -- refusing to merge a "
+                    "batch with no structured output (no gaps allowed).",
+                    response_body=json.dumps(raw, default=str),
+                )
+            batch_args.append(parsed)
 
         batch_size = max(len(images) // 2, 1)
         total_batches = (len(images) + batch_size - 1) // batch_size
@@ -1633,6 +1706,36 @@ class LLMClient:
                     response_body=str(last_exc),
                 )
 
+        merged: dict[str, Any] = {}
+        for args in batch_args:
+            for key, value in args.items():
+                if key not in merged:
+                    merged[key] = value
+                    continue
+                current = merged[key]
+                if isinstance(current, list) and isinstance(value, list):
+                    current.extend(value)
+                elif key == "conformance_level":
+                    if conf_order.get(str(value), 0) > conf_order.get(str(current), 0):
+                        merged[key] = value
+                elif key == "confidence" and isinstance(value, (int, float)) and isinstance(current, (int, float)):
+                    merged[key] = min(current, value)
+                elif not current and value:
+                    merged[key] = value
+
+        split_note = (
+            f"Payload exceeded the endpoint's size limit; analysis was split "
+            f"into {len(batch_args)} image batches and merged."
+        )
+        if isinstance(merged.get("confidence_reasoning"), str) and merged["confidence_reasoning"]:
+            merged["confidence_reasoning"] += f" | {split_note}"
+        elif "confidence_reasoning" in merged:
+            merged["confidence_reasoning"] = split_note
+        logger.info(
+            "Batch split merged %d batches into one '%s' call (%s)",
+            len(batch_args), tool_name or "(unnamed tool)", split_note,
+        )
+
         return {
             "choices": [
                 {
@@ -1640,19 +1743,8 @@ class LLMClient:
                         "tool_calls": [
                             {
                                 "function": {
-                                    "name": "report_wcag_assessment",
-                                    "arguments": json.dumps(
-                                        {
-                                            "conformance_level": worst_conformance,
-                                            "confidence": 0.7,
-                                            "confidence_reasoning": "Split into batches due to payload size limit",
-                                            "findings": all_findings,
-                                            "summary": (
-                                                f"Analysis split across batches. "
-                                                f"{len(all_findings)} findings merged."
-                                            ),
-                                        }
-                                    ),
+                                    "name": tool_name or "merged_batch_result",
+                                    "arguments": json.dumps(merged, default=str),
                                 }
                             }
                         ]

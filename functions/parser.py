@@ -134,7 +134,6 @@ def clean_tool_call_args(text: str) -> str:
     text = re.sub(r'"tru?true', "true", text)
     text = re.sub(r'"fal?false', "false", text)
     text = re.sub(r'"falsfalse', "false", text)
-    text = re.sub(r'"trtrue', "true", text)
 
     # Fix missing commas between values
     text = re.sub(r'(true|false|null)\s*"', r'\1, "', text)
@@ -366,6 +365,19 @@ def parse_native_tool_call(content: str) -> dict | None:
         except json.JSONDecodeError:
             logger.debug("Gemma tool call JSON fix failed: %s", fixed)
 
+    # Hermes/Qwen2.5-style: <tool_call>{"name": ..., "arguments": {...}}</tool_call>
+    # (no pipe -- distinct from the Gemma <|tool_call> format above).
+    hermes = re.search(r"<tool_call>\s*(\{.*?)\s*(?:</tool_call>|$)", content, re.DOTALL)
+    if hermes:
+        try:
+            obj = loose_json_loads(clean_tool_call_args(hermes.group(1)))
+        except json.JSONDecodeError:
+            obj = None
+        if isinstance(obj, dict) and obj.get("name"):
+            args = obj.get("arguments") or obj.get("parameters") or {}
+            if isinstance(args, dict):
+                return {"function": str(obj["name"]), "arguments": args}
+
     fn_match = re.search(r"<function=(\w+)>", content)
     if not fn_match:
         return None
@@ -563,6 +575,7 @@ def parse_tool_response(
     # ARE the real structured data. Accept if the parsed args have at
     # least one meaningful field. Empty {} is rejected -- that means the
     # model abdicated and we should retry or fall through.
+    deferred = None
     if tool_calls and tool_name is None:
         # caller didn't specify a name; try any tool_call
         for tc in tool_calls:
@@ -581,10 +594,6 @@ def parse_tool_response(
                 # answer. Cache this and check content first.
                 deferred = parsed
                 break
-        else:
-            deferred = None
-    else:
-        deferred = None
 
     # ── Pass 4: freeform JSON in content ────────────────────────────────
     if content_clean:
@@ -716,6 +725,7 @@ def describe_response_shape(response_data: dict[str, Any]) -> str:
 
         ``openai_tool_calls``      - native OpenAI tool_calls array
         ``gemma_native``           - <|tool_call>...<tool_call|> in content
+        ``hermes_native``          - <tool_call>{...}</tool_call> in content
         ``qwen_native``            - <function=...><parameter=...> in content
         ``freeform_json``          - JSON object embedded in prose content
         ``prose``                  - plain text, no recognizable tool format
@@ -732,6 +742,8 @@ def describe_response_shape(response_data: dict[str, Any]) -> str:
         return "empty"
     if "<|tool_call>" in content:
         return "gemma_native"
+    if "<tool_call>" in content:
+        return "hermes_native"
     if "<function=" in content:
         return "qwen_native"
     if "{" in content and "}" in content:
@@ -838,7 +850,7 @@ def _normalize_selector(s: str) -> str:
     different upstream sources emit different forms (the SC 4.1.1
     duplicate-id check uses ``[id="foo"]``, the judge rewrites to
     ``#foo``), and a literal-string match demoted legitimate findings
-    to judge_inference until this normalization landed (a university run
+    to judge_inference until this normalization landed (a university-site run
     f8765656 SC 4.1.1).
     """
     if not s:
@@ -885,7 +897,7 @@ def _findings_match(out_sel: str, out_elem: str, out_issue: str,
     attribute-form vs id-form divergence: SC 4.1.1's duplicate-id check
     emits ``[id="X"]`` while the judge rewrites to ``#X``. Both reference
     the same DOM node; without normalization the validator treats them as
-    different and demotes legitimate findings. Verified on university runs
+    different and demotes legitimate findings. Verified on university-site runs
     f8d46924 (SC 1.3.1) and f8765656 (SC 4.1.1).
 
     What we explicitly REJECT (relative to the prior implementation):
@@ -893,8 +905,8 @@ def _findings_match(out_sel: str, out_elem: str, out_issue: str,
     anchor to an input finding. Issue text is often a generic phrase
     ("The button has insufficient...") that recurs across many findings
     and across many SCs; matching on it alone let the judge launder its
-    own inferences as deterministic measurements (verified on the
-    fairfaxva.gov run 20260514_205147_cb3b646c: SC 1.4.3 cited a 4.44:1
+    own inferences as deterministic measurements (verified on a
+    municipal-government-site run 20260514_205147_cb3b646c: SC 1.4.3 cited a 4.44:1
     contrast ratio with source='axe' when the prompt had no
     text-contrast measurement for that selector, and the closest number
     was the 4.45 focus-indicator ratio for a different SC).
@@ -1021,7 +1033,7 @@ def validate_source_attribution(
     accuracy bug we're fixing: the judge sometimes EMITS new findings — its
     own inferences from the screenshots / DOM context — and labels them
     "programmatic", giving them deterministic gravitas they haven't earned
-    (observed on a university 2.5.8: deterministic check returned 0 findings, judge
+    (observed on a large-public-university-site 2.5.8 run: deterministic check returned 0 findings, judge
     emitted 9 with source="programmatic").
 
     This validator does NOT suppress the judge's autonomy to add findings
@@ -1108,7 +1120,7 @@ def validate_source_attribution(
                 # source (the judge mislabeled which subsystem measured
                 # it). Honest attribution means retagging to the real
                 # source, not demoting a measured finding to
-                # judge_inference. Verified bug (loudoun.gov SC 1.4.3):
+                # judge_inference. Verified bug (county-government-site SC 1.4.3):
                 # 5 real ANDI contrast findings were labeled
                 # "programmatic", failed the programmatic match, and were
                 # demoted -- then dropped -- instead of retagged to andi.

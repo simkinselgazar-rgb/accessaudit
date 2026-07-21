@@ -30,6 +30,8 @@ async def broadcast(review_id: str, message: dict) -> None:
         try:
             await ws.send_json(message)
         except Exception:
+            # Send failure means the client disconnected — collect the
+            # socket for cleanup; nothing to log per-message.
             dead.append(ws)
     if dead:
         with _active_websockets_lock:

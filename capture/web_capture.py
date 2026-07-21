@@ -29,9 +29,6 @@ from functions.element_labeler import LABELER_JS_BUNDLE, ensure_label_fields
 
 logger = logging.getLogger(__name__)
 
-# Maximum size for external scripts to download (bytes)
-SCRIPT_MAX_SIZE = 500_000
-
 
 async def capture_web_page(
     url: str,
@@ -69,10 +66,8 @@ async def capture_web_page(
 
     # Check for saved auth state (from a previous page in this review)
     from capture.auth import get_auth_state_path
-    # review root is one level up from page_NNN dirs
-    review_root = review_dir
-    if os.path.basename(review_dir).startswith("page_") or os.path.basename(review_dir).startswith("doc_"):
-        review_root = os.path.dirname(review_dir)
+    from functions.file_io import get_review_root
+    review_root = get_review_root(review_dir)
     auth_state = get_auth_state_path(review_root, url=url)
 
     async with async_playwright() as pw:
@@ -131,6 +126,16 @@ async def capture_web_page(
                     context.set_default_timeout(PLAYWRIGHT_TIMEOUT)
                     page = await context.new_page()
                     await page.goto(url, wait_until="networkidle", timeout=PLAYWRIGHT_TIMEOUT)
+
+            # Bot-protection gate: never audit a WAF challenge interstitial
+            # as if it were the requested page (see functions/bot_challenge).
+            from functions.bot_challenge import wait_out_bot_challenge
+            challenge = await wait_out_bot_challenge(page)
+            if challenge:
+                raise RuntimeError(
+                    f"Bot-protection challenge blocked capture of {url} ({challenge}). "
+                    "The target page was never reached, so no audit is possible."
+                )
 
             capture_data.title = await page.title()
 
@@ -290,16 +295,22 @@ async def _phase0_observation(
     video_dir = os.path.join(captures_dir, "observation_video")
     os.makedirs(video_dir, exist_ok=True)
 
-    browser = await pw.chromium.launch()
-    context = await browser.new_context(
-        viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT},
-        record_video_dir=video_dir,
-        record_video_size={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT},
-    )
-    context.set_default_timeout(PLAYWRIGHT_TIMEOUT)
-    page = await context.new_page()
-
+    # Acquire browser/context/page inside the try: a failure between
+    # launch and page creation must still close whatever was opened,
+    # or a recording Chromium leaks for the rest of the run.
+    browser = None
+    context = None
+    page = None
     try:
+        browser = await pw.chromium.launch()
+        context = await browser.new_context(
+            viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT},
+            record_video_dir=video_dir,
+            record_video_size={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT},
+        )
+        context.set_default_timeout(PLAYWRIGHT_TIMEOUT)
+        page = await context.new_page()
+
         await page.goto(url, wait_until="networkidle", timeout=PLAYWRIGHT_TIMEOUT)
         # Check if the page has dynamic content that warrants full observation
         dynamic_info = await page.evaluate("""() => {
@@ -342,9 +353,15 @@ async def _phase0_observation(
     except Exception:
         logger.exception("Error during page observation navigation")
     finally:
-        await page.close()
-        await context.close()
-        await browser.close()
+        # Each close is guarded so a failed page.close() can't skip the
+        # context/browser closes and leak the recording Chromium.
+        for resource, name in ((page, "page"), (context, "context"), (browser, "browser")):
+            if resource is None:
+                continue
+            try:
+                await resource.close()
+            except Exception:
+                logger.warning("Phase 0: failed to close %s", name, exc_info=True)
 
     # Locate the saved video file
     video_files = list(Path(video_dir).glob("*.webm"))
@@ -401,18 +418,26 @@ async def _capture_screenshots(
     except Exception:
         logger.exception("Viewport screenshot failed")
 
-    # Viewport at 200% zoom
+    # Viewport at 200% zoom. Zoom is restored in a finally so a
+    # screenshot failure can't leave the page at 2x for every later
+    # measurement.
     viewport_200_path = os.path.join(captures_dir, "viewport_200pct.png")
     try:
-        original_factor = ZOOM_FACTOR
-        await page.evaluate(f"document.body.style.zoom = '{original_factor}'")
+        await page.evaluate(f"document.body.style.zoom = '{ZOOM_FACTOR}'")
         await page.wait_for_timeout(500)
         await page.screenshot(path=viewport_200_path, full_page=False)
         capture_data.viewport_200pct_path = viewport_200_path
-        await page.evaluate("document.body.style.zoom = '1'")
-        await page.wait_for_timeout(300)
     except Exception:
         logger.exception("200%% zoom screenshot failed")
+    finally:
+        try:
+            await page.evaluate("document.body.style.zoom = '1'")
+            await page.wait_for_timeout(300)
+        except Exception:
+            logger.warning(
+                "Failed to reset body zoom to 1 after 200%% screenshot",
+                exc_info=True,
+            )
 
     # Viewport at 320px width
     viewport_320_path = os.path.join(captures_dir, "viewport_320px.png")
@@ -884,6 +909,11 @@ async def _capture_pixel_contrast(
         try:
             sample = sample_element_colors(screenshot_path, rect)
         except Exception:
+            logger.warning(
+                "Pixel contrast: color sampling failed for %s (rect=%s) — "
+                "element excluded from contrast evidence",
+                el.get("selector", "?"), rect, exc_info=True,
+            )
             continue
 
         fg = sample.get("fg_color")
@@ -972,17 +1002,17 @@ async def _capture_script_content(page: Page, capture_data: CaptureData) -> None
             try:
                 resp = await page.context.request.get(src_url)
                 body = await resp.text()
-                if len(body) <= SCRIPT_MAX_SIZE:
-                    content += f"\n\n// external: {src_url}\n{body}"
-                else:
-                    # Don't silently lose a large bundle: downstream code
-                    # analysis (4.1.2 / 2.1.1 widget handlers) reasons over
-                    # this. Log so the gap is visible.
-                    logger.warning(
-                        "external script over %d bytes skipped from script_content: "
-                        "%s (%d bytes) -- custom-widget handlers in this bundle "
-                        "will not reach code analysis",
-                        SCRIPT_MAX_SIZE, src_url, len(body),
+                # No size cap: SPA bundles are exactly where custom-widget
+                # handlers (4.1.2 / 2.1.1) live. The consumer chain
+                # (checks/base.py _extract_readable_scripts ->
+                # functions/code_analyzer.py) chunks arbitrarily large
+                # script_content losslessly via functions/chunker.py.
+                content += f"\n\n// external: {src_url}\n{body}"
+                if len(body) > 500_000:
+                    logger.info(
+                        "external script %s is %d bytes -- kept in full; "
+                        "code analysis will chunk it",
+                        src_url, len(body),
                     )
             except Exception:
                 logger.warning("external script fetch/decode failed, skipped: %s", src_url, exc_info=True)
@@ -1342,7 +1372,12 @@ async def _capture_htmlcs(page: Page, captures_dir: str, capture_data: CaptureDa
         # Standard "WCAG2AAA" runs every WCAG rule HCS implements; the
         # criterion-level filter happens in functions/htmlcs_extract.py
         # (mirroring the axe extractor's tag filter).
-        htmlcs_results = await page.evaluate(
+        # HCS registers no error callback of its own: if process() throws
+        # or never invokes the callback, the Promise would hang forever
+        # and stall the whole capture. The JS try/catch converts a throw
+        # into a resolvable error object; asyncio.wait_for bounds a
+        # never-firing callback.
+        htmlcs_results = await asyncio.wait_for(page.evaluate(
             """async () => {
                 return await new Promise((resolve) => {
                     if (typeof HTMLCS === "undefined") {
@@ -1350,6 +1385,7 @@ async def _capture_htmlcs(page: Page, captures_dir: str, capture_data: CaptureDa
                                  messages: []});
                         return;
                     }
+                    try {
                     HTMLCS.process("WCAG2AAA", document, () => {
                         const raw = HTMLCS.getMessages();
                         const messages = raw.map(m => {
@@ -1385,9 +1421,19 @@ async def _capture_htmlcs(page: Page, captures_dir: str, capture_data: CaptureDa
                             version: (HTMLCS.version || "2.5.1"),
                         });
                     });
+                    } catch (err) {
+                        resolve({error: "HTMLCS.process threw: " + (err && err.message ? err.message : String(err)),
+                                 messages: []});
+                    }
                 });
             }"""
-        )
+        ), timeout=60)
+        if htmlcs_results.get("error"):
+            logger.warning(
+                "HTML_CodeSniffer reported an error -- findings from HCS "
+                "will be absent for this review: %s",
+                htmlcs_results["error"],
+            )
         capture_data.htmlcs_results = htmlcs_results
 
         path = os.path.join(captures_dir, "htmlcs_results.json")
@@ -1840,8 +1886,12 @@ async def _capture_andi_contrast(
 # optional region (2 letters or 3 digits); plus extended subtags 1-8 alnum.
 # This is the same pattern used by ANDI's lang validator and aligns with
 # the simpler _LANG_RE in checks/checks_3_1.py — keep them in sync.
+# NOTE: this string is passed to page.evaluate as a JS function argument
+# and compiled with `new RegExp(...)` — it must contain a SINGLE
+# backslash before the `d` (the raw string below does). A double
+# backslash would make the JS regex match a literal "\d".
 _BCP47_RE_JS = (
-    r"^[a-zA-Z]{2,3}(-[a-zA-Z]{4})?(-[a-zA-Z]{2}|-\\d{3})?(-[a-zA-Z0-9]{1,8})*$"
+    r"^[a-zA-Z]{2,3}(-[a-zA-Z]{4})?(-[a-zA-Z]{2}|-\d{3})?(-[a-zA-Z0-9]{1,8})*$"
 )
 
 
@@ -2639,6 +2689,20 @@ async def _capture_andi_tables(
                 // Nested = this table has another <table> descendant
                 const nested = !!table.querySelector('table');
 
+                // First two rows' cell text — lets a downstream judge
+                // classify an 'ambiguous' table (data vs layout) from
+                // its actual content instead of guessing. A pricing/
+                // schedule/stats table reads as label-row + value-rows;
+                // a layout table reads as prose blocks.
+                const sampleRows = [];
+                const rowEls = table.rows ? Array.from(table.rows).slice(0, 2) : [];
+                for (const r of rowEls) {
+                    const cellTexts = Array.from(r.cells).map(
+                        c => (c.textContent || '').trim().slice(0, 60)
+                    );
+                    sampleRows.push(cellTexts);
+                }
+
                 // <th> scope coverage
                 const thMissingScope = [];
                 let thWithScope = 0;
@@ -2719,6 +2783,7 @@ async def _capture_andi_tables(
                     row_count: rows,
                     col_count: cols,
                     nested: nested,
+                    sample_rows: sampleRows,
                     issues: issues,
                 });
             }
@@ -3149,6 +3214,10 @@ async def _extract_elements(
                 return {
                     text: (el.textContent || '').trim(),
                     href: el.getAttribute('href') || '',
+                    // Cross-page nav consistency (SC 3.2.3) needs to know
+                    // which links live inside a navigation region — the
+                    // structural-summary writer filters on this key.
+                    in_nav: !!el.closest('nav,[role="navigation"]'),
                     target: el.getAttribute('target') || '',
                     ariaLabel: el.getAttribute('aria-label') || '',
                     ariaLabelledby: el.getAttribute('aria-labelledby') || '',
@@ -3296,6 +3365,12 @@ async def _extract_elements(
                     img_info["screenshot_path"] = ""
             except Exception:
                 img_info["screenshot_path"] = ""
+                logger.warning(
+                    "Image screenshot failed for index=%s src=%s selector=%s "
+                    "— image excluded from VLM visual analysis",
+                    img_info.get("index"), img_info.get("src", ""),
+                    img_info.get("selector", ""), exc_info=True,
+                )
             images_out.append(img_info)
         capture_data.images = images_out
         composed = ensure_label_fields(
@@ -3480,7 +3555,7 @@ async def _extract_elements(
             // screen, OR explicitly transparent. These elements render
             // text only to assistive tech; measuring contrast on them
             // produces meaningless ratios and creates SC 1.4.3 false
-            // positives (observed on a university's nav sub-toggle buttons whose
+            // positives (observed on a university site's nav sub-toggle buttons whose
             // ".visually-hidden" descendants gave a 1.23:1 reading).
             const isVisuallyHidden = (el) => {
                 if (!el || el.nodeType !== 1) return false;

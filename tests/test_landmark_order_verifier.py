@@ -1,6 +1,6 @@
 """Regression tests for the landmark-order claim verifier.
 
-Verified failure on A11Y Project run 20260511 SC 1.3.2: visual_ai
+Verified failure on a public accessibility-resource site run 20260511 SC 1.3.2: visual_ai
 claimed *"main content is placed AFTER secondary navigation and
 footer elements in the accessibility tree, violating WCAG 1.3.2"*.
 The captured a11y tree showed main BEFORE both -- the LLM had the
@@ -42,7 +42,7 @@ def _make_a11y_tree(*roles: str) -> dict:
 
 
 def test_detect_after_claim_in_visual_ai_prose():
-    """The exact university / A11Y Project failure-mode wording."""
+    """The exact failure-mode wording verified on live sites."""
     text = (
         "The main content (headings and sections) is placed AFTER "
         "secondary navigation and footer elements in the accessibility "
@@ -114,8 +114,8 @@ def test_first_position_handles_missing_tree():
 # ── Verify end-to-end ──────────────────────────────────────────────────
 
 
-def test_verify_a11y_project_failure_mode_contradicted():
-    """The exact A11Y Project SC 1.3.2 hallucination: claim says
+def test_verify_landmark_order_failure_mode_contradicted():
+    """The exact SC 1.3.2 hallucination verified on a live site: claim says
     'main after navigation and footer'; captured tree has main BEFORE
     both. Verifier returns 'contradicted'.
     """
@@ -123,9 +123,9 @@ def test_verify_a11y_project_failure_mode_contradicted():
         "The main content is placed AFTER secondary navigation and "
         "footer elements in the accessibility tree."
     )
-    # A11Y Project's actual captured a11y tree order:
+    # The site's actual captured a11y tree order:
     tree = _make_a11y_tree(
-        "complementary",  # Black Lives Matter
+        "complementary",  # statement banner
         "banner",
         "main",           # main is THIRD
         "complementary",

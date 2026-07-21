@@ -1,7 +1,7 @@
 """Regression tests for verdict / findings consistency in the slow-path
 judge consumer (``checks/base.py:run``).
 
-Two structural bugs found on university live runs that these tests pin:
+Two structural bugs found on university-site live runs that these tests pin:
 
 1. Silent input-finding retention when judge returns final_findings=[]
    AND rejected_findings=[]. Verified failure on run #5 SC 3.2.3:
@@ -51,7 +51,7 @@ def _stub_capture():
 
 
 def test_judge_returning_empty_final_findings_clears_result_findings():
-    """The exact university-run SC 3.2.3 failure: judge returned
+    """The exact university-site SC 3.2.3 failure: judge returned
     final_findings=[], rejected_findings=[], verdict=Supports. Pre-fix
     the 2 input findings persisted. Post-fix the result has 0 findings.
     """
@@ -170,7 +170,7 @@ def _apply_sanity_check(result: TestResult) -> TestResult:
 
 
 def test_partial_supports_with_zero_findings_downgrades_to_supports():
-    """The university run #4 SC 2.5.1 case: verdict was Partially Supports
+    """The university-site run #4 SC 2.5.1 case: verdict was Partially Supports
     but findings list was empty. Sanity check must downgrade to
     Supports and flag for review.
     """

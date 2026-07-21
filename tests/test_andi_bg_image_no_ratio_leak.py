@@ -5,7 +5,7 @@ SC 1.4.3 false-positive cluster from re-emerging:
    computed ratio in its issue or evidence prose. The rendered prompt
    the fast-path judge reads exposes both fields; if the unreliable
    ratio appears anywhere there, the judge re-quotes it in HIGH-
-   severity output (verified failure on a university run 2026-05-09 SC 1.4.3:
+   severity output (verified failure on a university-site 2026-05-09 SC 1.4.3:
    3 HIGH findings citing 1.23:1 emerged from INFO-only input).
 
 2. ``_judge_vpat_synthesis`` must clamp output findings' severity

@@ -212,7 +212,7 @@ def test_judge_consolidating_three_visual_ai_findings_keeps_source():
         {
             "source": "visual_ai",
             "css_selector": "div > div:nth-of-type(2) > picture > img",
-            "element": "University for You image",
+            "element": "University Spotlight image",
             "issue": "Image marked decorative but provides meaningful context",
             "severity": "medium",
         },
@@ -277,7 +277,7 @@ def test_genuinely_invented_visual_ai_claim_still_demoted():
 def test_judge_inventing_programmatic_claim_demoted():
     """Pre-existing protection: judge claiming source='programmatic' for
     a finding no programmatic check produced. Verifies the original bug
-    that motivated this validator (a university run 2.5.8) still gets caught.
+    that motivated this validator (a university-site SC 2.5.8 run) still gets caught.
     """
     inputs = [
         {
@@ -305,7 +305,7 @@ def test_judge_inventing_programmatic_claim_demoted():
 
 
 def test_pure_issue_text_overlap_without_selector_anchor_demotes():
-    """The leak the fairfaxva.gov 20260514 audit caught: judge claimed
+    """The leak a municipal-government-site 20260514 audit caught: judge claimed
     source='axe' with a fabricated selector and an issue string whose
     head matched an unrelated upstream axe finding by coincidence.
 

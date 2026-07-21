@@ -195,8 +195,10 @@ _OFF_SCOPE_KEYWORDS: dict[str, list[str]] = {
 def get_off_scope_keywords(criterion_id: str) -> list[str]:
     """Return the off-scope keyword list for a criterion.
 
-    Used by ``build_system_prompt`` to auto-populate the OFF-SCOPE TOPICS
-    block without callers having to pass ``off_scope_keywords`` explicitly.
+    Consumed by the judge prompt builders (``analysis/judge.py``) and the
+    per-SC check prompts (``checks/base.py``) to render the OFF-SCOPE
+    TOPICS block that keeps a model from drifting into a neighbouring
+    criterion's territory.
     """
     return list(_OFF_SCOPE_KEYWORDS.get(criterion_id, []))
 

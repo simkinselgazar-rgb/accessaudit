@@ -1,6 +1,6 @@
 """Regression tests for cross-criterion verdict reconciliation.
 
-Pins the behaviour verified-broken on fairfaxva.gov run
+Pins the behaviour verified-broken on a municipal-government-site run
 20260515_230613_ff643865: SC 2.1.3 "Keyboard (No Exception)" returned
 Supports while SC 2.1.1 "Keyboard" returned Does Not Support -- an
 impossible pair, since 2.1.3 is a strict superset of 2.1.1.

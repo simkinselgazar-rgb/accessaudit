@@ -892,9 +892,9 @@ each clip well under Gemini's ~20MB inline limit.
 {
   "ai_backend": "vllm",
   "ai_model": "Qwen3.5-35B",
-  "api_base_url": "http://local:11801/v1",
+  "api_base_url": "`http://localhost:8000/v1`",
   "ai_vision_model": "Qwen3-VL-32B",
-  "ai_vision_api_url": "http://local:11802/v1",
+  "ai_vision_api_url": "`http://localhost:8000/v1`",
   "ai_video_model": "gemini-2.5-flash-lite",
   "ai_video_api_url": "https://generativelanguage.googleapis.com/v1beta/openai",
   "ai_video_api_key": "your-gemini-key"
@@ -920,16 +920,20 @@ This is the recommended fleet for producing real audit reports. Each
 model is sized to its job; switching everything to one model trades
 accuracy for speed.
 
-| Role | Setting | Model | Endpoint | Why |
+The endpoints below are placeholders — substitute your own
+OpenAI-compatible server URL(s); a multi-model stack typically runs one
+server (and port) per model.
+
+| Role | Setting | Model (example) | Endpoint | Why |
 |---|---|---|---|---|
-| **Code AI** (HTML/JS analysis) | `AI_MODEL` / `api_base_url` | Qwen 3.5 35B (4-bit) | `localhost:11801` | Strong code reasoning. Catches semantic alt-text issues, ARIA conflicts, custom Bootstrap grids. |
-| **Vision (Phase 2 explorer)** | `AI_EXPLORER_MODEL` / `ai_explorer_url` | Gemma 4 E4B (4-bit) | `localhost:11804` | Fast multimodal. Used for per-element screenshot diffing where speed matters more than depth. |
-| **Vision (judge / per-SC visual)** | `AI_LOCAL_JUDGE_MODEL` / `ai_local_judge_url` | Gemma 4 26B (4-bit) | `localhost:11805` | Image-bearing calls always route here. **Accuracy over speed** rule: E4B was observed hallucinating `focus_visible` on byte-identical screenshots, so all image calls use 26B regardless of caller intent. |
-| **Vision fallback** | `AI_FALLBACK_VISION_MODEL` / `ai_fallback_vision_url` | Qwen3-VL 32B (4-bit) | `localhost:11802` | Hot standby if 26B is unavailable. |
-| **Text fallback** | `AI_FALLBACK_MODEL` / `ai_fallback_url` | Qwen 3.5 35B (4-bit) | `localhost:11801` | Same as primary code AI; used when other endpoints fail. |
+| **Code AI** (HTML/JS analysis) | `AI_MODEL` / `api_base_url` | Qwen 3.5 35B (4-bit) | `http://localhost:8000/v1` | Strong code reasoning. Catches semantic alt-text issues, ARIA conflicts, custom Bootstrap grids. |
+| **Vision (Phase 2 explorer)** | `AI_EXPLORER_MODEL` / `ai_explorer_url` | Gemma 4 E4B (4-bit) | `http://localhost:8000/v1` | Fast multimodal. Used for per-element screenshot diffing where speed matters more than depth. |
+| **Vision (judge / per-SC visual)** | `AI_LOCAL_JUDGE_MODEL` / `ai_local_judge_url` | Gemma 4 26B (4-bit) | `http://localhost:8000/v1` | Image-bearing calls always route here. **Accuracy over speed** rule: E4B was observed hallucinating `focus_visible` on byte-identical screenshots, so all image calls use 26B regardless of caller intent. |
+| **Vision fallback** | `AI_FALLBACK_VISION_MODEL` / `ai_fallback_vision_url` | Qwen3-VL 32B (4-bit) | `http://localhost:8000/v1` | Hot standby if 26B is unavailable. |
+| **Text fallback** | `AI_FALLBACK_MODEL` / `ai_fallback_url` | Qwen 3.5 35B (4-bit) | `http://localhost:8000/v1` | Same as primary code AI; used when other endpoints fail. |
 | **Video (frames)** | `AI_VIDEO_MODEL` / `ai_video_api_url` | Gemini 3 Flash (cloud) | `googleapis.com/.../openai/` | Local mlx-vlm chokes on large videos; cloud handles them. **Required for SC 1.4.2 / 2.2.2 audio detection** -- local mlx-vlm strips audio tracks before inference. |
-| **Speech-to-text (captions)** | `WHISPER_*` | faster-whisper large-v3-turbo | `localhost:11803` | Used by the video describer for caption transcription. Not an LLM. |
-| **Final judge** | `AI_JUDGE_MODEL` / `ai_judge_api_url` | Same as primary (Qwen 35B) by default | `localhost:11801` | Settable separately if you want the judge on a stronger model. |
+| **Speech-to-text (captions)** | `WHISPER_*` | faster-whisper large-v3-turbo | `http://localhost:8000/v1` | Used by the video describer for caption transcription. Not an LLM. |
+| **Final judge** | `AI_JUDGE_MODEL` / `ai_judge_api_url` | Same as primary (Qwen 35B) by default | `http://localhost:8000/v1` | Settable separately if you want the judge on a stronger model. |
 | **Final reviewer** (whole-ACR Pro pass) | `AI_REVIEWER_MODEL` / `ai_reviewer_api_url` | Defaults to `AI_JUDGE_MODEL` | (cascades from judge) | One holistic pass over the completed ACR for calibration / contradiction / citation / tone fixes. Point at a Pro-tier model (e.g. `gemini-3-pro-preview`) for production runs. |
 
 ### Single-model stacks (for fast iteration / structural validation)
@@ -978,13 +982,13 @@ for "does the architecture run" smoke tests.
 ```jsonc
 {
   "ai_backend": "vllm",
-  "api_base_url": "http://localhost:11804/v1",
+  "api_base_url": "`http://localhost:8000/v1`",
   "ai_model": "google/gemma-3n-E4B-it",
-  "ai_vision_api_url": "http://localhost:11804/v1",
+  "ai_vision_api_url": "`http://localhost:8000/v1`",
   "ai_vision_model": "google/gemma-3n-E4B-it",
-  "ai_local_judge_url": "http://localhost:11804/v1",
+  "ai_local_judge_url": "`http://localhost:8000/v1`",
   "ai_local_judge_model": "google/gemma-3n-E4B-it",
-  "ai_judge_api_url": "http://localhost:11804/v1",
+  "ai_judge_api_url": "`http://localhost:8000/v1`",
   "ai_judge_model": "google/gemma-3n-E4B-it"
 }
 ```
@@ -1348,8 +1352,9 @@ for [BROWSER-HANDLED] entries under SC 2.1.1, 2.1.2, 2.4.3, 2.4.7,
 actually exist."
 
 This eliminates the cross-SC false-positive cluster from cookie
-banners / preference modals / tracking pixels. Observed on a university site: 76 of
-76 hidden-content entries are marked browser-handled, so the judge
+banners / preference modals / tracking pixels. Observed on a large
+public university site: 76 of 76 hidden-content entries are marked
+browser-handled, so the judge
 has no legitimate grounds to flag any of them as focus leaks.
 
 ### Source-attribution validation (post-judge)
@@ -1371,7 +1376,7 @@ Why "lenient": the judge legitimately rewords inputs into VPAT prose,
 shortens selectors, and merges related findings. The validator should
 recognize the descendant-of-input case and only flag genuine fabrications.
 
-Why this exists: observed on a university site SC 2.5.8 — the deterministic check
+Why this exists: observed on a large public university site's SC 2.5.8 run — the deterministic check
 correctly applied the WCAG spacing exception and produced 0 findings,
 but the judge looked at the screenshot of the utility menu, decided the
 links were too small, and emitted 9 findings labeled
@@ -1399,19 +1404,19 @@ backed by deterministic measurement.
 Built from Playwright's STRUCTURED extraction (not regex on raw HTML). Includes:
 
 ```
-PAGE TITLE: "Example University"
+PAGE TITLE: "State University"
 LANGUAGE: html lang="en-us" (valid=True)
 
 HEADINGS:
   Counts: h1=1, h2=12, h3=14
   List:
-    <h1> "Farther Than Ever"
+    <h1> "Welcome to State University"
     <h2> "Start Here"
     ...
 
 IMAGES (9 total):
     hero.jpg: alt=(EMPTY alt="")
-    logo.svg: alt="University Logo"
+    logo.svg: alt="State University"
     spacer.gif: alt=(EMPTY alt="") [decorative]
 
 LANDMARKS (5):
@@ -1423,7 +1428,7 @@ LANDMARKS (5):
 FORM FIELDS (3):
     search name="q" label="Search"
     radio name="scope" label="Search this site" [in-fieldset]
-    radio name="scope" label="Search Example University" [in-fieldset]
+    radio name="scope" label="Search entire university" [in-fieldset]
   Radio inputs: 2, in <fieldset>: YES
 
 LINKS (138 total):
@@ -1620,7 +1625,7 @@ FastAPI server with:
   `_probe_autoplay_media` DOM check for SC 1.4.2 / 2.2.2 and layer
   optional cloud AI corroboration only when `AI_VIDEO_*` points at a
   cloud model that actually handles audio (Gemini Flash non-lite, etc.).
-- Estimated cost for a 51-SC run on a large-university-sized page: ~$2-3.
+- Estimated cost for a 51-SC run on a large-university-homepage-sized page: ~$2-3.
 
 ### Gemini 2.5 Flash (non-lite, optional upgrade for judge)
 - Same context window + tool-call behavior as Lite.

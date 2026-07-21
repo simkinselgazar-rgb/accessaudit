@@ -1,5 +1,7 @@
 # ── Secrets & local config — NEVER commit ───────────────────────────────────
 settings.json
+settings.*.json
+!settings.example.json
 .env
 .env.*
 *.pem
@@ -10,6 +12,9 @@ reviews/
 llm_transcripts/
 auth_sessions/
 *.log
+
+# Internal working notes — kept local, excluded from the public repo
+CLAUDE.md
 
 # ── Personal / business files (not part of the public tool) ─────────────────
 send_outreach.py
@@ -31,6 +36,3 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
-
-# Internal working notes — keep local, not published
-CLAUDE.md

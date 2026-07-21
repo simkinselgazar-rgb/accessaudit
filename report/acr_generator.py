@@ -186,6 +186,62 @@ def _collect_tt_results(results: list[TestResult]) -> list[dict[str, Any]]:
     return rows
 
 
+def _strip_finding(f) -> dict:
+    """Remove internal-only fields from a finding for client-facing output."""
+    d = dict(f) if isinstance(f, dict) else f
+    d.pop("source", None)
+    d.pop("decision", None)
+    d.pop("decision_reason", None)
+    d.pop("page_url", None)
+    d.pop("internal_remediation_note", None)
+    return d
+
+
+def _strip_internal_result_keys(r: dict) -> dict:
+    """Remove confidence/AI/programmatic internals from a result dict."""
+    d = dict(r)
+    for key in list(d.keys()):
+        if "confidence" in key or "programmatic" in key or "ai_" in key or "code_ai" in key or "at_sim" in key:
+            d.pop(key, None)
+    return d
+
+
+def _load_linked_documents(review_dir: Path, client_mode: bool) -> list[dict[str, Any]]:
+    """Load document_results.json (linked documents tested alongside the
+    page) for the 'Linked Documents Tested' report section. Returns
+    ``[{url, criteria_count, results}, ...]`` — empty when absent."""
+    doc_path = review_dir / "document_results.json"
+    if not doc_path.exists():
+        return []
+    try:
+        doc_results = json.loads(doc_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Malformed JSON in %s: %s", doc_path, exc)
+        return []
+    if not isinstance(doc_results, list):
+        logger.warning("Unexpected shape in %s: expected a list", doc_path)
+        return []
+    docs: list[dict[str, Any]] = []
+    for entry in doc_results:
+        if not isinstance(entry, dict):
+            continue
+        results = entry.get("results", []) or []
+        if client_mode:
+            cleaned = []
+            for r in results:
+                if isinstance(r, dict):
+                    r = _strip_internal_result_keys(r)
+                    r["findings"] = [_strip_finding(f) for f in r.get("findings", [])]
+                cleaned.append(r)
+            results = cleaned
+        docs.append({
+            "url": entry.get("url", ""),
+            "criteria_count": len(results),
+            "results": results,
+        })
+    return docs
+
+
 def _collect_findings(results: list[TestResult]) -> list[dict[str, Any]]:
     """Flatten all findings across criteria."""
     findings: list[dict[str, Any]] = []
@@ -256,14 +312,18 @@ def generate_acr_report(
 
     # For client mode: strip source from findings, strip confidence, sanitize AI language
     if client_mode:
-        def _strip_finding(f):
-            d = dict(f) if isinstance(f, dict) else f
-            d.pop("source", None)
-            d.pop("decision", None)
-            d.pop("decision_reason", None)
-            d.pop("page_url", None)
-            return d
         all_findings = [_strip_finding(f) for f in all_findings]
+        # The per-criterion dicts embed their own findings lists — strip
+        # those too, or the client JSON ships the internals the flat
+        # list just removed.
+        levels = {
+            lvl: [
+                {**r, "findings": [_strip_finding(f) for f in r.get("findings", [])]}
+                if isinstance(r, dict) else r
+                for r in rows
+            ]
+            for lvl, rows in levels.items()
+        }
 
         import re as _re
         _ai_patterns = [
@@ -283,6 +343,10 @@ def generate_acr_report(
 
     suffix = "_client" if client_mode else ""
 
+    # "Linked Documents Tested" — documents discovered on the page and
+    # tested alongside it (document_results.json, single-page path).
+    linked_documents = _load_linked_documents(review_dir, client_mode)
+
     context: dict[str, Any] = {
         "meta": meta.to_dict(),
         "summary": summary,
@@ -295,6 +359,8 @@ def generate_acr_report(
         "generated_at": generated_at,
         "report_format": report_format,
         "client_mode": client_mode,
+        "linked_documents": linked_documents,
+        "documents_tested": len(linked_documents),
     }
 
     # ---- HTML report ----
@@ -340,6 +406,8 @@ def generate_acr_report(
         },
         "findings": all_findings,
     }
+    if linked_documents:
+        json_data["linked_documents"] = linked_documents
     if not client_mode:
         json_data["tt_results"] = tt_rows
     if report_format == "508" and not client_mode:

@@ -6,10 +6,13 @@ functions for screenshot-based contrast measurement.
 """
 from __future__ import annotations
 
+import logging
 import re
 
 import numpy as np
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -146,9 +149,16 @@ def _load_image(image_path: str) -> Image.Image | None:
     try:
         img = Image.open(image_path).convert("RGB")
         if img.size[0] == 0 or img.size[1] == 0:
+            logger.warning(
+                "Contrast: image has zero dimension, skipping: %s", image_path,
+            )
             return None
         return img
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "Contrast: failed to load image %s: %s", image_path, exc,
+            exc_info=True,
+        )
         return None
 
 
@@ -166,32 +176,6 @@ def _median_color(pixels: np.ndarray) -> tuple[int, int, int] | None:
         return None
     med = np.median(pixels, axis=0).astype(int)
     return int(med[0]), int(med[1]), int(med[2])
-
-
-def sample_pixel_color(
-    image_path: str, x: int, y: int, sample_size: int = 5,
-) -> tuple[int, int, int] | None:
-    """Sample the median color in a small region around (x, y).
-
-    Uses median instead of mean to handle anti-aliased text edges.
-    sample_size is the radius -- samples a (2*sample_size+1) square.
-    Returns (R, G, B) or None if out of bounds or image can't be loaded.
-    """
-    img = _load_image(image_path)
-    if img is None:
-        return None
-    w, h = img.size
-    if x < 0 or x >= w or y < 0 or y >= h:
-        return None
-
-    x0 = _clamp(x - sample_size, 0, w - 1)
-    y0 = _clamp(y - sample_size, 0, h - 1)
-    x1 = _clamp(x + sample_size, 0, w - 1)
-    y1 = _clamp(y + sample_size, 0, h - 1)
-
-    region = img.crop((x0, y0, x1 + 1, y1 + 1))
-    pixels = np.array(region).reshape(-1, 3)
-    return _median_color(pixels)
 
 
 def sample_element_colors(image_path: str, rect: dict) -> dict:
@@ -214,9 +198,6 @@ def sample_element_colors(image_path: str, rect: dict) -> dict:
     7. If only one meaningful cluster exists (uniform colour), the
        element has no text contrast to measure.
 
-    For elements smaller than 4x4 pixels or with fewer than 16 pixels,
-    falls back to a simple most-different-from-median approach.
-
     *rect* must contain keys ``x``, ``y``, ``width``, ``height``
     (all numeric, in CSS pixels matching the screenshot scale).
 
@@ -224,7 +205,11 @@ def sample_element_colors(image_path: str, rect: dict) -> dict:
         "fg_color": (R, G, B) or None,
         "bg_color": (R, G, B) or None,
         "contrast_ratio": float or None,
-        "method": "kmeans_cluster" | "fallback_max_diff"
+        "method": "kmeans_cluster"            # normal text/background split
+                | "gradient_extremes"         # "fg" cluster >70% of pixels
+                | "uniform_region"            # near-identical initial centroids
+                | "uniform_region_post_kmeans"  # centroids converged together
+                | "pixel_sample"              # unusable image/rect (colors None)
     }
     """
     empty: dict = {
@@ -377,108 +362,4 @@ def sample_element_colors(image_path: str, rect: dict) -> dict:
         "bg_color": bg_color,
         "contrast_ratio": round(cr, 2),
         "method": method,
-    }
-
-
-def measure_focus_change(
-    before_path: str, after_path: str, rect: dict,
-) -> dict:
-    """Measure the visual change between unfocused and focused element screenshots.
-
-    Crops both screenshots to the element rect + margin, computes pixel diff,
-    extracts the dominant NEW color (the focus indicator color), and computes
-    its contrast against the background.
-
-    *rect* must contain keys ``x``, ``y``, ``width``, ``height``.
-
-    Returns: {
-        "visible": bool,           # did anything visually change?
-        "changed_pixel_ratio": float,  # fraction of pixels that changed
-        "indicator_color": (R, G, B) or None,  # the new color (focus ring/outline)
-        "bg_color": (R, G, B) or None,  # background behind the indicator
-        "indicator_contrast": float or None,  # contrast of indicator vs background
-        "method": "pixel_diff"
-    }
-    """
-    empty: dict = {
-        "visible": False,
-        "changed_pixel_ratio": 0.0,
-        "indicator_color": None,
-        "bg_color": None,
-        "indicator_contrast": None,
-        "method": "pixel_diff",
-    }
-
-    before_img = _load_image(before_path)
-    after_img = _load_image(after_path)
-    if before_img is None or after_img is None:
-        return empty
-
-    ex = int(rect.get("x", 0))
-    ey = int(rect.get("y", 0))
-    ew = int(rect.get("width", 0))
-    eh = int(rect.get("height", 0))
-    if ew <= 0 or eh <= 0:
-        return empty
-
-    # Expand rect by a margin so we capture focus rings drawn outside the element
-    margin = max(8, int(max(ew, eh) * 0.15))
-    bw = min(before_img.size[0], after_img.size[0])
-    bh = min(before_img.size[1], after_img.size[1])
-
-    crop_x0 = _clamp(ex - margin, 0, bw - 1)
-    crop_y0 = _clamp(ey - margin, 0, bh - 1)
-    crop_x1 = _clamp(ex + ew + margin, 0, bw)
-    crop_y1 = _clamp(ey + eh + margin, 0, bh)
-    if crop_x1 <= crop_x0 or crop_y1 <= crop_y0:
-        return empty
-
-    before_crop = np.array(before_img.crop((crop_x0, crop_y0, crop_x1, crop_y1)))
-    after_crop = np.array(after_img.crop((crop_x0, crop_y0, crop_x1, crop_y1)))
-
-    if before_crop.shape != after_crop.shape:
-        return empty
-
-    # Per-pixel Euclidean distance in RGB space
-    diff = np.abs(after_crop.astype(np.int16) - before_crop.astype(np.int16))
-    pixel_dist = np.sqrt(np.sum(diff.astype(np.float64) ** 2, axis=2))
-
-    # Threshold: a pixel is "changed" if its RGB distance > 30
-    change_threshold = 30
-    changed_mask = pixel_dist > change_threshold
-    total_pixels = changed_mask.size
-    changed_count = int(np.sum(changed_mask))
-    changed_ratio = changed_count / total_pixels if total_pixels > 0 else 0.0
-
-    # Need at least 0.5% of pixels changed to count as visible
-    visible = changed_ratio >= 0.005
-
-    if not visible:
-        return {
-            **empty,
-            "changed_pixel_ratio": round(changed_ratio, 4),
-        }
-
-    # Extract the dominant NEW colour (the focus indicator)
-    changed_pixels_after = after_crop[changed_mask]
-    indicator_color = _median_color(changed_pixels_after)
-
-    # Background: the unchanged pixels surrounding the changed area
-    unchanged_mask = ~changed_mask
-    unchanged_pixels = before_crop[unchanged_mask]
-    bg_color = _median_color(unchanged_pixels)
-
-    indicator_contrast: float | None = None
-    if indicator_color is not None and bg_color is not None:
-        indicator_contrast = round(
-            contrast_ratio_rgb(indicator_color, bg_color), 2,
-        )
-
-    return {
-        "visible": True,
-        "changed_pixel_ratio": round(changed_ratio, 4),
-        "indicator_color": indicator_color,
-        "bg_color": bg_color,
-        "indicator_contrast": indicator_contrast,
-        "method": "pixel_diff",
     }

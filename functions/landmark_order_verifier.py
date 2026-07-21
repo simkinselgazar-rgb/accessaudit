@@ -1,7 +1,7 @@
 """Cross-check visual_ai landmark-order claims against the captured
 accessibility tree.
 
-Verified failure mode on A11Y Project run 20260511 SC 1.3.2: visual_ai
+Verified failure mode on a public accessibility-resource site run 20260511 SC 1.3.2: visual_ai
 claimed *"main content is placed AFTER secondary navigation and footer
 elements in the accessibility tree, violating WCAG 1.3.2"*. The actual
 captured a11y tree had ``[main]`` at position 3 of the landmark list,
@@ -78,7 +78,7 @@ def _detect_landmark_order_claim(issue_text: str) -> tuple[str, str, str] | None
     before_alt = "|".join(_BEFORE_WORDS)
     after_alt = "|".join(_AFTER_WORDS)
 
-    # Try "after" first (the verified university / A11Y Project failure mode).
+    # Try "after" first (the verified failure mode from live-site testing).
     # The non-greedy gap of up to ~120 chars allows for VPAT prose
     # ("the main content is placed after secondary navigation and
     # footer elements in the accessibility tree...") without

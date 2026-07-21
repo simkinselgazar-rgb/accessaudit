@@ -14,6 +14,7 @@ import json
 import logging
 import os
 
+from functions.file_io import load_json_or
 from models import CaptureData
 
 logger = logging.getLogger(__name__)
@@ -139,15 +140,24 @@ def reload_capture_data(review_dir: str) -> CaptureData:
         capture_pipeline_version="v2",
     )
 
+    # Piecemeal artifact loads below each log the path at WARNING on
+    # failure and continue — one malformed file must not abort the
+    # whole resume (the other artifacts are still good).
+
     # DOM
     dom_path = os.path.join(captures_dir, "dom.html")
     if os.path.exists(dom_path):
-        cd.html = open(dom_path, encoding="utf-8", errors="replace").read()
+        try:
+            with open(dom_path, encoding="utf-8", errors="replace") as fh:
+                cd.html = fh.read()
+        except OSError:
+            logger.warning("Reload: dom.html unreadable at %s", dom_path, exc_info=True)
 
     # A11y tree
     a11y_path = os.path.join(captures_dir, "a11y_tree.json")
-    if os.path.exists(a11y_path):
-        cd.a11y_tree = json.loads(open(a11y_path, encoding="utf-8").read())
+    a11y_tree = load_json_or(a11y_path)
+    if a11y_tree is not None:
+        cd.a11y_tree = a11y_tree
 
     # Screenshots
     for name, field in [
@@ -181,13 +191,15 @@ def reload_capture_data(review_dir: str) -> CaptureData:
 
     # Tab walk
     tw_path = os.path.join(captures_dir, "tab_walk.json")
-    if os.path.exists(tw_path):
-        cd.tab_walk = json.loads(open(tw_path, encoding="utf-8").read())
+    tab_walk = load_json_or(tw_path)
+    if tab_walk is not None:
+        cd.tab_walk = tab_walk
 
     # Keyboard traps
     kt_path = os.path.join(captures_dir, "keyboard_traps.json")
-    if os.path.exists(kt_path):
-        cd.keyboard_traps = json.loads(open(kt_path, encoding="utf-8").read())
+    keyboard_traps = load_json_or(kt_path)
+    if keyboard_traps is not None:
+        cd.keyboard_traps = keyboard_traps
 
     # Keyboard walkthrough video
     kw_path = os.path.join(captures_dir, "keyboard_walkthrough", "keyboard_walkthrough.webm")
@@ -204,8 +216,8 @@ def reload_capture_data(review_dir: str) -> CaptureData:
 
     # Meta for URL/title
     meta_path = os.path.join(review_dir, "meta.json")
-    if os.path.exists(meta_path):
-        meta = json.loads(open(meta_path, encoding="utf-8").read())
+    meta = load_json_or(meta_path)
+    if meta is not None:
         cd.url = meta.get("source_url", "")
         cd.title = meta.get("product_name", "") or cd.url
 
@@ -219,6 +231,8 @@ def reload_capture_data(review_dir: str) -> CaptureData:
                 "text": tw.get("text", ""),
                 "has_visible_indicator": tw.get("has_visible_indicator"),
                 "indicator_type": tw.get("indicator_type", ""),
+                "css_unfocused": tw.get("css_unfocused", {}),
+                "focus_style_delta": tw.get("focus_style_delta", []),
             })
         cd.focus_indicators = focus_indicators
 

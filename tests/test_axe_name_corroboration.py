@@ -2,7 +2,7 @@
 against axe's name rules (link-name/button-name/image-alt). ANDI ignores
 clip/sr-only label text; axe honours it.
 
-Verified false positives (a university run 2026-05-28): ANDI flagged 4 named
+Verified false positives (a university site, 2026-05-28): ANDI flagged 4 named
 nav/infographic links and a search submit button as 'no accessible name';
 axe link-name had 67 passes / 0 violations and button-name 1 pass / 0
 violations, so every such element IS named. axe_confirms_named must return

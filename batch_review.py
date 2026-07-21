@@ -58,12 +58,12 @@ def switch_backend(backend: str):
 
     if backend == "vllm":
         settings["ai_backend"] = "vllm"
-        settings["api_base_url"] = "http://localhost:11801/v1"
+        settings["api_base_url"] = "http://localhost:8000/v1"
         settings["ai_model"] = "Qwen/Qwen3-32B"
         settings["ai_vision_model"] = "Qwen/Qwen2.5-VL-32B-Instruct"
-        settings["ai_vision_api_url"] = "http://localhost:11802/v1"
+        settings["ai_vision_api_url"] = "http://localhost:8000/v1"
         settings["ai_judge_model"] = "google/gemma-3-27b-it"
-        settings["ai_judge_api_url"] = "http://localhost:11805/v1"
+        settings["ai_judge_api_url"] = "http://localhost:8000/v1"
         settings["ai_judge_api_key"] = ""
         # No rate limit needed for local
         settings.pop("ai_timeout", None)
@@ -111,7 +111,7 @@ def submit_review(url: str, institution: str,
 def wait_for_completion(review_id: str, timeout: int = 3600) -> str:
     """Poll until the review completes or times out. Returns final status."""
     start = time.time()
-    last_phase = ""
+    last_status = ""
 
     while time.time() - start < timeout:
         try:
@@ -119,14 +119,15 @@ def wait_for_completion(review_id: str, timeout: int = 3600) -> str:
             if resp.status_code == 200:
                 data = resp.json()
                 status = data.get("status", "unknown")
-                phase = data.get("phase", "")
 
-                if phase != last_phase:
+                if status != last_status:
                     elapsed = int(time.time() - start)
-                    print(f"    [{elapsed}s] {status}: {phase}")
-                    last_phase = phase
+                    error = data.get("error") or ""
+                    suffix = f" ({error})" if error else ""
+                    print(f"    [{elapsed}s] status: {status}{suffix}")
+                    last_status = status
 
-                if status in ("complete", "error", "cancelled"):
+                if status in ("complete", "error", "cancelled", "interrupted"):
                     return status
         except Exception as exc:
             print(f"    WARN: status poll for {review_id} failed ({exc}); retrying")
@@ -195,7 +196,7 @@ def main():
 
     # Verify server is running
     try:
-        resp = httpx.get(f"{SERVER}/api/queue", timeout=5)
+        resp = httpx.get(f"{SERVER}/api/queue/status", timeout=5)
         if resp.status_code != 200:
             print(f"ERROR: Server at {SERVER} returned {resp.status_code}")
             sys.exit(1)

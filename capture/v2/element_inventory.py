@@ -80,7 +80,13 @@ class InventoryElement:
 
     # Type-specific fields
     href: str = ""
-    alt: str = ""
+    # alt=None means the attribute is ABSENT (SC 1.1.1 violation
+    # candidate); alt="" means an explicit empty alt (decorative
+    # marker). has_alt_attr records the distinction explicitly:
+    # True/False when measured by the phase-1 extractor, None when
+    # unknown (AI-derived dicts, non-image elements).
+    alt: str | None = ""
+    has_alt_attr: bool | None = None
     src: str = ""
     input_type: str = ""
     label: str = ""
@@ -97,14 +103,25 @@ class InventoryElement:
     parent_role: str = ""       # Parent element role
     # For links / buttons — does the element wrap an <img>/<svg>/[role=img]?
     # Set by the deterministic phase 1 extractor; the link mapper used to
-    # hard-code False here, which made every logo link (e.g. a university's
-    # endorsed-logo <a><img alt="Example University."></a>) look
+    # hard-code False here, which made every logo link (e.g. a university site's
+    # endorsed-logo <a><img alt="State University."></a>) look
     # like a nameless link. The image_alt field captures the wrapped
     # image's alt so per-SC checks can apply ARIA 1.2 step 5 (wrapper's
     # accessible name = wrapped img alt).
     has_image: bool = False
     image_alt: str = ""
     context: str = ""           # Surrounding sentence for SC 2.4.4 link-purpose
+    # For links — inside a <nav> / [role="navigation"] ancestor. Feeds
+    # the structural-summary nav_links list that cross-page SC 3.2.3
+    # consistency aggregation depends on.
+    in_nav: bool = False
+    # For tables — structure emitted by the phase-1 deterministic
+    # extractor. headers is a list of {text, scope, id} dicts for each
+    # <th>; row_count counts <tr> elements; summary is the (deprecated)
+    # summary attribute. Consumed by SC 1.3.1 via capture_data.tables.
+    headers: list = field(default_factory=list)
+    row_count: int = 0
+    summary: str = ""
     # Structured location data from functions.element_labeler.describe():
     # visible_text, accessible_name, preceding_heading, landmark, spatial.
     # Fed to the judge prompt via a LOCATION: line under each element so
@@ -115,11 +132,22 @@ class InventoryElement:
     @classmethod
     def from_dict(cls, d: dict) -> "InventoryElement":
         known = {f.name for f in cls.__dataclass_fields__.values()}
+        # The phase-1 JS extractor (and inventories saved by older runs)
+        # emit camelCase rowCount; the dataclass field is row_count.
+        if "rowCount" in d and "row_count" not in d:
+            d = {**d, "row_count": d["rowCount"]}
         filtered = {k: v for k, v in d.items() if k in known}
         elem = cls(**filtered)
         # Ensure aria is always a dict (AI sometimes returns None)
         if elem.aria is None:
             elem.aria = {}
+        # Reconcile alt with the measured attribute presence. Serialized
+        # dicts may drop a None alt; has_alt_attr survives and is the
+        # authoritative record of "attribute absent".
+        if elem.has_alt_attr is False:
+            elem.alt = None
+        elif elem.has_alt_attr is True and elem.alt is None:
+            elem.alt = ""
         # If type is missing, infer from tag and role
         if not elem.type:
             elem.type = _infer_type(elem.tag, elem.role, elem.href, elem.src, elem.input_type)
@@ -228,8 +256,16 @@ def _merge_inventory_into_v1(
             v1 = dict(existing_by_key[k])
             # Inventory fills any keys v1 didn't capture; v1 fields
             # win on overlap so HTML attributes are not clobbered.
+            # Empty-ish v1 values are only replaced by NON-empty
+            # inventory values: None and "" can both be measurements
+            # (alt=None means "attribute absent", alt="" means
+            # "explicitly decorative") and must never overwrite each
+            # other.
             for inv_k, inv_v in inv.items():
-                if inv_k not in v1 or v1.get(inv_k) in (None, "", [], {}):
+                if inv_k not in v1:
+                    v1[inv_k] = inv_v
+                elif (v1.get(inv_k) in (None, "", [], {})
+                        and inv_v not in (None, "", [], {})):
                     v1[inv_k] = inv_v
             merged.append(v1)
             seen_keys.add(k)
@@ -372,7 +408,7 @@ def map_inventory_to_capture_data(inventory: ElementInventory, capture_data: Any
     # textContent-only read missed the heading's accessible name. The
     # canonical accname rule (ARIA accname §4.3.7): if textContent is
     # empty, walk descendants for [aria-label] / <img alt> / <svg><title>.
-    # Reading raw textContent on <h1><a class="logo"><img alt="Example University
+    # Reading raw textContent on <h1><a class="logo"><img alt="University
     # home"></a></h1> returns "" and produced fabricated "empty h1"
     # findings on 1.3.1/1.3.2 — this recompute closes that gap for the
     # v2 path. Mirrors v1's __headingName JS in capture/web_capture.py.
@@ -417,6 +453,7 @@ def map_inventory_to_capture_data(inventory: ElementInventory, capture_data: Any
             "has_image": bool(e.has_image),
             "image_alt": e.image_alt or "",
             "context": e.context or "",
+            "in_nav": bool(e.in_nav),
             "rect": e.rect or {},
             "visible": e.visible,
             "location": e.location or {},
@@ -430,8 +467,11 @@ def map_inventory_to_capture_data(inventory: ElementInventory, capture_data: Any
     images = []
     for e in inventory.get_by_type("image"):
         images.append({
+            # alt=None when the attribute is absent (missing-alt
+            # failure candidate); "" only for an explicit alt="".
             "src": e.src,
             "alt": e.alt,
+            "has_alt_attr": e.has_alt_attr,
             "role": e.role,
             "ariaLabel": e.aria.get("aria-label", ""),
             "aria-label": e.aria.get("aria-label", ""),
@@ -525,7 +565,9 @@ def map_inventory_to_capture_data(inventory: ElementInventory, capture_data: Any
     )
     logger.info("  Landmarks: %d", len(capture_data.landmarks))
 
-    # Map tables
+    # Map tables — carry the structure the phase-1 extractor measured.
+    # checks/base.py reads has_headers / headers and row_count
+    # (snake_case); rowCount stays for camelCase readers.
     tables = []
     for e in inventory.get_by_type("table"):
         tables.append({
@@ -534,8 +576,11 @@ def map_inventory_to_capture_data(inventory: ElementInventory, capture_data: Any
             "aria_label": e.aria.get("aria-label", ""),
             "aria-label": e.aria.get("aria-label", ""),
             "selector": e.selector,
-            "headers": [],  # Phase 1 may provide these
-            "rowCount": 0,
+            "headers": e.headers or [],
+            "has_headers": bool(e.headers),
+            "row_count": e.row_count,
+            "rowCount": e.row_count,
+            "summary": e.summary or "",
         })
     capture_data.tables = _merge_inventory_into_v1(
         capture_data.tables or [], tables, key="selector",
@@ -628,8 +673,12 @@ def map_inventory_to_capture_data(inventory: ElementInventory, capture_data: Any
                         }
                         logger.info("  YouTube %s: captions=%s langs=%s",
                                     vid_id, bool(tracks), tracks)
-                except Exception as exc:
-                    logger.debug("  YouTube caption check failed for %s: %s", vid_id, exc)
+                except Exception:
+                    logger.warning(
+                        "  YouTube caption check failed for %s -- SC 1.2.2 "
+                        "loses caption evidence for this embed",
+                        vid_id, exc_info=True,
+                    )
     capture_data.video_embed_captions = video_caption_data
 
     # Map background images

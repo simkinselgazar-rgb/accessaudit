@@ -150,14 +150,16 @@ class Check_3_3_1(BaseCheck):
                             severity=Severity.LOW,
                         ))
 
-        # Check enriched form errors (pre-processed data from analysis phase)
+        # Check enriched form errors (pre-processed data from analysis
+        # phase). A MISSING key means "not measured" and must never be
+        # treated as a failure — findings only fire on an explicit False.
         for error in capture_data.form_errors:
-            selector = error.get("selector", "form")
-            has_text_description = error.get("has_text_description", False)
-            identifies_field = error.get("identifies_field", False)
-            programmatic_association = error.get("programmatic_association", False)
+            selector = error.get("selector") or error.get("form_selector") or "form"
+            has_text_description = error.get("has_text_description")
+            identifies_field = error.get("identifies_field")
+            programmatic_association = error.get("programmatic_association")
 
-            if not has_text_description:
+            if has_text_description is False:
                 findings.append(Finding(
                     id=_make_finding_id(),
                     element=selector,
@@ -166,7 +168,7 @@ class Check_3_3_1(BaseCheck):
                     recommendation="Provide a text description of the error.",
                     severity=Severity.HIGH,
                 ))
-            elif not identifies_field:
+            elif has_text_description and identifies_field is False:
                 findings.append(Finding(
                     id=_make_finding_id(),
                     element=selector,
@@ -179,7 +181,7 @@ class Check_3_3_1(BaseCheck):
                     severity=Severity.MEDIUM,
                 ))
 
-            if not programmatic_association:
+            if programmatic_association is False:
                 findings.append(Finding(
                     id=_make_finding_id(),
                     element=selector,
@@ -192,9 +194,14 @@ class Check_3_3_1(BaseCheck):
                     severity=Severity.MEDIUM,
                 ))
 
-            # Check if error container uses role="alert" or aria-live
-            has_live_region = error.get("has_role_alert", False) or error.get("has_aria_live", False)
-            if not has_live_region and has_text_description:
+            # Check if error container uses role="alert" or aria-live.
+            # Only fire when at least one of the two was measured and
+            # neither is True — both missing means "not measured".
+            live_measured = ("has_role_alert" in error) or ("has_aria_live" in error)
+            has_live_region = bool(
+                error.get("has_role_alert") or error.get("has_aria_live"),
+            )
+            if live_measured and not has_live_region and has_text_description:
                 findings.append(Finding(
                     id=_make_finding_id(),
                     element=selector,
@@ -215,8 +222,8 @@ class Check_3_3_1(BaseCheck):
                 ))
 
             # Check if aria-invalid is set on the errored field
-            has_aria_invalid = error.get("has_aria_invalid", False)
-            if not has_aria_invalid:
+            has_aria_invalid = error.get("has_aria_invalid")
+            if has_aria_invalid is False:
                 findings.append(Finding(
                     id=_make_finding_id(),
                     element=selector,

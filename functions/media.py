@@ -44,19 +44,51 @@ def media_type(media: dict) -> str:
     return "video"
 
 
-def encode_image(path: str, max_size: int = 768, quality: int = 80) -> str:
-    """Load an image, resize to fit within max_size px, return a base64 JPEG data URI.
+# Absolute pixel ceiling per encoded image. Keeps an extremely tall
+# full-page screenshot from producing a payload the endpoint rejects
+# outright (a single oversized image cannot be batch-split the way a
+# multi-image payload can).
+_PIXEL_BUDGET = 6_000_000
 
-    Default 768px/80% balances quality with local model memory limits.
+
+def encode_image(path: str, max_size: int | None = None, quality: int | None = None) -> str:
+    """Load an image, downscale for the vision model, return a base64 JPEG data URI.
+
+    Sizing rules (defaults come from ``AI_IMAGE_MAX_DIM`` / ``AI_IMAGE_QUALITY``):
+
+    - Roughly square images fit their LONG side to ``max_size``.
+    - Elongated images (full-page screenshots, where height can be many
+      times the width) fit their SHORT side to ``max_size`` instead --
+      scaling a 1280x8000 page capture by its long side would crush the
+      width to ~120px, destroying the focus rings, small text, and 1px
+      outlines that SC 2.4.7 / 1.4.x verdicts rest on.
+    - A total-pixel budget caps the worst case either way.
     """
+    if max_size is None or quality is None:
+        from config import AI_IMAGE_MAX_DIM, AI_IMAGE_QUALITY
+        if max_size is None:
+            max_size = AI_IMAGE_MAX_DIM
+        if quality is None:
+            quality = AI_IMAGE_QUALITY
+
     with Image.open(path) as img:
         if img.mode in ("RGBA", "P", "LA"):
             img = img.convert("RGB")
 
         w, h = img.size
-        if w > max_size or h > max_size:
-            scale = max_size / max(w, h)
-            img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+        long_side, short_side = max(w, h), min(w, h)
+        if long_side <= max_size:
+            scale = 1.0
+        elif long_side <= 2 * short_side:
+            scale = max_size / long_side
+        else:
+            scale = min(1.0, max_size / short_side)
+        if (w * scale) * (h * scale) > _PIXEL_BUDGET:
+            scale = (_PIXEL_BUDGET / (w * h)) ** 0.5
+        if scale < 1.0:
+            img = img.resize(
+                (max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS,
+            )
 
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=quality)

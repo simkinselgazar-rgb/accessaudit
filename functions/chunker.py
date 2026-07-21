@@ -72,24 +72,23 @@ def chunk_html_by_landmarks(
 
     1. If the whole page is already small enough, return it as one chunk
        labeled ``full page``.
-    2. Otherwise extract the ``<head>`` as its own section if present, then
-       each top-level landmark (``header``, ``nav``, ``main``, ``aside``,
-       ``footer``) as its own section.
-    3. Any section that by itself exceeds ``max_chars`` is sub-split by
-       walking its top-level child elements with proper depth tracking so
-       splits never land mid-tag. Child groups are packed greedy into
-       chunks that stay under the budget. The landmark's opening and
-       closing tags are repeated on every sub-part so each chunk is a
-       valid stand-alone fragment for the model to read.
-    4. If structured walking can't find a clean wrapper (malformed HTML,
-       no landmarks, etc) the fallback is a tag-boundary character split
-       (``_split_at_tag_boundary``). Still lossless; chunks concatenate
-       back to the input.
-    5. Pages with no landmarks at all fall back to splitting ``<body>``
-       (or the whole input) at tag boundaries.
+    2. Otherwise extract the ``<head>`` as its own section if present.
+    3. Walk the ``<body>``'s TOP-LEVEL children with depth tracking
+       (never a page-wide regex, which would drop content between
+       landmarks and mis-handle nested same-tag landmarks). Each child
+       that is itself a landmark (``header``, ``nav``, ``main``,
+       ``aside``, ``footer``) becomes its own labeled section;
+       everything else -- cookie banners, body-appended modals, ``<div
+       id="content">`` wrappers, inline scripts -- is greedy-packed into
+       ``body content`` sections. Every top-level child lands in exactly
+       one section.
+    4. Any section that by itself exceeds ``max_chars`` is sub-split by
+       ``_split_landmark`` (recursive structured walker), falling back
+       to a lossless tag-boundary character split for malformed HTML.
 
     Concatenation of all returned chunk bodies reconstructs the original
-    HTML verbatim (modulo the landmark wrapper repetition for sub-parts).
+    HTML verbatim (modulo the wrapper-tag repetition on sub-parts and
+    the <head> script/style body stripping).
     """
     if not html:
         return []
@@ -112,30 +111,103 @@ def chunk_html_by_landmarks(
             label = "head" if len(head_parts) == 1 else f"head_part{j + 1}"
             sections.append((label, part))
 
-    for tag, name in _LANDMARK_TAGS:
-        for idx, match in enumerate(
-            re.finditer(rf"<{tag}\b[^>]*>.*?</{tag}>", html, re.DOTALL | re.IGNORECASE)
-        ):
-            section_html = match.group(0)
-            base_name = f"{name}_{idx}" if idx > 0 else name
-            parts = _split_landmark(section_html, max_chars)
-            if len(parts) == 1:
-                sections.append((base_name, parts[0]))
-            else:
-                for j, part in enumerate(parts):
-                    sections.append((f"{base_name}_part{j + 1}", part))
+    body_match = re.search(r"<body\b[^>]*>.*?</body>", html, re.DOTALL | re.IGNORECASE)
+    if body_match:
+        body_html = body_match.group(0)
+    elif head_match:
+        body_html = html[head_match.end():]
+    else:
+        body_html = html
+    sections.extend(_chunk_body(body_html, max_chars))
 
-    if len(sections) <= 1:
-        # No landmarks -- run the same recursive structured walker on
-        # the <body> (or the whole input). This produces clean balanced
-        # fragments by walking the body's top-level children, recursing
-        # into oversized ones, instead of immediately dropping to the
-        # character-level fallback.
-        body_match = re.search(r"<body\b[^>]*>.*?</body>", html, re.DOTALL | re.IGNORECASE)
-        body = body_match.group(0) if body_match else html
-        sections = []
-        for j, part in enumerate(_split_landmark(body, max_chars)):
-            sections.append((f"body_part{j + 1}", part))
+    return sections
+
+
+_LANDMARK_NAMES = dict(_LANDMARK_TAGS)
+
+
+def _chunk_body(body_html: str, max_chars: int) -> list[tuple[str, str]]:
+    """Split body HTML into labeled sections without losing any content.
+
+    Walks the body's top-level children (depth-tracked). Landmark
+    children get landmark labels; runs of non-landmark children are
+    greedy-packed into ``body content`` sections. Oversized children are
+    recursively sub-split by ``_split_landmark``.
+    """
+    if len(body_html) <= max_chars:
+        return [("body", body_html)] if body_html.strip() else []
+
+    open_match = re.match(r"<body\b[^>]*>", body_html, re.IGNORECASE)
+    close_match = re.search(r"</body>\s*$", body_html, re.IGNORECASE)
+    if open_match and close_match and open_match.end() <= close_match.start():
+        inner = body_html[open_match.end():close_match.start()]
+        open_tag, close_tag = open_match.group(0), close_match.group(0)
+    else:
+        inner = body_html
+        open_tag = close_tag = ""
+
+    children = _walk_top_level_children(inner)
+    if not children:
+        return [
+            (f"body_part{j + 1}", part)
+            for j, part in enumerate(_split_at_tag_boundary(body_html, max_chars))
+        ]
+
+    sections: list[tuple[str, str]] = []
+    label_counts: dict[str, int] = {}
+
+    def _label(name: str) -> str:
+        idx = label_counts.get(name, 0)
+        label_counts[name] = idx + 1
+        return name if idx == 0 else f"{name}_{idx}"
+
+    def _emit_element(name: str, element_html: str) -> None:
+        base = _label(name)
+        parts = _split_landmark(element_html, max_chars)
+        if len(parts) == 1:
+            sections.append((base, parts[0]))
+        else:
+            for j, part in enumerate(parts):
+                sections.append((f"{base}_part{j + 1}", part))
+
+    misc: list[str] = []
+    misc_len = 0
+    # Non-landmark runs are re-wrapped in the body's own tags so each
+    # chunk is a self-describing fragment; budget the wrapper overhead.
+    misc_budget = max(1, max_chars - len(open_tag) - len(close_tag))
+
+    def _flush_misc() -> None:
+        nonlocal misc, misc_len
+        if not misc:
+            return
+        content = "".join(misc)
+        misc, misc_len = [], 0
+        if not content.strip():
+            return
+        base = _label("body content")
+        if len(content) <= misc_budget:
+            sections.append((base, open_tag + content + close_tag))
+        else:
+            for j, part in enumerate(_split_at_tag_boundary(content, misc_budget)):
+                sections.append((f"{base}_part{j + 1}", open_tag + part + close_tag))
+
+    for child in children:
+        tag_m = re.match(r"<(\w+)", child)
+        tag = tag_m.group(1).lower() if tag_m else ""
+        if tag in _LANDMARK_NAMES:
+            _flush_misc()
+            _emit_element(_LANDMARK_NAMES[tag], child)
+        elif len(child) > misc_budget:
+            # Oversized non-landmark child (e.g. a giant SPA root <div>):
+            # give it the same recursive structured treatment.
+            _flush_misc()
+            _emit_element("body content", child)
+        else:
+            if misc_len + len(child) > misc_budget:
+                _flush_misc()
+            misc.append(child)
+            misc_len += len(child)
+    _flush_misc()
 
     return sections
 

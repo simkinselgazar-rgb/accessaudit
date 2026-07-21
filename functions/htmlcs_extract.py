@@ -21,10 +21,13 @@ Severity mapping mirrors HCS's three-level scheme:
 """
 from __future__ import annotations
 
+import logging
 import re
 
 from models import CaptureData, Finding, Severity
 from functions.finding_utils import _make_finding_id
+
+logger = logging.getLogger(__name__)
 
 
 # HCS encodes the SC inside the message code as ``..._X_Y_Z.<technique>``.
@@ -301,7 +304,7 @@ _GENERIC_HCS_IMPACT = (
 # contains a navigation section..."), but our extractor previously
 # flowed it through at MEDIUM severity and the judge then rewrote the
 # conditional as assertive ("the navigation items are marked up as
-# paragraphs, violating WCAG"). Verified failure on A11Y Project run
+# paragraphs, violating WCAG"). Verified failure on a public accessibility-resource site run
 # 20260511: 3 false positives where the cited <p> elements were
 # author-bio paragraphs and copyright lines, NOT navigation. Filter:
 # only emit if the cited element's class actually appears inside a
@@ -312,11 +315,23 @@ _HCS_H48_CODE_SUFFIX = "1_3_1.H48"
 # children." HCS's rule fires on any SVG with role=presentation that
 # has children, even when the children are pure visual primitives
 # (<path>, <circle>, <rect>) with no ARIA / labels / titles.
-# Verified failure on A11Y Project run 20260511: hero illustration
+# Verified failure on a public accessibility-resource site run 20260511: hero illustration
 # SVG with role=presentation and only <path> primitives was flagged.
 # Filter: only emit if the matching SVG actually has children that
 # carry explicit semantic meaning.
 _HCS_F92_CODE_SUFFIX = "1_3_1.F92,ARIA4"
+
+# H67.2 = "Img element is marked so that it is ignored by Assistive
+# Technology." HCS emits this type-2 WARNING for EVERY alt="" image --
+# but alt="" is the standard, correct decorative-image marker. The
+# actual H67 failure condition is alt="" combined with a non-empty
+# title (or an aria-label/aria-labelledby naming contradiction): the
+# element then has a name AND asks to be ignored. Verified on the
+# ground-truth fixture run 20260716_233808: a plain decorative divider
+# (alt="", no title) reached the judge as a medium finding on an SC
+# that already had real failures. Filter: only emit when some alt=""
+# img in the captured DOM actually carries a title/aria-label.
+_HCS_H67_CODE_SUFFIX = "1_1_1.H67.2"
 
 
 def _selector_class_inside_nav_ancestor(selector: str, html: str) -> bool:
@@ -381,6 +396,30 @@ def _selector_class_inside_nav_ancestor(selector: str, html: str) -> bool:
             for tok in cls_value.split():
                 class_tokens_in_navs.add(tok)
     return any(c in class_tokens_in_navs for c in classes)
+
+
+def _empty_alt_img_with_conflicting_name(html: str) -> bool:
+    """Return True when ANY alt="" image in the captured HTML also
+    carries a title / aria-label / aria-labelledby.
+
+    Used to corroborate HCS H67.2 ("img ignored by AT") warnings: the
+    rule fires on every alt="" image, but the genuine H67 failure is the
+    contradiction of an element that has a name AND asks to be ignored.
+    Conservative: with no HTML available, keep the finding.
+    """
+    if not html:
+        return True
+    import re
+    for m in re.finditer(r"<img\b[^>]*>", html, re.IGNORECASE):
+        tag = m.group(0)
+        if not re.search(r"""\balt\s*=\s*(?:""|'')""", tag):
+            continue
+        if re.search(
+            r"""\b(?:title|aria-label|aria-labelledby)\s*=\s*(?:"[^"]+"|'[^']+')""",
+            tag, re.IGNORECASE,
+        ):
+            return True
+    return False
 
 
 def _svg_with_role_presentation_has_semantic_children(html: str) -> bool:
@@ -455,7 +494,7 @@ def extract_htmlcs_findings(
     # to reduce memory. Fall back to reading dom_path from disk when the
     # in-memory field is empty -- guarantees the H48 / F92 filters see
     # real DOM data regardless of the pipeline's memory-management
-    # decisions. Verified gap on A11Y Project run 20260511 SC 1.3.1
+    # decisions. Verified gap on a public accessibility-resource site run 20260511 SC 1.3.1
     # where the H48 filter returned conservative "keep" because the
     # in-memory html field was empty even though dom.html was on disk
     # with 3 <nav> elements.
@@ -469,17 +508,19 @@ def extract_htmlcs_findings(
             except Exception:
                 # Soft-no-op: if dom.html isn't readable, filters fall
                 # back to conservative "keep" -- no worse than before.
-                import logging
-                logging.getLogger(__name__).debug(
+                # WARNING (not DEBUG) per CLAUDE.md: an unreadable
+                # artifact must name its path so the operator can fix it.
+                logger.warning(
                     "HTMLCS SC %s: dom_path %r unreadable -- corroboration "
                     "filters running on empty html (conservative keep)",
-                    criterion_id, dom_path,
+                    criterion_id, dom_path, exc_info=True,
                 )
                 html = ""
 
     findings: list[Finding] = []
     dropped_h48 = 0
     dropped_f92 = 0
+    dropped_h67 = 0
     for m in messages:
         if not isinstance(m, dict):
             continue
@@ -521,6 +562,13 @@ def extract_htmlcs_findings(
             if not _svg_with_role_presentation_has_semantic_children(html):
                 dropped_f92 += 1
                 continue
+        if code.endswith(_HCS_H67_CODE_SUFFIX):
+            # H67.2 fires on every alt="" image; the real failure is
+            # alt="" combined with title/aria-* naming (see the filter's
+            # docstring). Plain decorative markers are correct usage.
+            if not _empty_alt_img_with_conflicting_name(html):
+                dropped_h67 += 1
+                continue
 
         # The element field gets a human-friendly description; the
         # selector field gets the raw CSS so the judge can verify it
@@ -532,7 +580,7 @@ def extract_htmlcs_findings(
         # A type-3 message is an ADVISORY manual-check reminder, not a
         # detected violation. Label it unmistakably so the judge cannot
         # escalate it into a concrete failure finding asserting a
-        # specific defect (verified on a university SC 4.1.3: a type-3
+        # specific defect (verified on a university-site SC 4.1.3 run: a type-3
         # "check that status messages..." notice was rewritten into two
         # fabricated findings about non-existent loading indicators).
         if msg_type_int == 3:
@@ -577,16 +625,21 @@ def extract_htmlcs_findings(
         ))
 
     if dropped_h48:
-        import logging
-        logging.getLogger(__name__).info(
+        logger.info(
             "HTMLCS SC %s: dropped %d H48 'nav-as-paragraph' finding(s) "
             "where cited element has no <nav> ancestor in captured DOM "
             "(body-text paragraphs with inline links are NOT navigation)",
             criterion_id, dropped_h48,
         )
+    if dropped_h67:
+        logger.info(
+            "HTMLCS SC %s: dropped %d H67.2 'ignored by AT' warning(s) -- "
+            "alt=\"\" without title/aria naming is the correct decorative "
+            "marker, not a defect",
+            criterion_id, dropped_h67,
+        )
     if dropped_f92:
-        import logging
-        logging.getLogger(__name__).info(
+        logger.info(
             "HTMLCS SC %s: dropped %d F92,ARIA4 'role=presentation with "
             "semantic children' finding(s) where the cited SVG has only "
             "visual primitives (<path>/<circle>/<rect>), no semantic "

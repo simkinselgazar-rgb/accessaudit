@@ -1,7 +1,7 @@
 """Regression tests for ``functions.aria_validator._build_selector``
 edge cases that crashed the ARIA validation pass on real sites.
 
-Verified crash on Fairfax City run 20260512_103712: a page with
+Verified crash on a municipal-government-site run 20260512_103712: a page with
 ``class=""`` (empty class attribute) raised ``IndexError: list index
 out of range`` from ``attrs["class"].split()[0]`` because
 ``"".split()`` is ``[]``. The exception was caught at the
@@ -24,7 +24,7 @@ from functions.aria_validator import _build_selector  # noqa: E402
 
 
 def test_empty_class_attribute_does_not_crash():
-    """The exact Fairfax City crash case: <div class=""> has a present
+    """The exact a municipal-government-site crash case: <div class=""> has a present
     class attribute, but the value is empty. ``"".split()`` returns
     ``[]``; the old code's ``[0]`` raised IndexError.
     """

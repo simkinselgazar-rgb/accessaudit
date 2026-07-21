@@ -27,6 +27,24 @@ from config import (
 
 logger = logging.getLogger(__name__)
 
+_warned_unconfigured = False
+
+
+def _warn_unconfigured_once() -> None:
+    """One WARNING (not one per call) when no embeddings endpoint is set.
+
+    Embeddings are optional: without them, cross-page dedup and the
+    semantic consistency checks fall back to exact-string matching.
+    """
+    global _warned_unconfigured
+    if not _warned_unconfigured:
+        _warned_unconfigured = True
+        logger.warning(
+            "EMBEDDINGS_API_URL is not configured -- embedding-based "
+            "dedup/consistency will use zero vectors (exact-match "
+            "fallback). Set embeddings_api_url in settings.json to enable."
+        )
+
 
 # Global serialization lock for the embedding endpoint.
 #
@@ -90,6 +108,10 @@ async def embed(
     NEVER-TRUNCATE rule from CLAUDE.md).
     """
     if not text or not text.strip():
+        return [0.0] * EMBEDDINGS_DIM
+
+    if not EMBEDDINGS_API_URL:
+        _warn_unconfigured_once()
         return [0.0] * EMBEDDINGS_DIM
 
     # Single-chunk happy path.
@@ -253,6 +275,10 @@ async def embed_batch(
     """
     if not texts:
         return []
+
+    if not EMBEDDINGS_API_URL:
+        _warn_unconfigured_once()
+        return [[0.0] * EMBEDDINGS_DIM for _ in texts]
 
     def _log_zero_vector(idx: int, txt: str, exc: Exception) -> None:
         try:

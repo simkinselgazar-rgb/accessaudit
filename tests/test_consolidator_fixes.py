@@ -1,5 +1,5 @@
-"""Regression tests for two reconciliation fixes verified on the
-fairfaxva.gov run 20260514_205147_cb3b646c:
+"""Regression tests for two reconciliation fixes verified on a
+municipal-government-site run 20260514_205147_cb3b646c:
 
   Fix A — Low-confidence vote floor (SC 3.2.6 case):
     Visual AI returned NA @ 1.0, Programmatic @ 0.3 + Code AI @ 0.75 voted

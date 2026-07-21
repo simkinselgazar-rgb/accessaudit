@@ -80,10 +80,10 @@ SOURCE_EXPERTISE: dict[str, str] = {
 JUDGE_SYSTEM_PROMPT = """\
 <role>
 You are a WCAG accessibility auditor acting as the final arbiter for a
-Section 508 conformance evaluation. Three upstream analyzers
-(programmatic DOM check, code AI, visual AI) have already produced
-findings against ONE specific WCAG success criterion. You produce the
-final verdict and VPAT ACR text for that criterion.
+Section 508 conformance evaluation. Four upstream analyzers
+(programmatic DOM check, code AI, visual AI, and AT simulation) have
+already produced findings against ONE specific WCAG success criterion.
+You produce the final verdict and VPAT ACR text for that criterion.
 </role>
 
 <task>
@@ -239,7 +239,7 @@ but are not measured (e.g. "2.36:1 between the button border and
 its background") even when the prompt says not to. We trust
 captured measurements; we do NOT trust unsupported AI numbers.
 
-Example: a visual AI finding says "The border of the 'Visit University'
+Example: a visual AI finding says "The border of the 'Visit Campus'
 button has a contrast ratio of 2.36:1" with empty evidence.
 ANDI CONTRAST has no entry for this selector (it's a UI border,
 not text). pixel_contrast and nontext_contrast also have no
@@ -366,14 +366,14 @@ How to weight cross-tool agreement when consolidating:
 CRITERION GUIDANCE for SC 1.1.1: fail_condition = "<img> with no alt attribute and no aria-label/aria-labelledby".
 ALL FINDINGS:
   [programmatic] selector="img#hero" issue="Image missing alt attribute" severity=high
-  [ai]           selector="#hero img" issue="Hero banner has no text alternative" severity=high
+  [visual_ai]    selector="#hero img" issue="Hero banner has no text alternative" severity=high
   [code_ai]      selector="img#hero" issue="<img src='/banner.jpg'> lacks alt text" severity=high
 VERIFIED DOM FACTS contain: <img id="hero" src="/banner.jpg">
 </input>
 <output_reasoning>
 All three findings target the same DOM node (#hero img == img#hero).
 Same root issue: missing alt. Selector verified in DOM. Merge into
-one entry, source = "programmatic, ai, code_ai", severity = high
+one entry, source = "programmatic, visual_ai, code_ai", severity = high
 (worst). Verdict: Does Not Support.
 </output_reasoning>
 <output_tool_call>
@@ -384,7 +384,7 @@ final_findings: [{
   "impact": "Screen reader users on JAWS, NVDA, and VoiceOver receive no description of this image.",
   "recommendation": "Add a meaningful alt attribute describing the image content.",
   "severity": "high",
-  "source": "programmatic, ai, code_ai"
+  "source": "programmatic, visual_ai, code_ai"
 }]
 conformance_level: "Does Not Support"
 rejected_findings: []
@@ -666,7 +666,7 @@ async def judge_criterion(
         return None
 
     # Cross-source dedup. The fuzzy version (selector + issue-prefix
-    # match) failed on a university's SC 1.1.1 -- 3 sources flagged the same
+    # match) failed on a university site's SC 1.1.1 -- 3 sources flagged the same
     # hero image with 3 different selector paths and 3 different
     # wordings. Replaced with a focused LLM call that decides the
     # grouping semantically; merging is then mechanical. Failure
@@ -741,6 +741,11 @@ def _load_criterion_guidance(criterion_id: str) -> str:
 
         return "\n\n".join(parts)
     except Exception:
+        logger.warning(
+            "Criterion guidance for SC %s failed to load -- the judge "
+            "will run WITHOUT its criterion-specific rules",
+            criterion_id, exc_info=True,
+        )
         return ""
 
 
@@ -1006,7 +1011,7 @@ def _normalize_judge_payload(payload: dict[str, Any]) -> dict[str, Any]:
             cited = f.get("cited_measurements", [])
             if not isinstance(cited, list):
                 cited = []
-            final_findings.append({
+            entry = {
                 "element": str(f.get("element", "")),
                 "issue": str(f.get("issue", "")),
                 "impact": str(f.get("impact", "")),
@@ -1015,7 +1020,15 @@ def _normalize_judge_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "source": str(f.get("source", "judge")),
                 "css_selector": css,
                 "cited_measurements": cited,
-            })
+            }
+            # Internal-only remediation guidance. The schema promises
+            # this survives to internal exports (and the final reviewer
+            # can edit it), so it must not be dropped here. Client-mode
+            # report generation strips it.
+            note = str(f.get("internal_remediation_note", "") or "")
+            if note:
+                entry["internal_remediation_note"] = note
+            final_findings.append(entry)
 
     # NOTE: cross-source dedup intentionally NOT done here. This path
     # runs PER BATCH; the LLM-based dedup at the end of judge_criterion

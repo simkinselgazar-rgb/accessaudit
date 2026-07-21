@@ -1,7 +1,7 @@
 """Regression for the server-side false-positive filters in
 BaseCheck._filter_findings_contradicted_by_capture.
 
-Each rule kills a verified 2026-05-28 university-run false positive while leaving
+Each rule kills a verified university-site 2026-05-28 false positive while leaving
 genuine findings intact. The method only reads self.criterion_id, so we drive
 it with a SimpleNamespace stub.
 """
@@ -43,13 +43,13 @@ def _run(cid, findings, cd=None):
 
 def test_logo_contrast_exemption_dropped():
     out = _run("1.4.6", [_f("logo text has insufficient contrast", "visual_ai",
-                            "div#zone-branding > h1.logo > a", "U-M logo link")])
+                            "div#zone-branding > h1.logo > a", "University logo link")])
     assert out == []
 
 
 def test_non_logo_contrast_finding_survives():
     out = _run("1.4.6", [_f("body paragraph text contrast 4.6:1", "andi",
-                            "div#michigan-time > p")])
+                            "div#campus-time > p")])
     assert len(out) == 1
 
 
@@ -95,13 +95,13 @@ def test_browser_handled_visibility_hidden_dropped():
 def _links_capture():
     return _capture(links=[
         {"text": "Learn more about the ceremony",
-         "href": "https://record.example.edu/articles/1-million-memories/"},
+         "href": "https://record.example-university.edu/articles/1-million-memories/"},
         {"text": "Learn more about the ceremony",
-         "href": "https://record.example.edu/articles/1-million-memories/"},
+         "href": "https://record.example-university.edu/articles/1-million-memories/"},
         {"text": "Learn more about this research",
-         "href": "https://news.example.edu/studying-bird-flu/"},
+         "href": "https://news.example-university.edu/studying-bird-flu/"},
         {"text": "Learn more about this research",
-         "href": "https://news.example.edu/microplastics/"},
+         "href": "https://news.example-university.edu/microplastics/"},
     ])
 
 

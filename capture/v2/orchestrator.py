@@ -41,6 +41,7 @@ async def capture_web_page_v2(
     user_context: dict | None = None,
     auth_callback=None,
     progress_callback=None,
+    cancel_check=None,
 ) -> CaptureData:
     """V2 AI-driven capture pipeline.
 
@@ -50,10 +51,19 @@ async def capture_web_page_v2(
         user_context: Optional user-provided context
         auth_callback: Async callback for auth progress messages
         progress_callback: Async callback for phase progress updates
+        cancel_check: Optional sync callable invoked at each phase
+            boundary; it should raise (e.g. ReviewCancelled) when the
+            review has been cancelled, so a cancel during the long
+            capture phase takes effect promptly instead of after
+            capture fully completes.
 
     Returns:
         Fully populated CaptureData object
     """
+    def _check_cancel():
+        if cancel_check is not None:
+            cancel_check()
+
     pipeline_start = time.monotonic()
     logger.info("=" * 70)
     logger.info("V2 CAPTURE PIPELINE START: %s", url)
@@ -74,9 +84,8 @@ async def capture_web_page_v2(
     )
 
     # Determine review root (for auth state lookups)
-    review_root = review_dir
-    if os.path.basename(review_dir).startswith("page_") or os.path.basename(review_dir).startswith("doc_"):
-        review_root = os.path.dirname(review_dir)
+    from functions.file_io import get_review_root
+    review_root = get_review_root(review_dir)
 
     # ── Phase 0: Observation (v1 reuse) ──────────────────────────
     if progress_callback:
@@ -94,6 +103,7 @@ async def capture_web_page_v2(
 
     capture_data.phase_timings["phase0"] = round(time.monotonic() - pipeline_start, 1)
 
+    _check_cancel()
     # ── Phase D: Deterministic capture ───────────────────────────
     if progress_callback:
         await progress_callback("Capturing: DOM, accessibility tree, screenshots...")
@@ -153,6 +163,21 @@ async def capture_web_page_v2(
 
         if not nav_success:
             raise RuntimeError(f"Could not navigate to {url} after trying all wait strategies")
+
+        # Bot-protection gate: if a WAF served a challenge interstitial
+        # instead of the page, auditing it would produce a well-formed
+        # but meaningless ACR. Wait out auto-clearing variants, then
+        # fail loudly if the challenge persists.
+        from functions.bot_challenge import wait_out_bot_challenge
+        challenge = await wait_out_bot_challenge(page)
+        if challenge:
+            raise RuntimeError(
+                f"Bot-protection challenge blocked capture of {url} ({challenge}). "
+                "The target page was never reached, so no audit is possible. "
+                "Options: audit from a network the site trusts, ask the site "
+                "owner to allowlist the auditing machine, or audit a copy of "
+                "the page that is not behind bot protection."
+            )
 
         # Post-navigation hydration stabilization. networkidle fires when
         # requests stop; SPA frameworks (React, Vue, Instructure-UI, etc.)
@@ -299,25 +324,61 @@ async def capture_web_page_v2(
         await page.screenshot(path=vp_path, full_page=False)
         capture_data.viewport_path = vp_path
 
+        # Zoom is restored in a finally so a screenshot failure can't
+        # leave every later extraction running at 200% (same bug class
+        # as the fixed v1 site in web_capture.py).
         vp200_path = os.path.join(captures_dir, "viewport_200pct.png")
         fp200_path = os.path.join(captures_dir, "full_page_200pct.png")
-        await page.evaluate(f"document.body.style.zoom = '{ZOOM_FACTOR}'")
-        await page.wait_for_timeout(800)
-        await page.screenshot(path=vp200_path, full_page=False)
-        await page.screenshot(path=fp200_path, full_page=True)
-        await page.evaluate("document.body.style.zoom = '1'")
-        capture_data.viewport_200pct_path = vp200_path
-        capture_data.full_page_200pct_path = fp200_path
+        try:
+            await page.evaluate(f"document.body.style.zoom = '{ZOOM_FACTOR}'")
+            await page.wait_for_timeout(800)
+            await page.screenshot(path=vp200_path, full_page=False)
+            await page.screenshot(path=fp200_path, full_page=True)
+            capture_data.viewport_200pct_path = vp200_path
+            capture_data.full_page_200pct_path = fp200_path
+        finally:
+            try:
+                await page.evaluate("document.body.style.zoom = '1'")
+            except Exception:
+                logger.warning(
+                    "PHASE D: failed to reset body zoom to 1 after 200%% "
+                    "screenshot -- later extractions may see a zoomed page",
+                    exc_info=True,
+                )
 
+        # A flaky 320px navigation must not abort the whole capture —
+        # skip the reflow screenshot, record the gap, close the page.
         vp320_path = os.path.join(captures_dir, "viewport_320px.png")
-        narrow = await context.new_page()
-        await narrow.set_viewport_size({"width": 320, "height": 720})
-        await narrow.goto(url, wait_until="domcontentloaded", timeout=PLAYWRIGHT_TIMEOUT)
-        await narrow.wait_for_timeout(1000)
-        await narrow.screenshot(path=vp320_path, full_page=False)
-        await narrow.close()
-        capture_data.viewport_320px_path = vp320_path
-        logger.info("PHASE D: 4 screenshots captured")
+        narrow = None
+        try:
+            narrow = await context.new_page()
+            await narrow.set_viewport_size({"width": 320, "height": 720})
+            await narrow.goto(url, wait_until="domcontentloaded", timeout=PLAYWRIGHT_TIMEOUT)
+            await narrow.wait_for_timeout(1000)
+            await narrow.screenshot(path=vp320_path, full_page=False)
+            capture_data.viewport_320px_path = vp320_path
+        except Exception as narrow_err:
+            logger.warning(
+                "PHASE D: 320px viewport capture failed — skipping reflow "
+                "screenshot (SC 1.4.10 evidence gap): %s", narrow_err,
+            )
+            completions = getattr(capture_data, "capture_completions", {})
+            skipped = completions.get("skipped_captures", [])
+            skipped.append({
+                "capture": "viewport_320px",
+                "reason": str(narrow_err),
+            })
+            completions["skipped_captures"] = skipped
+            capture_data.capture_completions = completions
+        finally:
+            if narrow is not None:
+                try:
+                    await narrow.close()
+                except Exception:
+                    logger.warning(
+                        "PHASE D: failed to close 320px page", exc_info=True,
+                    )
+        logger.info("PHASE D: Screenshots captured")
 
         # ── Fix 3: Pierce Shadow DOM before capturing HTML ───────
         logger.info("PHASE D: Extracting DOM (piercing Shadow DOM)...")
@@ -444,7 +505,10 @@ async def capture_web_page_v2(
                                     "width": r["width"],
                                     "height": r["height"],
                                 }
-                            fe["selector"] = f"iframe[src*='{frame_url}'] >> {fe.get('tag', '?')}"
+                            # Escape backslashes and quotes so a URL containing
+                            # `'` cannot break out of the CSS attribute string.
+                            css_url = frame_url.replace("\\", "\\\\").replace("'", "\\'")
+                            fe["selector"] = f"iframe[src*='{css_url}'] >> {fe.get('tag', '?')}"
                         iframe_elements.extend(frame_elems)
                     except Exception as iframe_eval_err:
                         logger.warning("PHASE D: Cross-origin iframe blocked: %s (%s)",
@@ -517,7 +581,7 @@ async def capture_web_page_v2(
         # only does computed_styles / colors / language / landmarks,
         # so media autoplay / muted / loop / controls and form_field
         # in_fieldset / group_label / placeholder were missing on
-        # every v2 run. Without these, a university's <video autoplay muted loop>
+        # every v2 run. Without these, a university site's <video autoplay muted loop>
         # was reported with all four attrs inverted, and radios inside
         # real <fieldset> elements all reported in_fieldset=None.
         # The element_inventory mapper merges these in via
@@ -700,6 +764,7 @@ async def capture_web_page_v2(
         save_capture_data(capture_data, captures_dir, after_label="Phase D")
 
         # ── Phase 1: Static Code AI ──────────────────────────────
+        _check_cancel()
         from capture.v2.phase1_code_analysis import run_phase1
 
         ai_client = None
@@ -742,6 +807,7 @@ async def capture_web_page_v2(
         save_capture_data(capture_data, captures_dir, after_label="Phase 1")
 
         # ── Phase 2: Visual AI Explorer ──────────────────────────
+        _check_cancel()
         from capture.v2.phase2_visual_explorer import run_phase2
         await run_phase2(page, inventory, capture_data, ai_client, captures_dir, progress_callback)
 
@@ -794,6 +860,7 @@ async def capture_web_page_v2(
         await browser.close()
 
     # ── Phase 3: Video Segments ──────────────────────────────────
+    _check_cancel()
     from capture.v2.phase3_video_segments import run_phase3
 
     async def _form_pause(name, reason, page_url):
@@ -817,7 +884,7 @@ async def capture_web_page_v2(
     # <body> hit, and can get stuck on a bot-challenge interstitial. Letting a
     # truncated Phase 3 walk overwrite a good v1 walk made the judge see "TAB
     # WALK: 5 reached" next to "TAB COVERAGE: 72 reached (104%)" and report a
-    # bogus 0%-coverage keyboard failure (verified on a university run 2026-05-29: a
+    # bogus 0%-coverage keyboard failure (verified on a university site 2026-05-29: a
     # 5-stop Cloudflare Phase 3 walk clobbered a 72-stop v1 walk).
     twp = os.path.join(captures_dir, "tab_walk.json")
     if os.path.exists(twp):
@@ -853,7 +920,7 @@ async def capture_web_page_v2(
                         capture_data.keyboard_traps.append(trap)
                 logger.info("Keyboard traps: %d detected", len(capture_data.keyboard_traps))
         except Exception:
-            logger.debug("Failed to load keyboard_traps.json from %s", ktp, exc_info=True)
+            logger.warning("Failed to load keyboard_traps.json from %s", ktp, exc_info=True)
 
     # Derive focus_indicators from tab_walk data so that checks_2_4
     # (SC 2.4.7 Focus Visible) and checks_2_4_22 (SC 2.4.11/13) can
@@ -886,6 +953,8 @@ async def capture_web_page_v2(
                 "border_color": css.get("borderColor", ""),
                 "border_width": css.get("borderWidth", ""),
                 "background_color": css.get("backgroundColor", ""),
+                "css_unfocused": tw.get("css_unfocused", {}),
+                "focus_style_delta": tw.get("focus_style_delta", []),
                 "rect": tw.get("rect", {}),
             }
             focus_indicators.append(fi)
@@ -897,6 +966,7 @@ async def capture_web_page_v2(
     save_capture_data(capture_data, captures_dir, after_label="Phase 3")
 
     # ── Phase 4: AT Simulation ───────────────────────────────────
+    _check_cancel()
     from capture.v2.phase4_at_simulation import run_phase4
     await run_phase4(capture_data, inventory, captures_dir, progress_callback)
     # Persist after Phase 4 so the AT-simulation cross-reference state

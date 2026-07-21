@@ -26,7 +26,7 @@ async def _capture_html_media_and_form_attrs(page, capture_data) -> None:
     These are HTML attributes (autoplay, muted, loop, controls, in_fieldset,
     placeholder, etc.) — NOT ARIA attributes — so the element-inventory
     mapper cannot infer them from ``e.aria``. Earlier code tried, and on
-    a university's hero ``<video autoplay muted loop>`` reported every attribute
+    a university site's hero ``<video autoplay muted loop>`` reported every attribute
     inverted because the inventory dict had no such keys.
 
     Result: ``capture_data.media`` and ``capture_data.form_fields`` are
@@ -40,7 +40,7 @@ async def _capture_html_media_and_form_attrs(page, capture_data) -> None:
     # Without alignment, an element with no id collapses to ``selector=tag``
     # in v1 while inventory produces the full ``a > b:nth-of-type(2) > c``
     # path → no match → either v1 entries get dropped (collapsed by repeated
-    # key) or duplicate entries appear in the output. A university's six <ul> nodes
+    # key) or duplicate entries appear in the output. A university site's six <ul> nodes
     # without ids and the six <nav> landmarks both hit this pattern.
     SELECTOR_HELPER = r"""
         function getSelector(el) {
@@ -274,7 +274,7 @@ async def _capture_html_media_and_form_attrs(page, capture_data) -> None:
         // Per ARIA spec, <section> and <form> elements promote to landmark
         // roles (`region` and `form` respectively) ONLY when they have an
         // accessible name via aria-label or aria-labelledby. Without a
-        // name they're generic — not landmarks. A university's <section
+        // name they're generic — not landmarks. A university site's <section
         // id="main-slider" aria-label="University Rankings Highlights">
         // is a region landmark; the inventory misreports it as
         // role='section'.

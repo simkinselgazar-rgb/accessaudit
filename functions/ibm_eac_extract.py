@@ -22,8 +22,81 @@ through, just less precisely tagged).
 """
 from __future__ import annotations
 
+import re
+
 from models import CaptureData, Finding, Severity
 from functions.finding_utils import _make_finding_id
+
+
+def _last_segment_tokens(selector: str) -> tuple[str, str, set[str]]:
+    """Extract (tag, id, classes) from the last segment of a selector.
+
+    Handles both CSS paths (``div > a.nav-link``, ``#main-nav``,
+    ``p.lead``, ``a:nth-of-type(2)``) and IBM EAC XPath-style paths
+    (``/html[1]/body[1]/div[3]/a[2]``, ``//a[@id='home']``). Returns
+    lowercase tokens; empty string / empty set for tokens the segment
+    does not carry.
+    """
+    sel = (selector or "").strip().lower()
+    if not sel:
+        return "", "", set()
+    if "/" in sel and ">" not in sel and not sel.startswith((".", "#")):
+        seg = sel.rstrip("/").split("/")[-1].strip()
+        m = re.search(r"@id=['\"]([^'\"]+)['\"]", seg)
+        seg_id = m.group(1) if m else ""
+        tag_m = re.match(r"([a-z][a-z0-9-]*)", seg)
+        return (tag_m.group(1) if tag_m else ""), seg_id, set()
+    seg = sel.split(">")[-1].strip()
+    seg = re.sub(r":{1,2}[a-z-]+(\([^)]*\))?", "", seg).strip()
+    tag_m = re.match(r"([a-z][a-z0-9-]*)", seg)
+    ids = re.findall(r"#([\w-]+)", seg)
+    classes = set(re.findall(r"\.([\w-]+)", seg))
+    return (tag_m.group(1) if tag_m else ""), (ids[0] if ids else ""), classes
+
+
+def _tails_structurally_match(
+    probe_sel: str, eac_sel: str, eac_snippet: str = "",
+) -> bool:
+    """Compare the last segment of a probe selector (ANDI /
+    focus_contrast CSS) against an IBM EAC selector structurally.
+
+    Raw substring containment is NOT safe here: a bare-tag tail like
+    ``a`` substring-matches nearly every XPath (the same failure mode
+    as the 22-collisions-on-"a" bug fixed in focus_contrast's
+    makeSelector — see capture/interactive_capture.py), which let one
+    probe entry suppress IBM EAC findings for unrelated elements.
+
+    Match rules:
+      - Tags must agree when both segments carry one.
+      - An id token must be corroborated: same id in the EAC segment,
+        or a literal ``id="..."`` in the EAC snippet.
+      - A class token must be corroborated by the EAC segment's classes
+        or the snippet's ``class`` attribute.
+      - A bare-tag tail with no id/class carries no identifying
+        evidence and never matches.
+    """
+    p_tag, p_id, p_classes = _last_segment_tokens(probe_sel)
+    e_tag, e_id, e_classes = _last_segment_tokens(eac_sel)
+    if not (p_tag or p_id or p_classes):
+        return False
+    if p_tag and e_tag and p_tag != e_tag:
+        return False
+    snippet = (eac_snippet or "").lower()
+    if p_id:
+        if e_id:
+            return p_id == e_id
+        return bool(snippet) and (
+            f'id="{p_id}"' in snippet or f"id='{p_id}'" in snippet
+        )
+    if p_classes:
+        if p_classes & e_classes:
+            return True
+        if snippet:
+            cls_m = re.search(r"class=[\"']([^\"']*)[\"']", snippet)
+            if cls_m and p_classes & set(cls_m.group(1).split()):
+                return True
+        return False
+    return False
 
 
 # Rule-id → list of SC ids the rule is evidence for. Sourced from
@@ -367,7 +440,15 @@ def _scs_for_rule(rule_id: str, message: str, criterion_id: str) -> list[str]:
     """
     if rule_id in IBM_RULE_TO_SC:
         return IBM_RULE_TO_SC[rule_id]
-    if criterion_id and criterion_id in (message or ""):
+    # Boundary-aware match: a bare substring test would let "1.4.1"
+    # match "WCAG 1.4.10"/"1.4.11" (and "2.4.1" match "2.4.11"),
+    # attributing reflow/spacing rules to the wrong SC's judge prompt.
+    # Reject a digit/dot prefix and a following digit or ".digit"
+    # (a longer dotted id) while still accepting a sentence-ending
+    # period after the criterion id.
+    if criterion_id and re.search(
+        rf"(?<![\d.]){re.escape(criterion_id)}(?!\.?\d)", message or ""
+    ):
         return [criterion_id]
     return []
 
@@ -421,15 +502,12 @@ def _selector_likely_over_bg_image(
         andi_sel = str(entry.get("selector") or "").lower()
         if not andi_sel:
             continue
-        # Match if the ANDI selector appears in the IBM EAC selector
-        # or snippet, OR vice versa. ANDI selectors are typically
-        # short (.foo, #bar, p.lead); IBM EAC selectors are XPath-
-        # style (/html[1]/body[1]/...). Selector-text overlap covers
-        # both directions.
-        andi_tail = andi_sel.split(">")[-1].strip()
-        if andi_tail and (
-            andi_tail in sel_lower or andi_tail in snip_lower
-        ):
+        # ANDI selectors are typically short (.foo, #bar, p.lead);
+        # IBM EAC selectors are XPath-style (/html[1]/body[1]/...).
+        # Compare structural tokens of the last segments — substring
+        # containment let a bare "a"/"p" tail match nearly every
+        # XPath and suppressed findings for unrelated elements.
+        if _tails_structurally_match(andi_sel, sel_lower, snip_lower):
             return True
         # ANDI text-node text content sometimes appears in IBM EAC
         # snippets (engines pick up the same text). Use the text as
@@ -479,10 +557,12 @@ def _focus_visible_corroborated(
         e_sel = str(entry.get("selector") or "").lower()
         if not e_sel:
             continue
-        # Bidirectional overlap: IBM EAC uses XPath, focus_contrast
-        # uses CSS selectors. Compare by tail-token containment.
-        e_tail = e_sel.split(">")[-1].strip()
-        if e_tail and e_tail in sel_lower:
+        # IBM EAC uses XPath, focus_contrast uses CSS selectors.
+        # Compare structural tokens of the last segments — substring
+        # containment let a bare "a" tail match nearly every XPath,
+        # so one arbitrary focus_contrast entry decided the fate of
+        # IBM EAC findings for unrelated elements.
+        if _tails_structurally_match(e_sel, sel_lower):
             if entry.get("has_change") is True:
                 # Pixels prove focus is visible -- IBM EAC false positive
                 return False
@@ -544,6 +624,7 @@ def extract_ibm_eac_findings(
     findings: list[Finding] = []
     dropped_bgimg = 0
     dropped_focus = 0
+    dropped_hidden_alt = 0
     for r in results:
         if not isinstance(r, dict):
             continue
@@ -574,6 +655,19 @@ def extract_ibm_eac_findings(
                 dropped_focus += 1
                 continue
 
+        # Filter 3: "redundant alt" on an aria-hidden image. An element
+        # with aria-hidden="true" is removed from the accessibility
+        # tree, so its alt text is inert -- no announcement happens and
+        # no redundancy is possible. IBM EAC's img_alt_redundant rule
+        # compares alt vs parent-link name without checking aria-hidden
+        # (verified on a federal-government homepage: 3 spurious
+        # VIOLATIONs on aria-hidden card icons while axe's own
+        # image-redundant-alt rule passed). The engine's snippet carries
+        # the element's own markup, so the check is exact.
+        if rule_id == "img_alt_redundant" and 'aria-hidden="true"' in snippet:
+            dropped_hidden_alt += 1
+            continue
+
         severity = _JUDGMENT_TO_SEVERITY.get(judgment, Severity.INFO)
         help_text = str(r.get("help") or "").strip()
 
@@ -585,7 +679,7 @@ def extract_ibm_eac_findings(
         # engine saw a signal but cannot definitively rule. Label it as
         # advisory so the judge cannot promote it into a concrete
         # violation claim (mirrors the htmlcs type-3 advisory marker).
-        # Verified on a university SC 3.3.2: IBM POTENTIAL input_label_visible
+        # Verified on a university-site SC 3.3.2 run: IBM POTENTIAL input_label_visible
         # was escalated into definitive "no programmatic label" findings
         # on an input that actually has <label for>, aria-label, and title.
         is_potential = str(judgment).upper() == "POTENTIAL"
@@ -643,6 +737,14 @@ def extract_ibm_eac_findings(
             "deterministic byte-identical screenshot probe shows "
             "has_change=True (focus IS visible)",
             criterion_id, dropped_focus,
+        )
+    if dropped_hidden_alt:
+        import logging
+        logging.getLogger(__name__).info(
+            "IBM_EAC SC %s: dropped %d redundant-alt finding(s) on "
+            'aria-hidden="true" images -- hidden images announce nothing, '
+            "so alt redundancy is impossible",
+            criterion_id, dropped_hidden_alt,
         )
 
     return findings

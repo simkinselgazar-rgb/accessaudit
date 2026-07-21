@@ -39,6 +39,11 @@ PHASE2_TIMEOUT = 7200     # 120 minutes wall clock (scaled with element limit)
 HOVER_WAIT_MS = 700       # Time to wait after hover
 CLICK_WAIT_MS = 1000      # Time to wait after click
 SCROLL_TIMEOUT_MS = 3000  # Timeout for scroll into view
+INTERACTION_TIMEOUT_S = 120  # Guard on the Playwright interaction phase ONLY —
+                             # the AI analysis phase runs unguarded because a
+                             # local 26B vision model can legitimately take
+                             # longer than 120s (AI_TIMEOUT is 1200s) and is
+                             # already bounded by the LLM client's HTTP timeout.
 
 
 @dataclass
@@ -60,6 +65,7 @@ class ExplorationResult:
     """
     selector: str
     text: str = ""
+    element_type: str = ""  # InventoryElement.type (link, button, image, ...)
     depth: int = 0
     # Dynamic screenshot list — every state change gets captured
     screenshots: list = field(default_factory=list)  # list[StateScreenshot]
@@ -129,7 +135,6 @@ async def run_phase2(
 
     results: list[ExplorationResult] = []
     explored_count = 0
-    original_url = page.url
     explored_selectors: set[str] = set()
 
     hit_limit = False
@@ -160,26 +165,25 @@ async def run_phase2(
                      elem.exploration_priority, elem.exploration_actions)
 
         try:
-            result = await asyncio.wait_for(
-                _explore_element(
-                    page, elem, explore_dir, ai_client,
-                    depth=0, explored_count=explored_count, original_url=original_url,
-                ),
-                timeout=120,
+            result = await _explore_element(
+                page, elem, explore_dir, ai_client,
+                depth=0, explored_count=explored_count,
             )
         except asyncio.TimeoutError:
             logger.error(
                 "PHASE 2: TIMEOUT exploring element %d/%d: %s \"%s\" "
-                "(stuck >120s — likely a Playwright interaction hung on a "
+                "(Playwright interaction stuck >%ds — likely hung on a "
                 "closed dropdown or unresponsive element). Skipping.",
                 i + 1, len(explorable), elem.type if hasattr(elem, 'type') else '?',
                 (elem.text if hasattr(elem, 'text') else str(elem)),
+                INTERACTION_TIMEOUT_S,
             )
             result = ExplorationResult(
                 selector=elem.selector if hasattr(elem, 'selector') else str(elem),
                 text=elem.text if hasattr(elem, 'text') else '',
+                element_type=getattr(elem, 'type', '') or '',
                 depth=0,
-                error="Timeout after 120s — element exploration hung",
+                error=f"Timeout after {INTERACTION_TIMEOUT_S}s — element interaction hung",
             )
             # Probe the page connection. If Playwright lost its
             # bridge to the browser (e.g. hung carousel button froze
@@ -190,7 +194,7 @@ async def run_phase2(
             # hangs we abort Phase 2 cleanly with a partial result
             # rather than letting the whole capture stall for the
             # full PHASE2_TIMEOUT window (60 minutes). Observed on
-            # a community-college carousel elem_0065 — Phase 2 hung 28+ minutes
+            # a community-college site's carousel elem_0065 — Phase 2 hung 28+ minutes
             # past the 120s per-element timeout because Playwright
             # itself was unresponsive.
             try:
@@ -222,6 +226,7 @@ async def run_phase2(
             result = ExplorationResult(
                 selector=elem.selector if hasattr(elem, 'selector') else str(elem),
                 text=elem.text if hasattr(elem, 'text') else '',
+                element_type=getattr(elem, 'type', '') or '',
                 depth=0,
                 error=f"{type(exc).__name__}: {exc}",
             )
@@ -230,25 +235,19 @@ async def run_phase2(
         sel = elem.selector if hasattr(elem, 'selector') else str(elem)
         explored_selectors.add(sel)
 
-        # Recursive depth exploration
+        # Recursive depth exploration. No batch-level wait_for here:
+        # a wall-clock guard around the whole batch used to cancel
+        # legitimate slow AI calls mid-flight. Each element inside is
+        # already bounded by the per-element interaction guard plus the
+        # LLM client's HTTP timeout, and recursion is capped by
+        # MAX_DEPTH / MAX_ELEMENTS / cycle prevention.
         if result.new_elements and explored_count < MAX_ELEMENTS:
-            try:
-                depth_results = await asyncio.wait_for(
-                    _explore_depth(
-                        page, result.new_elements, explore_dir, ai_client,
-                        depth=1, explored_count=explored_count,
-                        original_url=original_url, progress_callback=progress_callback,
-                        explored_selectors=explored_selectors,
-                    ),
-                    timeout=300,
-                )
-            except asyncio.TimeoutError:
-                logger.error(
-                    "PHASE 2: TIMEOUT in depth exploration for %s "
-                    "(stuck >300s exploring submenu elements). Skipping depth.",
-                    (elem.text if hasattr(elem, 'text') else str(elem)),
-                )
-                depth_results = []
+            depth_results = await _explore_depth(
+                page, result.new_elements, explore_dir, ai_client,
+                depth=1, explored_count=explored_count,
+                progress_callback=progress_callback,
+                explored_selectors=explored_selectors,
+            )
             results.extend(depth_results)
             explored_count += len(depth_results)
 
@@ -273,6 +272,11 @@ async def run_phase2(
                 "title_attr": "",
                 "new_elements_count": len(r.new_elements),
                 "hover_content": r.interaction_response,
+                # Every entry in this list revealed content by construction;
+                # the SC 1.4.13 judge block keys off this flag, and its
+                # absence used to render every reveal as reveals=False.
+                "reveals": True,
+                "revealed_content": r.interaction_response,
                 "screenshot_path": r.hover_screenshot,
             })
     capture_data.hover_content = hover_content
@@ -311,6 +315,16 @@ async def run_phase2(
     return results
 
 
+@dataclass
+class _InteractionOutcome:
+    """What the Playwright interaction phase hands to the AI phase."""
+    result: ExplorationResult
+    last_action: str = "none"
+    visual_change_detected: bool = False
+    elem_dir: str = ""
+    screenshot_count: int = 0
+
+
 async def _explore_element(
     page: Page,
     elem: InventoryElement | dict,
@@ -318,14 +332,47 @@ async def _explore_element(
     ai_client: Any,
     depth: int = 0,
     explored_count: int = 0,
-    original_url: str = "",
 ) -> ExplorationResult:
-    """Execute the 3-screenshot cycle for one element."""
+    """Explore one element: guarded interaction, then unguarded AI analysis.
+
+    Only the Playwright interaction phase runs under
+    INTERACTION_TIMEOUT_S — wrapping the AI call too used to cancel
+    legitimate slow image analyses and record them as timeouts. A
+    TimeoutError from the interaction phase propagates to the caller,
+    which records the element as timed out and probes the Playwright
+    connection.
+    """
+    outcome = await asyncio.wait_for(
+        _interact_element(page, elem, explore_dir, depth, explored_count),
+        timeout=INTERACTION_TIMEOUT_S,
+    )
+    result = outcome.result
+
+    try:
+        await _analyze_interaction(page, elem, ai_client, outcome)
+    except Exception as e:
+        result.error = str(e)
+        logger.warning("PHASE 2: Error analyzing %s: %s", result.selector, e)
+
+    logger.info("PHASE 2: Element %s — %d screenshots captured, response=%s",
+                result.selector, len(result.screenshots), result.interaction_response)
+    return result
+
+
+async def _interact_element(
+    page: Page,
+    elem: InventoryElement | dict,
+    explore_dir: str,
+    depth: int,
+    explored_count: int,
+) -> _InteractionOutcome:
+    """Playwright interaction phase: screenshot cycle + pixel-diff gate."""
     selector = elem.selector if hasattr(elem, "selector") else elem.get("selector", "")
     text = elem.text if hasattr(elem, "text") else elem.get("text", "")
+    elem_type = elem.type if hasattr(elem, "type") else elem.get("type", "")
     actions = elem.exploration_actions if hasattr(elem, "exploration_actions") else elem.get("exploration_actions", ["hover", "click"])
 
-    result = ExplorationResult(selector=selector, text=text, depth=depth)
+    result = ExplorationResult(selector=selector, text=text, element_type=elem_type, depth=depth)
     screenshot_count = 0
 
     def _ss_path(state_name: str) -> str:
@@ -348,23 +395,25 @@ async def _explore_element(
     elem_dir = os.path.join(explore_dir, f"elem_{explored_count:04d}_{safe_name}")
     os.makedirs(elem_dir, exist_ok=True)
 
+    outcome = _InteractionOutcome(result=result, elem_dir=elem_dir)
+
     try:
         el = await page.query_selector(selector)
         if not el:
             result.error = f"Element not found: {selector}"
-            return result
+            return outcome
 
         is_visible = await el.is_visible()
         if not is_visible:
             result.error = "Element not visible"
-            return result
+            return outcome
 
         # Scroll into view
         try:
             await el.scroll_into_view_if_needed(timeout=SCROLL_TIMEOUT_MS)
         except Exception:
             result.error = "Could not scroll to element"
-            return result
+            return outcome
         await page.wait_for_timeout(200)
 
         # Re-query the element after scroll — the reference can go stale
@@ -524,160 +573,202 @@ async def _explore_element(
                     )
 
             result.screenshots = kept_screenshots
-            screenshot_paths = [s.path for s in result.screenshots]
 
-        if visual_change_detected and len(screenshot_paths) >= 2 and ai_client:
-            elem_rect = None
-            if hasattr(elem, 'rect'):
-                elem_rect = elem.rect
-            elif isinstance(elem, dict):
-                elem_rect = elem.get('rect')
-
-            enhanced_paths = []
-            try:
-                from analysis.image_annotator import annotate_screenshot as _annotate
-                from PIL import Image as _PILImage
-
-                import re as _re
-                safe_id = _re.sub(r'[^\w\-]', '_', selector[:20])
-
-                for ss_idx, ss_path in enumerate(screenshot_paths):
-                    if elem_rect and elem_rect.get('width', 0) > 0:
-                        annotated = _annotate(
-                            ss_path,
-                            [{"rect": elem_rect, "_bb_label": 1}],
-                            f"p2_{safe_id}_{ss_idx}",
-                            elem_dir,
-                        )
-                        if annotated:
-                            enhanced_paths.append(annotated)
-
-                        try:
-                            img = _PILImage.open(ss_path)
-                            x = max(0, int(elem_rect['x']) - 50)
-                            y = max(0, int(elem_rect['y']) - 50)
-                            x2 = min(img.width, int(elem_rect['x'] + elem_rect['width']) + 50)
-                            y2 = min(img.height, int(elem_rect['y'] + elem_rect['height']) + 50)
-                            if x2 > x and y2 > y:
-                                cropped = img.crop((x, y, x2, y2))
-                                crop_path = ss_path.replace('.png', '_crop.png')
-                                cropped.save(crop_path)
-                                enhanced_paths.append(crop_path)
-                        except Exception:
-                            pass  # best-effort — fall through to original full screenshot if crop fails
-                    else:
-                        enhanced_paths.append(ss_path)
-            except ImportError:
-                logger.debug("PHASE 2: image_annotator not available, using raw screenshots")
-                enhanced_paths = screenshot_paths
-            except Exception as ann_err:
-                logger.warning("PHASE 2: Annotation failed for %s: %s", selector, ann_err)
-                enhanced_paths = screenshot_paths
-
-            if not enhanced_paths:
-                enhanced_paths = screenshot_paths
-
-            ai_screenshot_paths = enhanced_paths
-
-            labels = []
-            for s in result.screenshots:
-                labels.append(f"{s.state}: {s.description}")
-                if elem_rect and elem_rect.get('width', 0) > 0:
-                    labels.append(f"{s.state} (close-up crop of element)")
-            labels = labels[:len(ai_screenshot_paths)]
-
-            ai_result = await _ai_analyze_exploration(
-                ai_client, selector, text, last_action, ai_screenshot_paths, labels,
-            )
-            if not ai_result:
-                import asyncio as _aio
-                logger.info("PHASE 2: Retrying AI for %s after 5s...", selector)
-                await _aio.sleep(5)
-                ai_result = await _ai_analyze_exploration(
-                    ai_client, selector, text, last_action, ai_screenshot_paths, labels,
-                )
-
-            if ai_result:
-                result.interaction_response = ai_result.get("interaction_response", result.interaction_response)
-                result.new_elements = ai_result.get("new_elements_found", [])
-                result.focus_indicator_visible = ai_result.get("focus_indicator_visible", False)
-                result.state_change_detected = ai_result.get("state_change_detected", False)
-                result.accessibility_observations = ai_result.get("accessibility_observations", [])
-
-                # Reconcile contradiction: observed 2026-04-23 on a university site
-                # that the AI sometimes picks ``interaction_response=
-                # "focus_visible"`` (categorical) but sets
-                # ``focus_indicator_visible=false`` (boolean) in the
-                # same response -- two fields answering the same
-                # question with opposite answers. The categorical is
-                # the stronger signal (it's one of 13 enum values the
-                # AI chose ONE of), so promote the boolean to match
-                # when the categorical claims focus visibility. Also
-                # log so we can measure how often this fires.
-                if (
-                    result.interaction_response == "focus_visible"
-                    and not result.focus_indicator_visible
-                ):
-                    logger.info(
-                        "PHASE 2: reconciling contradiction on %s -- "
-                        "interaction_response=focus_visible but "
-                        "focus_indicator_visible was false; setting "
-                        "boolean to true to match categorical.",
-                        selector,
-                    )
-                    result.focus_indicator_visible = True
-                # Converse: if categorical is "none" and action was
-                # focus, there definitively was no visible indicator.
-                if (
-                    result.interaction_response == "none"
-                    and last_action == "focus"
-                    and result.focus_indicator_visible
-                ):
-                    logger.info(
-                        "PHASE 2: reconciling contradiction on %s -- "
-                        "interaction_response=none but "
-                        "focus_indicator_visible was true on a focus "
-                        "action; setting boolean to false.",
-                        selector,
-                    )
-                    result.focus_indicator_visible = False
-
-                if result.accessibility_observations:
-                    logger.info("PHASE 2: Observations for %s: %s",
-                                selector, "; ".join(result.accessibility_observations))
-            else:
-                logger.warning("PHASE 2: AI returned no result for %s after retry (%d screenshots)",
-                               selector, len(screenshot_paths))
-        elif not visual_change_detected and len(screenshot_paths) >= 1:
-            logger.info(
-                "PHASE 2: No visual change for %s — skipped LLM call (saved %d identical screenshots)",
-                selector,
-                len([s.path for s in result.screenshots]) - 1 if len(result.screenshots) > 1 else 0,
-            )
-        elif len(screenshot_paths) < 2:
-            if not result.error:
-                result.error = "All interactions failed — only initial screenshot captured"
-            logger.info("PHASE 2: Skipped AI analysis for %s — only %d screenshot(s)",
-                        selector, len(screenshot_paths))
-
-        # Try to close any opened menus/modals
-        if result.interaction_response in ("dropdown", "modal", "submenu", "overlay"):
-            try:
-                await page.keyboard.press("Escape")
-                await page.wait_for_timeout(300)
-                # Screenshot the closed state too
-                await _capture_state("after_escape", "After pressing Escape to close", "escape")
-            except Exception:
-                pass  # cleanup — best-effort Escape press to dismiss overlay, page state may be unrecoverable
+        outcome.last_action = last_action
+        outcome.visual_change_detected = visual_change_detected
 
     except Exception as e:
         result.error = str(e)
         logger.warning("PHASE 2: Error exploring %s: %s", selector, e)
 
-    logger.info("PHASE 2: Element %s — %d screenshots captured, response=%s",
-                selector, len(result.screenshots), result.interaction_response)
+    outcome.screenshot_count = screenshot_count
+    return outcome
 
-    return result
+
+async def _analyze_interaction(
+    page: Page,
+    elem: InventoryElement | dict,
+    ai_client: Any,
+    outcome: _InteractionOutcome,
+) -> None:
+    """AI analysis phase — runs OUTSIDE the interaction timeout guard.
+
+    The LLM call is bounded by the LLM client's own HTTP timeout, so a
+    slow-but-legitimate image analysis is never cancelled here.
+    """
+    result = outcome.result
+    selector = result.selector
+    text = result.text
+    last_action = outcome.last_action
+    visual_change_detected = outcome.visual_change_detected
+    elem_dir = outcome.elem_dir
+    screenshot_paths = [s.path for s in result.screenshots]
+
+    if visual_change_detected and len(screenshot_paths) >= 2 and ai_client:
+        elem_rect = None
+        if hasattr(elem, 'rect'):
+            elem_rect = elem.rect
+        elif isinstance(elem, dict):
+            elem_rect = elem.get('rect')
+
+        # Build image paths and their labels TOGETHER so the two lists
+        # can never disagree about which screenshot a label describes —
+        # mislabeled evidence is worse than unannotated evidence.
+        enhanced_paths: list[str] = []
+        labels: list[str] = []
+        try:
+            from analysis.image_annotator import annotate_screenshot as _annotate
+            from PIL import Image as _PILImage
+
+            import re as _re
+            safe_id = _re.sub(r'[^\w\-]', '_', selector[:20])
+
+            for ss_idx, ss in enumerate(result.screenshots):
+                ss_path = ss.path
+                base_label = f"{ss.state}: {ss.description}"
+                if elem_rect and elem_rect.get('width', 0) > 0:
+                    annotated = _annotate(
+                        ss_path,
+                        [{"rect": elem_rect, "_bb_label": 1}],
+                        f"p2_{safe_id}_{ss_idx}",
+                        elem_dir,
+                    )
+                    if annotated:
+                        enhanced_paths.append(annotated)
+                        labels.append(f"{base_label} (element outlined in red)")
+                    else:
+                        enhanced_paths.append(ss_path)
+                        labels.append(base_label)
+
+                    try:
+                        img = _PILImage.open(ss_path)
+                        x = max(0, int(elem_rect['x']) - 50)
+                        y = max(0, int(elem_rect['y']) - 50)
+                        x2 = min(img.width, int(elem_rect['x'] + elem_rect['width']) + 50)
+                        y2 = min(img.height, int(elem_rect['y'] + elem_rect['height']) + 50)
+                        if x2 > x and y2 > y:
+                            cropped = img.crop((x, y, x2, y2))
+                            crop_path = ss_path.replace('.png', '_crop.png')
+                            cropped.save(crop_path)
+                            enhanced_paths.append(crop_path)
+                            labels.append(f"{ss.state} (close-up crop of element)")
+                    except Exception:
+                        pass  # best-effort — fall through to original full screenshot if crop fails
+                else:
+                    enhanced_paths.append(ss_path)
+                    labels.append(base_label)
+        except ImportError:
+            logger.warning("PHASE 2: image_annotator not available, using raw screenshots")
+            enhanced_paths = []
+        except Exception as ann_err:
+            logger.warning("PHASE 2: Annotation failed for %s: %s", selector, ann_err)
+            enhanced_paths = []
+
+        if not enhanced_paths:
+            enhanced_paths = screenshot_paths
+            labels = [f"{s.state}: {s.description}" for s in result.screenshots]
+
+        ai_screenshot_paths = enhanced_paths
+
+        ai_result = await _ai_analyze_exploration(
+            ai_client, selector, text, last_action, ai_screenshot_paths, labels,
+        )
+        if not ai_result:
+            import asyncio as _aio
+            logger.info("PHASE 2: Retrying AI for %s after 5s...", selector)
+            await _aio.sleep(5)
+            ai_result = await _ai_analyze_exploration(
+                ai_client, selector, text, last_action, ai_screenshot_paths, labels,
+            )
+
+        if ai_result:
+            result.interaction_response = ai_result.get("interaction_response", result.interaction_response)
+            result.new_elements = ai_result.get("new_elements_found", [])
+            result.focus_indicator_visible = ai_result.get("focus_indicator_visible", False)
+            result.state_change_detected = ai_result.get("state_change_detected", False)
+            result.accessibility_observations = ai_result.get("accessibility_observations", [])
+
+            # Reconcile contradiction: observed 2026-04-23 on a university site
+            # that the AI sometimes picks ``interaction_response=
+            # "focus_visible"`` (categorical) but sets
+            # ``focus_indicator_visible=false`` (boolean) in the
+            # same response -- two fields answering the same
+            # question with opposite answers. The categorical is
+            # the stronger signal (it's one of 13 enum values the
+            # AI chose ONE of), so promote the boolean to match
+            # when the categorical claims focus visibility. Also
+            # log so we can measure how often this fires.
+            if (
+                result.interaction_response == "focus_visible"
+                and not result.focus_indicator_visible
+            ):
+                logger.info(
+                    "PHASE 2: reconciling contradiction on %s -- "
+                    "interaction_response=focus_visible but "
+                    "focus_indicator_visible was false; setting "
+                    "boolean to true to match categorical.",
+                    selector,
+                )
+                result.focus_indicator_visible = True
+            # Converse: if categorical is "none" and action was
+            # focus, there definitively was no visible indicator.
+            if (
+                result.interaction_response == "none"
+                and last_action == "focus"
+                and result.focus_indicator_visible
+            ):
+                logger.info(
+                    "PHASE 2: reconciling contradiction on %s -- "
+                    "interaction_response=none but "
+                    "focus_indicator_visible was true on a focus "
+                    "action; setting boolean to false.",
+                    selector,
+                )
+                result.focus_indicator_visible = False
+
+            if result.accessibility_observations:
+                logger.info("PHASE 2: Observations for %s: %s",
+                            selector, "; ".join(result.accessibility_observations))
+        else:
+            logger.warning("PHASE 2: AI returned no result for %s after retry (%d screenshots)",
+                           selector, len(screenshot_paths))
+    elif not visual_change_detected and len(screenshot_paths) >= 1:
+        logger.info(
+            "PHASE 2: No visual change for %s — skipped LLM call (saved %d identical screenshots)",
+            selector,
+            len([s.path for s in result.screenshots]) - 1 if len(result.screenshots) > 1 else 0,
+        )
+    elif len(screenshot_paths) < 2:
+        if not result.error:
+            result.error = "All interactions failed — only initial screenshot captured"
+        logger.info("PHASE 2: Skipped AI analysis for %s — only %d screenshot(s)",
+                    selector, len(screenshot_paths))
+
+    # Try to close any opened menus/modals. This is brief Playwright work
+    # running after the interaction guard, so give it its own small budget
+    # in case the renderer hung during the preceding AI wait.
+    if result.interaction_response in ("dropdown", "modal", "submenu", "overlay"):
+        try:
+            await asyncio.wait_for(
+                _escape_close(page, result, outcome), timeout=30,
+            )
+        except Exception:
+            pass  # cleanup — best-effort Escape press to dismiss overlay, page state may be unrecoverable
+
+
+async def _escape_close(page: Page, result: ExplorationResult, outcome: _InteractionOutcome) -> None:
+    """Press Escape to dismiss an overlay and screenshot the closed state."""
+    await page.keyboard.press("Escape")
+    await page.wait_for_timeout(300)
+    outcome.screenshot_count += 1
+    path = os.path.join(
+        outcome.elem_dir, f"{outcome.screenshot_count:02d}_after_escape.png",
+    )
+    await page.screenshot(path=path)
+    result.screenshots.append(StateScreenshot(
+        path=path, state="after_escape",
+        description="After pressing Escape to close", action_taken="escape",
+    ))
 
 
 async def _explore_depth(
@@ -687,7 +778,6 @@ async def _explore_depth(
     ai_client: Any,
     depth: int,
     explored_count: int,
-    original_url: str,
     progress_callback=None,
     explored_selectors: set[str] | None = None,
 ) -> list[ExplorationResult]:
@@ -732,48 +822,35 @@ async def _explore_depth(
         )
 
         try:
-            result = await asyncio.wait_for(
-                _explore_element(
-                    page, elem, explore_dir, ai_client,
-                    depth=depth, explored_count=explored_count + len(results),
-                    original_url=original_url,
-                ),
-                timeout=120,
+            result = await _explore_element(
+                page, elem, explore_dir, ai_client,
+                depth=depth, explored_count=explored_count + len(results),
             )
         except asyncio.TimeoutError:
             sel = elem_dict.get("selector", "?")
             txt = elem_dict.get("text", "?")
             logger.error(
                 "PHASE 2 DEPTH %d: TIMEOUT exploring \"%s\" (%s) "
-                "(stuck >120s). Skipping this submenu element.",
-                depth, txt, sel,
+                "(Playwright interaction stuck >%ds). Skipping this submenu element.",
+                depth, txt, sel, INTERACTION_TIMEOUT_S,
             )
             result = ExplorationResult(
-                selector=sel, text=txt, depth=depth,
-                error=f"Timeout after 120s at depth {depth}",
+                selector=sel, text=txt,
+                element_type=elem_dict.get("type", ""), depth=depth,
+                error=f"Timeout after {INTERACTION_TIMEOUT_S}s at depth {depth}",
             )
         results.append(result)
         explored_selectors.add(elem_dict.get("selector", ""))
 
-        # Recurse if more new elements found
+        # Recurse if more new elements found. No batch-level wait_for —
+        # see the depth-exploration comment in run_phase2.
         if result.new_elements and depth + 1 <= MAX_DEPTH:
-            try:
-                sub_results = await asyncio.wait_for(
-                    _explore_depth(
-                        page, result.new_elements, explore_dir, ai_client,
-                        depth=depth + 1, explored_count=explored_count + len(results),
-                        original_url=original_url, progress_callback=progress_callback,
-                        explored_selectors=explored_selectors,
-                    ),
-                    timeout=300,
-                )
-            except asyncio.TimeoutError:
-                logger.error(
-                    "PHASE 2 DEPTH %d: TIMEOUT in sub-depth exploration "
-                    "(stuck >300s). Skipping deeper levels.",
-                    depth + 1,
-                )
-                sub_results = []
+            sub_results = await _explore_depth(
+                page, result.new_elements, explore_dir, ai_client,
+                depth=depth + 1, explored_count=explored_count + len(results),
+                progress_callback=progress_callback,
+                explored_selectors=explored_selectors,
+            )
             results.extend(sub_results)
 
     return results
@@ -978,6 +1055,7 @@ def _result_to_dict(r: ExplorationResult) -> dict:
     return {
         "selector": r.selector,
         "text": r.text,
+        "type": r.element_type,
         "depth": r.depth,
         "screenshot_count": len(r.screenshots),
         "screenshots": [

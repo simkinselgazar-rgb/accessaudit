@@ -85,7 +85,7 @@
     "FALSE POSITIVE: flagging an <img> or <svg> as 'decorative but has an accessible name' when the element has a real accessible name (alt attribute, aria-label, aria-labelledby, or <title> child). If it has a name, it is NOT decorative -- do not cite it as both."
   ],
   "examples": {
-    "pass": "An image of the town hall has alt='Richlands Town Hall, a two-story brick building with white columns at the entrance on Main Street'",
+    "pass": "An image of the town hall has alt='Town Hall, a two-story brick building with white columns at the entrance on Main Street'",
     "fail": "An image of the town hall has no alt attribute — screen readers will announce the filename 'DSC_0042.jpg' or nothing",
     "partial": "Most images have alt text but 3 out of 20 images have filename-like alt text ('header-bg.png') instead of descriptions"
   }

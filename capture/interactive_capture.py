@@ -29,6 +29,8 @@ async def _safe_goto(page, url, timeout=60000):
 
 from playwright.async_api import Page
 
+from functions.js_helpers import GET_SELECTOR_JS
+from functions.selectors import selector_within
 from models import CaptureData
 
 logger = logging.getLogger(__name__)
@@ -50,11 +52,23 @@ TRAP_CONSECUTIVE_THRESHOLD = 5
 # elements on every focus change (SPAs with live carousels, dynamic
 # iframes) can keep producing *new* selectors every iteration, which
 # evades the trap detectors and burns the full 1800s outer timeout.
-# Observed on a university run, 2026-04-23: tab_walk ran 30 min without tripping
+# Observed on a university site 2026-04-23: tab_walk ran 30 min without tripping
 # any existing trap detector. Iteration cap is the backstop.
 MAX_TAB_ITERATIONS = 1000
 TRAP_CYCLE_LENGTH = 2
 TRAP_CYCLE_REPEATS = 5
+
+# Native inputs whose internal segments/spinners each consume a Tab
+# press while resolving to the SAME host selector, so they legitimately
+# appear several times in a row in the tab walk. That is normal
+# browser behavior (continued Tab DOES leave the field), NOT a keyboard
+# trap, so they are exempt from the frequency-cycle trap detector.
+# Verified: a native <input type="date"> was falsely reported as a
+# 2.1.2 keyboard trap ("received focus 4 times") on the Trattoria
+# fixture because month/day/year segments each register on #rdate.
+_SEGMENTED_INPUT_TYPES = frozenset({
+    "date", "time", "datetime-local", "week", "month", "number", "range",
+})
 
 # WCAG 1.4.12 text spacing CSS overrides
 TEXT_SPACING_CSS = """
@@ -206,6 +220,45 @@ _CLOSE_CHECK_JS = r"""
 }
 """
 
+# Selector builder shared by the four focus-walk probes (_tab_walk,
+# _backward_tab_walk, _tab_coverage_comparison, and the arrow-key
+# probe's _active_selector). Deliberately NOT
+# functions.js_helpers.GET_SELECTOR_JS: these walks must see focus
+# inside shadow roots, so the path hops through ShadowRoot.host and
+# marks crossings with ' >>> ' — a format the canonical getSelector
+# doesn't produce. The four call sites diff each other's selectors,
+# so they must share ONE implementation (a drifted copy in
+# _tab_coverage_comparison used to emit ' > >>> > ' instead of
+# ' >>> ' and broke the apples-to-apples diff against tab_walk).
+_UNIQUE_SELECTOR_SHADOW_JS = r"""
+function uniqueSelector(node) {
+    if (!node || node === document.body) return 'body';
+    if (node.id) return '#' + node.id;
+    const parts = [];
+    let cur = node;
+    while (cur && cur !== document.body && cur !== document.documentElement) {
+        if (cur.id) { parts.unshift('#' + cur.id); break; }
+        const tag = cur.tagName ? cur.tagName.toLowerCase() : '';
+        if (!tag) break;
+        const parent = cur.parentNode;
+        const sibs = parent && parent.children ? Array.from(parent.children) : [];
+        const sameTag = sibs.filter(n => n.tagName === cur.tagName);
+        const idx = sameTag.indexOf(cur) + 1;
+        parts.unshift(sameTag.length > 1 ? tag + ':nth-of-type(' + idx + ')' : tag);
+        if (parent instanceof ShadowRoot) {
+            // Hop to the host element and prepend a shadow crossing
+            // marker so the selector is readable.
+            parts.unshift('>>>');
+            cur = parent.host;
+        } else {
+            cur = parent;
+        }
+        if (!cur) break;
+    }
+    return parts.join(' > ').replace(/ > >>> > /g, ' >>> ');
+}
+"""
+
 
 async def run_interactive_tests(
     page: Page,
@@ -281,7 +334,7 @@ async def run_interactive_tests(
         a different URL -- activating a skip link, submitting a form, or
         following a link as part of its probe. Every later capture
         (focus_contrast, widget_keyboard, focus_content, ...) would then
-        read the WRONG page. Verified bug (a university run 20260519):
+        read the WRONG page. Verified bug (a university-site run 20260519):
         focus_contrast captured a different site's DOM after a
         mid-sequence navigation. _verify_or_recover_page only re-navigates
         on a dead bridge, not on URL drift -- this closes that gap.
@@ -452,8 +505,8 @@ async def run_interactive_tests(
     # the DOM clearly has focusable elements -- the walk likely ran before the
     # page settled or while a focus-capturing interstitial (e.g. a bot
     # challenge) was up. A second pass after a short settle usually succeeds
-    # and prevents keyboard SCs from resting on a 0%-coverage walk (verified
-    # a university run, 2026-05-29: a Cloudflare interstitial yielded a 0-real-stop walk).
+    # and prevents keyboard SCs from resting on a 0%-coverage walk (verified on
+    # a university site 2026-05-29: a Cloudflare interstitial yielded a 0-real-stop walk).
     _non_body = [t for t in (capture_data.tab_walk or []) if t.get("tag") != "body"]
     if not _non_body:
         try:
@@ -578,7 +631,7 @@ async def _probe_autoplay_media(page: Page, capture_data) -> None:
     """Deterministic DOM probe for autoplay audio/video.
 
     Replaces the prior Gemma E4B audio-LLM call (which never actually
-    received audio -- mlx-vlm at port 11804 strips the audio track from
+    received audio -- some local multimodal servers strip the audio track from
     video uploads, so the model only saw frames; combined with Playwright's
     video recording producing webm with no audio stream at all, the LLM
     call was an architectural no-op and frequently got cancelled).
@@ -718,6 +771,15 @@ async def _tab_walk(
         tab_order: list[dict] = []
         traps: list[dict] = []
         recent_selectors: list[str] = []
+        # Selectors of native segmented/spinner inputs seen in the walk;
+        # the frequency-cycle detector exempts these (their internal
+        # segments repeat the host selector but aren't a trap).
+        segmented_input_selectors: set[str] = set()
+        # Separate window that DOES include body hits — used only by the
+        # density-based chrome-cycle stop below. Keeping body out of
+        # recent_selectors means the trap detectors can never emit a
+        # spurious trap naming <body> (matches the backward walk).
+        recent_tab_outcomes: list[str] = []
         consecutive_body = 0
 
         i = 0
@@ -762,7 +824,7 @@ async def _tab_walk(
             await page.keyboard.press("Tab")
             await page.wait_for_timeout(100)
 
-            info = await page.evaluate("""() => {
+            info = await page.evaluate("() => {" + _UNIQUE_SELECTOR_SHADOW_JS + """
                 // Descend through every shadow root so focus inside a
                 // web component (Canvas/Instructure-UI, SIDEARM, Lit)
                 // is seen, not reported as <body>.
@@ -789,39 +851,6 @@ async def _tab_walk(
                 const hasShadow = boxShadow !== 'none' && boxShadow !== '';
                 const hasBorder = borderWidth !== '0px' && borderColor !== '';
                 const isVisible = hasOutline || hasShadow || hasBorder;
-                // Build a selector that's unique per DOM element and that
-                // crosses shadow-root boundaries with ' >>> '. A simple
-                // parentNode walk stops at ShadowRoot; we hop through
-                // ShadowRoot.host so the path reflects the real DOM
-                // hierarchy, including shadow-wrapped components.
-                function uniqueSelector(node) {
-                    if (!node || node === document.body) return 'body';
-                    if (node.id) return '#' + node.id;
-                    const parts = [];
-                    let cur = node;
-                    let crossedShadow = false;
-                    while (cur && cur !== document.body && cur !== document.documentElement) {
-                        if (cur.id) { parts.unshift('#' + cur.id); break; }
-                        const tag = cur.tagName ? cur.tagName.toLowerCase() : '';
-                        if (!tag) break;
-                        const parent = cur.parentNode;
-                        const sibs = parent && parent.children ? Array.from(parent.children) : [];
-                        const sameTag = sibs.filter(n => n.tagName === cur.tagName);
-                        const idx = sameTag.indexOf(cur) + 1;
-                        parts.unshift(sameTag.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
-                        if (parent instanceof ShadowRoot) {
-                            // Hop to the host element and prepend a shadow
-                            // crossing marker so the selector is readable.
-                            crossedShadow = true;
-                            parts.unshift('>>>');
-                            cur = parent.host;
-                        } else {
-                            cur = parent;
-                        }
-                        if (!cur) break;
-                    }
-                    return parts.join(' > ').replace(/ > >>> > /g, ' >>> ');
-                }
                 const selector = uniqueSelector(el);
                 // Detect whether focus is currently inside a shadow root
                 // (caller uses this to flag SCs that evaluate shadow-DOM
@@ -830,6 +859,7 @@ async def _tab_walk(
                 const inShadow = rootNode && rootNode.host !== undefined;
                 return {
                     tag: el.tagName.toLowerCase(),
+                    type: (el.getAttribute('type') || '').toLowerCase(),
                     role: el.getAttribute('role') || '',
                     text: (el.textContent || '').trim(),
                     selector: selector,
@@ -852,17 +882,17 @@ async def _tab_walk(
             # consecutive_body never reaches 3 yet the walk clearly has
             # finished enumerating focusable elements and is now looping.
             # A density-based stop (body >= 30% of last 20 tabs) catches
-            # this pattern immediately. Observed on a university run, 2026-04-23:
+            # this pattern immediately. Observed on a university site 2026-04-23:
             # tab_walk ran 7000+ iterations in 30 min without tripping any
             # existing detector.
             if info["tag"] == "body":
                 consecutive_body += 1
-                recent_selectors.append("body")
+                recent_tab_outcomes.append("body")
                 if consecutive_body >= 3:
                     break
                 # Density stop: body dominates the recent window.
-                if len(recent_selectors) >= 20:
-                    window = recent_selectors[-20:]
+                if len(recent_tab_outcomes) >= 20:
+                    window = recent_tab_outcomes[-20:]
                     body_hits = sum(1 for s in window if s == "body")
                     if body_hits >= 6:  # 30% of last 20 tabs
                         logger.info(
@@ -871,11 +901,18 @@ async def _tab_walk(
                             i, body_hits,
                         )
                         break
+                # Reset the trap-detection window — passing through body
+                # is normal browser behavior, not a trap. Same rule as
+                # the backward walk.
+                recent_selectors = []
                 continue
             consecutive_body = 0
 
             tab_order.append(info)
             recent_selectors.append(info["selector"])
+            recent_tab_outcomes.append(info["selector"])
+            if info.get("tag") == "input" and info.get("type") in _SEGMENTED_INPUT_TYPES:
+                segmented_input_selectors.add(info["selector"])
 
             # --- Full-wrap detection ---
             # When focus wraps from the last focusable element back to
@@ -929,6 +966,17 @@ async def _tab_walk(
                     pass
                 break
 
+            # Native segmented/spinner inputs (date/time/number/…) focus
+            # their internal segments on successive Tabs, all resolving to
+            # the host selector — so they repeat both consecutively AND by
+            # frequency. Continued Tab DOES leave the field, so this is not
+            # a keyboard trap. Skip ALL trap detectors for this iteration
+            # (covers the consecutive, cycle, and frequency detectors below
+            # in one place). i is incremented at the top of the loop, so a
+            # bare continue is correct.
+            if info.get("tag") == "input" and info.get("type") in _SEGMENTED_INPUT_TYPES:
+                continue
+
             # --- Trap detection ---
             # Consecutive same element (only across a body-free run).
             if len(recent_selectors) >= TRAP_CONSECUTIVE_THRESHOLD:
@@ -968,7 +1016,16 @@ async def _tab_walk(
                 last_n = recent_selectors[-8:]
                 counts = Counter(last_n)
                 most_common_sel, most_common_count = counts.most_common(1)[0]
-                if most_common_count >= 4:
+                if most_common_count >= 4 and most_common_sel in segmented_input_selectors:
+                    # Native segmented input (date/time/number/…): the
+                    # internal segments repeat the host selector but
+                    # continued Tab leaves the field — not a trap.
+                    logger.debug(
+                        "Tab walk: %s repeated %d× but is a native segmented "
+                        "input — not a keyboard trap, skipping",
+                        most_common_sel, most_common_count,
+                    )
+                elif most_common_count >= 4:
                     trap_record = {
                         "type": "frequency_cycle",
                         "selector": most_common_sel,
@@ -990,7 +1047,7 @@ async def _tab_walk(
                     # walk. If it fails after one attempt, only THEN
                     # mark the walk halted-by-trap. This produces real
                     # tab-coverage data on pages that have a single
-                    # cycle followed by reachable content (the university
+                    # cycle followed by reachable content (a university site's
                     # Lorem-Ipsum-ID cycle is the canonical case).
                     pre_recovery_count = len(tab_order)
                     recovery_succeeded = False
@@ -1079,6 +1136,7 @@ async def _backward_tab_walk(
         tab_order: list[dict] = []
         traps: list[dict] = []
         recent_selectors: list[str] = []
+        segmented_input_selectors: set[str] = set()
         consecutive_body = 0
 
         i = 0
@@ -1111,7 +1169,7 @@ async def _backward_tab_walk(
             await page.keyboard.press("Shift+Tab")
             await page.wait_for_timeout(100)
 
-            info = await page.evaluate("""() => {
+            info = await page.evaluate("() => {" + _UNIQUE_SELECTOR_SHADOW_JS + """
                 function deepActiveElement() {
                     let el = document.activeElement;
                     while (el && el.shadowRoot && el.shadowRoot.activeElement) {
@@ -1131,40 +1189,12 @@ async def _backward_tab_walk(
                 const hasShadow = boxShadow !== 'none' && boxShadow !== '';
                 const hasBorder = borderWidth !== '0px';
                 const isVisible = hasOutline || hasShadow || hasBorder;
-                // See forward _tab_walk for why this must be a structural
-                // path, not tagName + first-className (which aliases
-                // siblings to the same string and fakes keyboard traps).
-                // Shadow-root crossings use ' >>> ' markers so components
-                // appear in the path instead of disappearing.
-                function uniqueSelector(node) {
-                    if (!node || node === document.body) return 'body';
-                    if (node.id) return '#' + node.id;
-                    const parts = [];
-                    let cur = node;
-                    while (cur && cur !== document.body && cur !== document.documentElement) {
-                        if (cur.id) { parts.unshift('#' + cur.id); break; }
-                        const tag = cur.tagName ? cur.tagName.toLowerCase() : '';
-                        if (!tag) break;
-                        const parent = cur.parentNode;
-                        const sibs = parent && parent.children ? Array.from(parent.children) : [];
-                        const sameTag = sibs.filter(n => n.tagName === cur.tagName);
-                        const idx = sameTag.indexOf(cur) + 1;
-                        parts.unshift(sameTag.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
-                        if (parent instanceof ShadowRoot) {
-                            parts.unshift('>>>');
-                            cur = parent.host;
-                        } else {
-                            cur = parent;
-                        }
-                        if (!cur) break;
-                    }
-                    return parts.join(' > ').replace(/ > >>> > /g, ' >>> ');
-                }
                 const selector = uniqueSelector(el);
                 let rootNode = el.getRootNode ? el.getRootNode() : document;
                 const inShadow = rootNode && rootNode.host !== undefined;
                 return {
                     tag: el.tagName.toLowerCase(),
+                    type: (el.getAttribute('type') || '').toLowerCase(),
                     role: el.getAttribute('role') || '',
                     text: (el.textContent || '').trim(),
                     selector: selector,
@@ -1190,6 +1220,8 @@ async def _backward_tab_walk(
 
             tab_order.append(info)
             recent_selectors.append(info["selector"])
+            if info.get("tag") == "input" and info.get("type") in _SEGMENTED_INPUT_TYPES:
+                segmented_input_selectors.add(info["selector"])
 
             # --- Full-wrap detection ---
             # Same rationale as the forward walk: pages that wrap focus
@@ -1222,6 +1254,17 @@ async def _backward_tab_walk(
                     except AttributeError:
                         pass
                 break
+
+            # Native segmented/spinner inputs (date/time/number/…) focus
+            # their internal segments on successive Tabs, all resolving to
+            # the host selector — so they repeat both consecutively AND by
+            # frequency. Continued Tab DOES leave the field, so this is not
+            # a keyboard trap. Skip ALL trap detectors for this iteration
+            # (covers the consecutive, cycle, and frequency detectors below
+            # in one place). i is incremented at the top of the loop, so a
+            # bare continue is correct.
+            if info.get("tag") == "input" and info.get("type") in _SEGMENTED_INPUT_TYPES:
+                continue
 
             # --- Trap detection ---
             # Consecutive same element (only across a body-free run).
@@ -1260,7 +1303,15 @@ async def _backward_tab_walk(
                 last_n = recent_selectors[-8:]
                 counts = Counter(last_n)
                 most_common_sel, most_common_count = counts.most_common(1)[0]
-                if most_common_count >= 4:
+                if most_common_count >= 4 and most_common_sel in segmented_input_selectors:
+                    # Native segmented input — internal segments repeat the
+                    # host selector but continued Tab leaves it; not a trap.
+                    logger.debug(
+                        "Backward walk: %s repeated %d× but is a native "
+                        "segmented input — skipping trap",
+                        most_common_sel, most_common_count,
+                    )
+                elif most_common_count >= 4:
                     traps.append({
                         "type": "frequency_cycle",
                         "selector": most_common_sel,
@@ -1329,34 +1380,11 @@ async def _tab_coverage_comparison(
     "unreached" entries.
     """
     try:
-        result = await page.evaluate("""() => {
+        result = await page.evaluate("() => {" + _UNIQUE_SELECTOR_SHADOW_JS + """
             // Selector builder MUST match the one in _tab_walk so the
             // diff against capture_data.tab_walk is apples-to-apples.
             // (Structural nth-of-type path, ID shortcut, shadow DOM
             // crossing markers.)
-            function uniqueSelector(node) {
-                if (!node || node === document.body) return 'body';
-                if (node.id) return '#' + node.id;
-                const parts = [];
-                let cur = node;
-                while (cur && cur !== document.body && cur !== document.documentElement) {
-                    if (cur.id) { parts.unshift('#' + cur.id); break; }
-                    const tag = cur.tagName ? cur.tagName.toLowerCase() : '';
-                    if (!tag) break;
-                    const parent = cur.parentNode;
-                    const sibs = parent && parent.children ? Array.from(parent.children) : [];
-                    const sameTag = sibs.filter(n => n.tagName === cur.tagName);
-                    const idx = sameTag.indexOf(cur) + 1;
-                    parts.unshift(sameTag.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
-                    if (parent instanceof ShadowRoot) {
-                        parts.unshift('>>>');
-                        cur = parent.host;
-                    } else {
-                        cur = parent;
-                    }
-                }
-                return parts.join(' > ');
-            }
 
             function isVisible(el) {
                 const style = getComputedStyle(el);
@@ -1820,7 +1848,7 @@ async def _probe_widget_keyboard_behavior(
     async def _active_selector() -> str | None:
         try:
             return await page.evaluate(
-                """() => {
+                "() => {" + _UNIQUE_SELECTOR_SHADOW_JS + """
                     let el = document.activeElement;
                     while (el && el.shadowRoot && el.shadowRoot.activeElement) {
                         el = el.shadowRoot.activeElement;
@@ -1829,28 +1857,15 @@ async def _probe_widget_keyboard_behavior(
                     // Same selector builder as _tab_walk so the probe's
                     // before/after comparisons stay aligned with the
                     // existing reached_selectors set.
-                    function uniq(node) {
-                        if (!node || node === document.body) return 'body';
-                        if (node.id) return '#' + node.id;
-                        const parts = [];
-                        let cur = node;
-                        while (cur && cur !== document.body && cur !== document.documentElement) {
-                            if (cur.id) { parts.unshift('#' + cur.id); break; }
-                            const tag = cur.tagName ? cur.tagName.toLowerCase() : '';
-                            if (!tag) break;
-                            const parent = cur.parentNode;
-                            const sibs = parent && parent.children ? Array.from(parent.children) : [];
-                            const sameTag = sibs.filter(n => n.tagName === cur.tagName);
-                            const idx = sameTag.indexOf(cur) + 1;
-                            parts.unshift(sameTag.length > 1 ? tag + ':nth-of-type(' + idx + ')' : tag);
-                            if (parent instanceof ShadowRoot) { parts.unshift('>>>'); cur = parent.host; } else { cur = parent; }
-                        }
-                        return parts.join(' > ');
-                    }
-                    return uniq(el);
+                    return uniqueSelector(el);
                 }"""
             )
         except Exception:
+            logger.warning(
+                "Arrow-key probe: active-element selector read failed for "
+                "target %s — treating focus position as unknown",
+                target_selector, exc_info=True,
+            )
             return None
 
     async def _press(key: str) -> None:
@@ -1874,6 +1889,11 @@ async def _probe_widget_keyboard_behavior(
             await page.wait_for_timeout(50)
             return bool(ok)
         except Exception:
+            logger.warning(
+                "Arrow-key probe: focus() attempt failed for %s — probe "
+                "will report 'could not focus target'",
+                target_selector, exc_info=True,
+            )
             return False
 
     async def _run_probe() -> None:
@@ -2065,7 +2085,11 @@ async def _recorded_keyboard_walkthrough(
             # or consecutive duplicates indicate the tab order has cycled.
             walk_consec_body = 0
             walk_consec_dup = 0
-            walk_prev_selector = ""
+            # Duplicate budget granted after a trap recovery: the outer
+            # loop must re-traverse already-seen tab stops (from the top
+            # of the page after a reload / click-outside) without the
+            # cycle detector reading that re-traversal as a focus trap.
+            walk_dup_grace = 0
             while True:
                 await rec_page.keyboard.press("Tab")
                 await rec_page.wait_for_timeout(ACTION_WAIT)
@@ -2094,7 +2118,7 @@ async def _recorded_keyboard_walkthrough(
                 # leaves focus momentarily lost. Treating a single
                 # body-hit as end-of-walkthrough terminates the walk
                 # prematurely after exploring one widget (observed on
-                # a university run, 2026-04-24: walkthrough stopped at 15 actions
+                # a university site 2026-04-24: walkthrough stopped at 15 actions
                 # right after entering a widget, Arrow-Down-exploring,
                 # and Escape-ing out). Give focus several chances to
                 # recover; only call the walk done when we've been on
@@ -2126,6 +2150,11 @@ async def _recorded_keyboard_walkthrough(
                 # the tab order has cycled and further Tab presses will
                 # only revisit covered elements.
                 if sel in seen_selectors:
+                    if walk_dup_grace > 0:
+                        # Post-recovery re-traversal of known tab stops —
+                        # not a cycle.
+                        walk_dup_grace -= 1
+                        continue
                     walk_consec_dup += 1
                     # 20 consecutive already-seen focuses = confident cycle
                     if walk_consec_dup >= 20:
@@ -2137,6 +2166,7 @@ async def _recorded_keyboard_walkthrough(
                         break
                     continue
                 walk_consec_dup = 0
+                walk_dup_grace = 0
                 seen_selectors.add(sel)
 
                 # ── Activate interactive elements ────────────
@@ -2302,6 +2332,13 @@ async def _recorded_keyboard_walkthrough(
                             arrow_seen.add(cur_sel)
                             arrow_prev = cur_sel
 
+                    if opened_overlay:
+                        # Shared dismiss verification for BOTH overlay
+                        # kinds. Modals used to skip this entirely, so a
+                        # modal that ignored Escape never produced an
+                        # escape_result entry and could never be reported
+                        # as a trap (the walkthrough_traps synthesis keys
+                        # off escape_result).
                         await rec_page.keyboard.press("Escape")
                         await rec_page.wait_for_timeout(ACTION_WAIT)
                         walkthrough_log.append({"action": "escape", "element": sel})
@@ -2353,6 +2390,7 @@ async def _recorded_keyboard_walkthrough(
                         walkthrough_log.append({
                             "action": "escape_result",
                             "element": sel,
+                            "overlay_kind": overlay_kind,
                             "focus_after_escape": focus_returned,
                             # focus_is_trigger is the AUTHORITATIVE answer
                             # SC 2.4.3 needs -- did focus stay on the same
@@ -2505,11 +2543,64 @@ async def _recorded_keyboard_walkthrough(
 
                         if (still_open or expanded_after == "true") and not exit_via_tab:
                             logger.warning(
-                                "Keyboard TRAP: '%s' did not close after Escape AND "
-                                "focus could not exit via Tab after 5 presses "
+                                "Keyboard TRAP: '%s' (%s) did not close after Escape "
+                                "AND focus could not exit via Tab "
                                 "(aria-expanded=%s, still_open=%s)",
-                                sel, expanded_after, still_open,
+                                sel, overlay_kind, expanded_after, still_open,
                             )
+                            # The overlay is still open AND focus cannot
+                            # leave it. Without recovery, the outer Tab
+                            # loop would cycle inside the overlay until
+                            # the 20-duplicate detector terminated the
+                            # WHOLE walkthrough — the trap is already
+                            # recorded via escape_result above, so now
+                            # recover and keep walking. Escape already
+                            # failed: try clicking outside the overlay
+                            # (mirrors the reset_state pattern in
+                            # _capture_keyboard_roundtrip), then reload
+                            # as the last resort (mirrors the _safe_goto
+                            # recovery used by the media walkthroughs).
+                            recovery_method = "click_outside"
+                            recovered = False
+                            try:
+                                await rec_page.mouse.click(2, 2)
+                                await rec_page.wait_for_timeout(ACTION_WAIT)
+                                after_click = await rec_page.evaluate(_OVERLAY_SNAPSHOT_JS)
+                                recovered = (
+                                    after_click.get("open_count", 0)
+                                    <= overlay_before.get("open_count", 0)
+                                )
+                            except Exception:
+                                logger.warning(
+                                    "Walkthrough trap recovery: click outside "
+                                    "'%s' failed", sel, exc_info=True,
+                                )
+                            if not recovered:
+                                recovery_method = "reload"
+                                try:
+                                    await _safe_goto(rec_page, current_url, timeout=60000)
+                                    await rec_page.wait_for_timeout(2000)
+                                    await rec_page.evaluate("document.body.focus()")
+                                    recovered = True
+                                except Exception:
+                                    logger.warning(
+                                        "Walkthrough trap recovery: reload after "
+                                        "trap on '%s' failed", sel, exc_info=True,
+                                    )
+                            walkthrough_log.append({
+                                "action": "trap_recovery",
+                                "element": sel,
+                                "overlay_kind": overlay_kind,
+                                "method": recovery_method,
+                                "recovered": recovered,
+                            })
+                            if recovered:
+                                # Let the outer loop re-traverse the
+                                # already-seen tab stops (focus restarts
+                                # at the top after click-outside/reload)
+                                # without tripping the cycle detector.
+                                walk_consec_dup = 0
+                                walk_dup_grace = len(seen_selectors) + 10
                         elif (still_open or expanded_after == "true") and exit_via_tab:
                             logger.info(
                                 "Non-standard exit: '%s' ignored Escape but focus "
@@ -2656,15 +2747,18 @@ async def _recorded_keyboard_walkthrough(
             if not (still_open or expanded_after == "true"):
                 continue
             sel_trap = entry.get("element") or "element"
+            overlay_kind = entry.get("overlay_kind") or "dropdown"
+            kind_word = "Modal" if overlay_kind == "modal" else "Dropdown"
             if exit_via_tab:
                 walkthrough_traps.append({
                     "type": "non_standard_exit",
                     "selector": sel_trap,
+                    "overlay_kind": overlay_kind,
                     "can_exit": True,
                     "exit_instructions": "",
                     "description": (
-                        f"Dropdown '{sel_trap}' did not close on Escape; focus "
-                        f"escaped via Tab after "
+                        f"{kind_word} '{sel_trap}' did not close on Escape; "
+                        f"focus escaped via Tab after "
                         f"{entry.get('tab_presses_to_exit', 0)} press(es). "
                         f"Passes 2.1.2 but the non-standard exit path is "
                         f"not advertised to the user."
@@ -2672,12 +2766,16 @@ async def _recorded_keyboard_walkthrough(
                 })
             else:
                 walkthrough_traps.append({
-                    "type": "dropdown_escape_failed",
+                    "type": (
+                        "modal_escape_failed" if overlay_kind == "modal"
+                        else "dropdown_escape_failed"
+                    ),
                     "selector": sel_trap,
+                    "overlay_kind": overlay_kind,
                     "can_exit": False,
                     "description": (
-                        f"Dropdown '{sel_trap}' did not close after Escape "
-                        f"AND focus could not exit via Tab after 5 presses. "
+                        f"{kind_word} '{sel_trap}' did not close after Escape "
+                        f"AND focus could not exit via Tab. "
                         f"Keyboard-only users are stuck inside this widget."
                     ),
                 })
@@ -2709,7 +2807,7 @@ async def _focus_indicator_screenshots(
     both screenshots, producing byte-identical pairs. The downstream
     visual AI was then asked "is the focus visible?" looking at two
     copies of the same image and would hallucinate "yes" most of the
-    time (observed: 34/38 pairs identical on a university site, 26 of which had a
+    time (observed: 34/38 pairs identical on a large public university site, 26 of which had a
     real outline that was cropped, 8 were genuine SC 2.4.7 failures).
 
     Fix:
@@ -3195,7 +3293,7 @@ async def _text_spacing_overflow(
             // "loss of content or functionality"; carousels still scroll
             // and still display the same content with text spacing applied,
             // so flagging them produces FALSE POSITIVES (observed on a
-            // university glide.js main-slider sW=3156 cW=526 and the campus
+            // university site's glide.js main-slider sW=3156 cW=526 and the campus
             // carousel sW=9808 cW=1280).
             // We climb up looking for ARIA carousel signals or the
             // glide/swiper/slick class names; if any ancestor matches,
@@ -3872,6 +3970,9 @@ async def _transcript_verification(
                         # Try by text content
                         el = page.get_by_text(btn_text).first
                 except Exception:
+                    # fallback — selector lookup failed (invalid/stale
+                    # selector); retry by visible text, click below
+                    # reports failure if that also misses
                     el = page.get_by_text(btn_text).first
 
                 if el:
@@ -4471,20 +4572,16 @@ async def _skip_link_verification(
         # this, a single bad click handler (infinite-loop JS, blocked
         # navigation, modal that swallows focus) hangs Playwright's
         # bridge and poisons every subsequent interactive test.
-        # Observed on fairfaxva.gov: a single skip_links candidate
+        # Observed on a municipal government site: a single skip_links candidate
         # wedged the bridge for 49 minutes until the outer timeout
         # fired, then all downstream tests inherited a dead page.
-        MAX_CANDIDATES = 25  # pathological pages list 50+ "skip" hits
+        # Every candidate is probed — no count cap. The per-candidate
+        # timeout above already bounds the cost of pathological pages
+        # with 50+ "skip" hits, and dropping candidates hides real
+        # SC 2.4.1 evidence.
         PER_CANDIDATE_TIMEOUT = 30
-        truncated_candidates = False
-        if len(candidates) > MAX_CANDIDATES:
-            logger.info(
-                "Skip links: %d candidates found, processing first %d "
-                "(pathological page or false-positive selectors)",
-                len(candidates), MAX_CANDIDATES,
-            )
-            candidates = candidates[:MAX_CANDIDATES]
-            truncated_candidates = True
+        probed_selectors: list[str] = []
+        bridge_abort = False
         for cand in candidates:
             sel = cand.get("selector", "")
             href = cand.get("href", "")
@@ -4492,6 +4589,7 @@ async def _skip_link_verification(
             if not sel or not href:
                 continue
 
+            probed_selectors.append(sel)
             try:
                 await asyncio.wait_for(
                     _probe_one_skip_link(
@@ -4531,13 +4629,16 @@ async def _skip_link_verification(
                         "unresponsive after candidate timeout, "
                         "aborting remaining candidates"
                     )
+                    bridge_abort = True
                     break
 
         capture_data.skip_link_results = results
-        if truncated_candidates:
-            results_meta = getattr(capture_data, "skip_link_meta", {}) or {}
-            results_meta["candidates_truncated_at"] = MAX_CANDIDATES
-            capture_data.skip_link_meta = results_meta
+        capture_data.skip_link_meta = {
+            "candidates_found": len(candidates),
+            "candidates_probed": len(probed_selectors),
+            "probed_selectors": probed_selectors,
+            "aborted_bridge_unresponsive": bridge_abort,
+        }
 
         # Record first-tabstop context at the capture_data level so
         # SC 2.4.1's check can detect the "no skip link at all" case
@@ -4564,6 +4665,68 @@ async def _skip_link_verification(
 
 
 # ─── Form submission test ────────────────────────────────────────────────────
+
+# Post-submit accessibility probe for a form's error state. Measures the
+# fields the SC 3.3.x readers (checks/checks_3_3.py, checks/base.py form-error
+# renderer) consume: live-region presence, programmatic error association,
+# aria-invalid usage, and any visible error text on the page.
+_FORM_ERROR_A11Y_PROBE_JS = """(sel) => {
+    const form = document.querySelector(sel);
+    if (!form) return null;
+    const isVisible = (el) => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0
+            && s.display !== 'none' && s.visibility !== 'hidden';
+    };
+    let hasAriaLive = false, hasRoleAlert = false;
+    const visibleErrorText = [];
+    for (const el of document.querySelectorAll('[role="alert"]')) {
+        const t = (el.textContent || '').trim();
+        if (t) { hasRoleAlert = true; visibleErrorText.push(t); }
+    }
+    for (const el of document.querySelectorAll('[aria-live]:not([aria-live="off"])')) {
+        const t = (el.textContent || '').trim();
+        if (t) { hasAriaLive = true; visibleErrorText.push(t); }
+    }
+    for (const el of form.querySelectorAll('.error, .invalid, .is-invalid, .field-error')) {
+        const t = (el.textContent || '').trim();
+        if (t && isVisible(el)) visibleErrorText.push(t);
+    }
+    let programmaticAssociation = false;
+    let hasAriaInvalid = false;
+    for (const el of form.querySelectorAll('input, select, textarea')) {
+        if (el.getAttribute('aria-invalid') === 'true') hasAriaInvalid = true;
+        const refIds = ((el.getAttribute('aria-describedby') || '') + ' '
+            + (el.getAttribute('aria-errormessage') || '')).trim().split(/\\s+/).filter(Boolean);
+        for (const id of refIds) {
+            const target = document.getElementById(id);
+            if (target && (target.textContent || '').trim()) {
+                programmaticAssociation = true;
+                break;
+            }
+        }
+    }
+    return {
+        has_aria_live: hasAriaLive,
+        has_role_alert: hasRoleAlert,
+        programmatic_association: programmaticAssociation,
+        has_aria_invalid: hasAriaInvalid,
+        visible_error_text: visibleErrorText,
+    };
+}"""
+
+
+async def _probe_form_error_a11y(page: Page, sel: str) -> dict:
+    """Run the post-submit error-state probe; {} when the form vanished
+    or the evaluate failed (missing keys mean "not measured" downstream).
+    """
+    try:
+        return await page.evaluate(_FORM_ERROR_A11Y_PROBE_JS, sel) or {}
+    except Exception:
+        logger.warning("Form error a11y probe failed for %s", sel, exc_info=True)
+        return {}
+
 
 async def _form_submission_test(
     page: Page,
@@ -4677,6 +4840,10 @@ async def _form_submission_test(
                     }));
                 }""", sel)
 
+                # Probe the error state BEFORE the recovery fill mutates it —
+                # these are the fields the SC 3.3.x readers consume.
+                a11y_probe = await _probe_form_error_a11y(page, sel)
+
                 # Error recovery test (3.3.1/3.3.3/3.3.4): fill valid values
                 # and check if error state clears properly
                 recovery_data = {}
@@ -4713,12 +4880,32 @@ async def _form_submission_test(
                 except Exception:
                     logger.debug("Form recovery test failed for %s", sel)
 
-                results.append({
+                entry = {
                     "form_selector": sel,
+                    "selector": sel,
                     "error_screenshot": error_path,
                     "validation_messages": validation,
                     "recovery_state": recovery_data,
-                })
+                }
+                native_text = any(
+                    (vm.get("validationMessage") or "").strip()
+                    for vm in (validation or [])
+                )
+                if native_text:
+                    entry["has_text_description"] = True
+                elif a11y_probe:
+                    entry["has_text_description"] = bool(
+                        a11y_probe.get("visible_error_text"),
+                    )
+                # else: probe failed and no native text — leave the key
+                # absent so readers treat it as "not measured".
+                # Probe fields are only recorded when measured; readers
+                # treat a missing key as "not measured", never as False.
+                for key in ("has_aria_live", "has_role_alert",
+                            "programmatic_association", "has_aria_invalid"):
+                    if key in a11y_probe:
+                        entry[key] = bool(a11y_probe[key])
+                results.append(entry)
             except Exception:
                 logger.debug("Form submission test failed for form %s", form_info.get("selector"))
 
@@ -4735,15 +4922,12 @@ async def _context_change_detection(
 ) -> None:
     """Select the second option in <select> elements and check for URL changes."""
     try:
-        selects = await page.evaluate("""() => {
+        selects = await page.evaluate("() => {" + GET_SELECTOR_JS + """
             return Array.from(document.querySelectorAll('select'))
                 .filter(el => !el.disabled && !el.closest('fieldset[disabled]'))
                 .map((el, i) => {
-                    let selector = 'select';
-                    if (el.id) selector = '#' + el.id;
-                    else if (el.name) selector = 'select[name="' + el.name + '"]';
                     const options = Array.from(el.options).map(o => ({value: o.value, text: o.text}));
-                    return {selector, options, index: i};
+                    return {selector: getSelector(el), options, index: i};
                 });
         }""")
 
@@ -5170,14 +5354,34 @@ async def _capture_form_errors(
                     };
                 }""", sel)
 
-                results.append({
+                entry = {
                     "form_selector": sel,
+                    "selector": sel,
                     "submit_method": submitted,
                     "before_screenshot": before_path,
                     "after_screenshot": after_path,
                     "required_fields": form_info.get("requiredFields", []),
                     "error_state": error_state,
-                })
+                }
+                a11y_probe = await _probe_form_error_a11y(page, sel)
+                error_state = error_state or {}
+                native_text = any(
+                    (fe.get("validationMessage") or "").strip()
+                    for fe in (error_state.get("fieldErrors") or [])
+                )
+                if native_text or error_state.get("errorMessages"):
+                    entry["has_text_description"] = True
+                elif a11y_probe:
+                    entry["has_text_description"] = bool(
+                        a11y_probe.get("visible_error_text"),
+                    )
+                # else: not measured — key stays absent so readers
+                # render "unknown" instead of failing the SC.
+                for key in ("has_aria_live", "has_role_alert",
+                            "programmatic_association", "has_aria_invalid"):
+                    if key in a11y_probe:
+                        entry[key] = bool(a11y_probe[key])
+                results.append(entry)
 
                 url_after = page.url
                 if url_after != url_before:
@@ -5341,6 +5545,7 @@ async def _capture_focus_content(
 
 _MODAL_TRIGGER_INVENTORY_JS = r"""
 () => {
+""" + GET_SELECTOR_JS + r"""
     // Find every element that looks like a modal trigger. We cast a
     // wide net -- the cost of testing a false positive (element that
     // does nothing on Enter) is a recorded "did not open" result,
@@ -5351,23 +5556,6 @@ _MODAL_TRIGGER_INVENTORY_JS = r"""
         if (el.offsetParent === null && cs.position !== 'fixed') return false;
         const r = el.getBoundingClientRect();
         return r.width > 0 && r.height > 0;
-    }
-    function uniqueSelector(node) {
-        if (!node) return '';
-        if (node.id) return '#' + node.id;
-        const parts = [];
-        let cur = node;
-        while (cur && cur !== document.body && cur !== document.documentElement) {
-            if (cur.id) { parts.unshift('#' + cur.id); break; }
-            const tag = cur.tagName ? cur.tagName.toLowerCase() : '';
-            if (!tag) break;
-            const sibs = cur.parentNode ? Array.from(cur.parentNode.children) : [];
-            const sameTag = sibs.filter(n => n.tagName === cur.tagName);
-            const idx = sameTag.indexOf(cur) + 1;
-            parts.unshift(sameTag.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
-            cur = cur.parentNode;
-        }
-        return parts.join(' > ');
     }
 
     const triggerSelectors = [
@@ -5407,7 +5595,7 @@ _MODAL_TRIGGER_INVENTORY_JS = r"""
                 }
             }
             triggers.push({
-                selector: uniqueSelector(el),
+                selector: getSelector(el),
                 text: (el.textContent || '').trim(),
                 aria_haspopup: el.getAttribute('aria-haspopup') || '',
                 aria_controls: controlsId || '',
@@ -5705,6 +5893,7 @@ async def _capture_modal_interactions(
 
 _KB_ROUNDTRIP_INVENTORY_JS = r"""
 () => {
+""" + GET_SELECTOR_JS + r"""
     function isVisible(el) {
         const cs = getComputedStyle(el);
         if (cs.display === 'none' || cs.visibility === 'hidden') return false;
@@ -5712,23 +5901,6 @@ _KB_ROUNDTRIP_INVENTORY_JS = r"""
         if (el.offsetParent === null && cs.position !== 'fixed') return false;
         const r = el.getBoundingClientRect();
         return r.width > 1 && r.height > 1;
-    }
-    function uniqueSelector(node) {
-        if (!node) return '';
-        if (node.id) return node.tagName.toLowerCase() + '#' + node.id;
-        const parts = [];
-        let cur = node;
-        while (cur && cur !== document.body && cur !== document.documentElement) {
-            if (cur.id) { parts.unshift(cur.tagName.toLowerCase() + '#' + cur.id); break; }
-            const tag = cur.tagName ? cur.tagName.toLowerCase() : '';
-            if (!tag) break;
-            const sibs = cur.parentNode ? Array.from(cur.parentNode.children) : [];
-            const sameTag = sibs.filter(n => n.tagName === cur.tagName);
-            const idx = sameTag.indexOf(cur) + 1;
-            parts.unshift(sameTag.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
-            cur = cur.parentNode;
-        }
-        return parts.join(' > ');
     }
 
     // Candidate triggers: things that can accept Enter and might open
@@ -5775,7 +5947,7 @@ _KB_ROUNDTRIP_INVENTORY_JS = r"""
             const ariaHaspopup = el.getAttribute('aria-haspopup') || '';
 
             candidates.push({
-                selector: uniqueSelector(el),
+                selector: getSelector(el),
                 tag: tag,
                 role: el.getAttribute('role') || '',
                 href: el.getAttribute('href') || '',
@@ -5795,6 +5967,7 @@ _KB_ROUNDTRIP_INVENTORY_JS = r"""
 
 _KB_DOM_SIGNATURE_JS = r"""
 () => {
+""" + GET_SELECTOR_JS + r"""
     // Lightweight DOM signature so we can detect whether Enter caused
     // a meaningful change. Counts visible focusables, visible-text
     // length, open-popover/dialog roles, aria-expanded=true count.
@@ -5824,9 +5997,7 @@ _KB_DOM_SIGNATURE_JS = r"""
     const active = document.activeElement;
     let activeSel = '';
     if (active && active !== document.body) {
-        if (active.id) activeSel = active.tagName.toLowerCase() + '#' + active.id;
-        else activeSel = active.tagName.toLowerCase()
-            + (active.className ? '.' + (typeof active.className === 'string' ? active.className.trim().split(/\s+/).join('.') : '') : '');
+        activeSel = getSelector(active);
     }
     return {
         focusables: visibleFocusables,
@@ -5995,6 +6166,42 @@ async def _capture_keyboard_roundtrip(
         logger.exception("Keyboard roundtrip probe failed")
 
 
+_FOCUS_WITHIN_CONTAINER_JS = r"""
+(sel) => {
+    let container = null;
+    try { container = document.querySelector(sel); } catch (e) { return null; }
+    if (!container) return null;
+    let a = document.activeElement;
+    while (a && a.shadowRoot && a.shadowRoot.activeElement) {
+        a = a.shadowRoot.activeElement;
+    }
+    if (!a || a === document.body || a === document.documentElement) return false;
+    return container === a || container.contains(a);
+}
+"""
+
+
+async def _focus_within_container(page: Page, container_selector: str) -> bool | None:
+    """DOM-truth containment: is the focused element inside the container?
+
+    Returns True/False from ``container.contains(activeElement)``, or
+    None when the container selector no longer resolves (DOM mutated,
+    invalid selector) so the caller can fall back to structural
+    selector matching (``functions.selectors.selector_within``).
+    Focus on <body>/<html>/nothing counts as escaped, never inside.
+    """
+    if not container_selector:
+        return None
+    try:
+        return await page.evaluate(_FOCUS_WITHIN_CONTAINER_JS, container_selector)
+    except Exception:
+        logger.warning(
+            "focus-within-container probe failed for %s",
+            container_selector, exc_info=True,
+        )
+        return None
+
+
 async def _probe_one_keyboard_roundtrip(
     page: Page,
     cand: dict,
@@ -6085,7 +6292,7 @@ async def _probe_one_keyboard_roundtrip(
 
     # Something opened. Identify the open container if possible.
     open_target = await page.evaluate(
-        r"""() => {
+        "() => {" + GET_SELECTOR_JS + r"""
             function isVisible(el) {
                 if (!el) return false;
                 const cs = getComputedStyle(el);
@@ -6099,13 +6306,7 @@ async def _probe_one_keyboard_roundtrip(
                 + '[aria-expanded="true"]'
             );
             for (const el of cands) {
-                if (isVisible(el)) {
-                    if (el.id) return el.tagName.toLowerCase() + '#' + el.id;
-                    return el.tagName.toLowerCase()
-                        + (el.className && typeof el.className === 'string'
-                           ? '.' + el.className.trim().split(/\s+/).join('.')
-                           : '');
-                }
+                if (isVisible(el)) return getSelector(el);
             }
             return '';
         }"""
@@ -6119,7 +6320,7 @@ async def _probe_one_keyboard_roundtrip(
     # tab_stays_inside=None so the SC 2.1.2 finding extractor skips
     # this candidate. Earlier behaviour: treated empty open_target as
     # "perpetually inside" and produced HIGH 2.1.2 false positives on
-    # a university's #pauseHeroVid (toggles the video's play state without
+    # a university site's #pauseHeroVid (toggles the video's play state without
     # opening any UI) and the inline header search button.
     if not open_target:
         entry["tab_steps_inside"] = 0
@@ -6133,9 +6334,16 @@ async def _probe_one_keyboard_roundtrip(
                 await asyncio.sleep(0.2)
                 sig_step = await page.evaluate(_KB_DOM_SIGNATURE_JS)
                 active = sig_step.get("active_selector", "") or ""
-                # If active is inside the opened container OR is still
-                # within an aria-expanded subtree, count as "inside".
-                inside = bool(open_target in active or active in open_target)
+                # DOM-truth containment first (container.contains(active)).
+                # Falls back to structural selector matching when the
+                # container selector no longer resolves. Either way an
+                # empty/body active selector counts as ESCAPED — the old
+                # raw-substring test ('' in open_target) counted focus on
+                # <body> as "inside" and let prefix-sharing selectors
+                # (#nav vs #nav2) false-match.
+                inside = await _focus_within_container(page, open_target)
+                if inside is None:
+                    inside = selector_within(active, open_target)
                 if not inside:
                     # Focus moved out of the opened thing
                     seen_inside = False
@@ -6426,6 +6634,11 @@ async def _ai_discover_widgets(
         }""")
     except Exception:
         dom_snippet = {}
+        logger.warning(
+            "Widget DOM snapshot failed — AI arrow-key prompt will lack "
+            "widget_elements/trigger_elements evidence for this page",
+            exc_info=True,
+        )
 
     known_lines = [
         f"- {w.get('type')} @ {w.get('selector')} "
@@ -6489,7 +6702,7 @@ async def _ai_discover_widgets(
             # Resolve first item and count items via live DOM.
             try:
                 item_sels = await page.evaluate(
-                    """(container, first) => {
+                    """(container) => {
                         const c = document.querySelector(container);
                         if (!c) return [];
                         // Child items by role or focusable tag
@@ -6508,9 +6721,13 @@ async def _ai_discover_widgets(
                                 : t;
                         });
                     }""",
-                    sel, first_sel,
+                    sel,
                 )
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "Widget item enumeration failed for %s: %s -- falling back to first item only",
+                    sel, exc,
+                )
                 item_sels = [first_sel] if first_sel else []
 
             if not item_sels:
@@ -6795,7 +7012,12 @@ async def _ai_keyboard_exploration_loop(
             verdict = r["_verdict"]
             fc = fail_counts[sel]
             if verdict == "FAIL" and fc > 1:
-                verdict = f"FAIL (tried {fc}×) — confirmed no ARIA keyboard support"
+                verdict = (
+                    f"FAIL (tried {fc}×) — APG pattern keys unresponsive. "
+                    "Not by itself an SC 2.1.1 violation: the widget may "
+                    "still operate via Enter/Space/Tab, and the widget-type "
+                    "label may be a heuristic guess"
+                )
             keys_str = ", ".join(str(k) for k in keys) if keys else "none"
             summary_lines.append(
                 f"  {wtype}{ai_tag} @ {sel}: [{keys_str}] → {verdict}"
@@ -7201,7 +7423,7 @@ async def _capture_widget_keyboard(
                 # respond to Escape by collapsing.
                 for key in keys_to_test:
                     try:
-                        state_before = await page.evaluate("""(sel, attr) => {
+                        state_before = await page.evaluate("""(attr) => {
                             const el = document.activeElement;
                             if (!el) return {focused: null, state: null};
                             let s = el.tagName.toLowerCase();
@@ -7211,7 +7433,7 @@ async def _capture_widget_keyboard(
                                 state: el.getAttribute(attr) || '',
                                 text: (el.textContent || '').trim(),
                             };
-                        }""", first_item_sel, state_attr)
+                        }""", state_attr)
 
                         await page.keyboard.press(key)
                         await page.wait_for_timeout(400)
@@ -7249,10 +7471,15 @@ async def _capture_widget_keyboard(
                             "after": state_after,
                             "responded": focus_moved or state_changed,
                         })
-                    except Exception:
+                    except Exception as exc:
+                        logger.warning(
+                            "Widget key probe failed (key=%s, widget=%s): %s",
+                            key, widget_result.get("selector", "?"), exc,
+                        )
                         widget_result["key_results"].append({
                             "key": key,
                             "error": True,
+                            "error_detail": str(exc),
                             "responded": False,
                         })
 
@@ -7384,7 +7611,9 @@ async def _capture_reduced_motion(
             "reduced_details": reduced_data.get("details", []),
         }
 
-        await page.emulate_media(reduced_motion=None)
+        # Playwright treats reduced_motion=None as "leave unchanged";
+        # "null" is the documented reset back to system default.
+        await page.emulate_media(reduced_motion="null")
 
         elapsed = time.monotonic() - t0
         logger.info(
@@ -7394,6 +7623,6 @@ async def _capture_reduced_motion(
     except Exception:
         logger.exception("Reduced motion capture failed")
         try:
-            await page.emulate_media(reduced_motion=None)
+            await page.emulate_media(reduced_motion="null")
         except Exception:
             pass  # cleanup — best-effort restore of media emulation, page state may be unrecoverable

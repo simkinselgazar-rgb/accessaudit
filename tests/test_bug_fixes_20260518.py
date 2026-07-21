@@ -1,4 +1,4 @@
-"""Regression tests for the six bugs found auditing the loudoun.gov
+"""Regression tests for the six bugs found auditing a county-government-site
 WCAG 2.2 AAA run 20260518_190643_88c447ff.
 
 Each test pins one verified failure so it cannot silently return:
@@ -55,8 +55,8 @@ def test_repd_style_iframe_detected_by_title():
     """The verified miss: a video iframe on a non-hardcoded host whose
     title carries a media word."""
     iframe = {
-        "src": "https://embed.repd.us/loudoun-county?clientId=292",
-        "title": "Repd Video Guide Embed for Loudoun County",
+        "src": "https://embed.repd.us/example-county?clientId=292",
+        "title": "Repd Video Guide Embed for Example County",
     }
     assert _iframe_is_media_candidate(iframe) is True
 
@@ -105,13 +105,13 @@ def test_page_has_media_iframe():
 
 def test_media_scs_applicable_with_video_iframe():
     """The end-to-end fix: with a video iframe present (and media[]
-    empty, as on loudoun.gov), the media SCs must report applicable so
+    empty, as on a county-government site), the media SCs must report applicable so
     the judge runs — A-level 1.2.1 and AAA-level 1.2.6 alike."""
     cd = CaptureData()
     cd.media = []
     cd.iframes = [{
-        "src": "https://embed.repd.us/loudoun-county",
-        "title": "Repd Video Guide Embed for Loudoun County",
+        "src": "https://embed.repd.us/example-county",
+        "title": "Repd Video Guide Embed for Example County",
     }]
     assert Check_1_2_1().is_applicable(cd) is True
     assert Check_1_2_6().is_applicable(cd) is True
@@ -199,7 +199,7 @@ def test_bug6_position_fixed_kept_when_fixed_elements_exist():
 def test_bug4_no_h1_finding_dropped_when_h1_exists():
     cd = CaptureData()
     cd.headings = [
-        {"tag": "span", "level": 1, "text": "Loudoun County Virginia"},
+        {"tag": "span", "level": 1, "text": "Example County Virginia"},
         {"tag": "h2", "level": 2, "text": "News"},
     ]
     findings = [_f("The page contains headings but lacks an <h1> element")]

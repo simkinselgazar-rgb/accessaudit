@@ -79,8 +79,41 @@ _EXTRACT_JS = r"""
                 opacity: cs.opacity,
             };
         } catch (_) {
-            return {};
+            // null (not {}) so callers can tell "style read failed"
+            // apart from "styles read fine".
+            return null;
         }
+    }
+
+    function resolveLabelledby(el, aria) {
+        const ids = (aria['aria-labelledby'] || '').split(/\s+/).filter(Boolean);
+        if (!ids.length) return '';
+        const root = el.getRootNode() || document;
+        const parts = [];
+        for (const id of ids) {
+            const ref = root.getElementById ? root.getElementById(id) : null;
+            if (ref) {
+                const t = (ref.textContent || '').trim();
+                if (t) parts.push(t);
+            }
+        }
+        return parts.join(' ');
+    }
+
+    const NAME_FROM_CONTENT_TAGS = ['a', 'button', 'summary', 'label', 'legend', 'option',
+                                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    const NAME_FROM_CONTENT_ROLES = ['link', 'button', 'heading', 'menuitem', 'tab',
+                                     'option', 'checkbox', 'radio', 'switch', 'treeitem'];
+
+    function computeAccessibleName(el, tag, role, text, aria) {
+        const name = resolveLabelledby(el, aria)
+            || el.ariaLabel || aria['aria-label']
+            || el.getAttribute('alt') || el.getAttribute('title') || '';
+        if (name) return name;
+        if (NAME_FROM_CONTENT_TAGS.includes(tag) || NAME_FROM_CONTENT_ROLES.includes(role)) {
+            return text;
+        }
+        return '';
     }
 
     function getAriaAttrs(el) {
@@ -109,14 +142,18 @@ _EXTRACT_JS = r"""
             tag: tag,
             role: role,
             text: text,
-            accessible_name: el.ariaLabel || aria['aria-label'] || el.getAttribute('alt') || el.getAttribute('title') || '',
+            accessible_name: computeAccessibleName(el, tag, role, text, aria),
             aria: aria,
             selector: fullSelector,
             shadow_host: hostSel,
             shadow_depth: depth,
             rect: rect,
-            computed_styles: styles,
-            visible: styles.display !== 'none' && styles.visibility !== 'hidden' && parseFloat(styles.opacity || '1') > 0,
+            computed_styles: styles || {},
+            // null = unknown (style read failed). Readers skip elements
+            // only on `visible is False`, so unknown stays audited.
+            visible: styles
+                ? (styles.display !== 'none' && styles.visibility !== 'hidden' && parseFloat(styles.opacity || '1') > 0)
+                : null,
             id: el.id || '',
             name: el.getAttribute('name') || '',
         };

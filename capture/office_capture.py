@@ -15,6 +15,22 @@ from models import CaptureData
 logger = logging.getLogger(__name__)
 
 
+def capture_office(file_path: str, review_dir: str) -> CaptureData:
+    """Capture a DOCX/XLSX/PPTX document, dispatching by file extension.
+
+    Raises ValueError for unsupported extensions so callers surface the
+    unhandled type instead of silently skipping the document.
+    """
+    ext = Path(file_path).suffix.lower()
+    if ext == ".docx":
+        return capture_docx(file_path, review_dir)
+    if ext == ".xlsx":
+        return capture_xlsx(file_path, review_dir)
+    if ext == ".pptx":
+        return capture_pptx(file_path, review_dir)
+    raise ValueError(f"Unsupported office document type '{ext}': {file_path}")
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 #  DOCX capture
 # ═════════════════════════════════════════════════════════════════════════════
@@ -137,17 +153,27 @@ def capture_docx(file_path: str, review_dir: str) -> CaptureData:
             elif text:
                 body_html_parts.append(f"<p>{_escape(text)}</p>")
 
-            # Links in runs
-            for run in para.runs:
-                try:
-                    for rel in run.part.rels.values():
-                        if "hyperlink" in str(rel.reltype).lower():
-                            links.append({
-                                "text": run.text.strip(),
-                                "href": rel.target_ref or "",
-                            })
-                except Exception:
-                    pass  # best-effort — skip run if its relationship table is unreadable
+            # Hyperlinks — pair each w:hyperlink element's own text with
+            # its own resolved target. (A previous per-run loop over the
+            # part-level rels table produced one bogus (text, href) pair
+            # per run x relationship, and the href dedup below then
+            # suppressed the correct extraction.)
+            try:
+                for hl in para.hyperlinks:
+                    href = hl.address or ""
+                    if not href and hl.fragment:
+                        href = f"#{hl.fragment}"
+                    if href:
+                        links.append({
+                            "text": (hl.text or "").strip(),
+                            "href": href,
+                        })
+            except Exception:
+                logger.warning(
+                    "DOCX hyperlink extraction failed for paragraph %r",
+                    text,
+                    exc_info=True,
+                )
 
         # ── Hyperlinks from relationships ────────────────────────────
         try:

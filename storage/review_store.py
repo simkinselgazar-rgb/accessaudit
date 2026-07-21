@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,6 +13,33 @@ from config import REVIEWS_DIR
 from models import ReviewMeta, TestResult
 
 logger = logging.getLogger(__name__)
+
+RUNNING_STATUSES = (
+    "queued", "capturing", "testing", "generating_report", "crawling",
+    "aggregating", "reviewing", "selecting", "authenticating",
+    "testing_documents",
+)
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Write content to path atomically (temp file + os.replace).
+
+    A concurrent reader never sees a half-written file: it reads either
+    the old complete content or the new complete content.
+    """
+    fd, tmp_name = tempfile.mkstemp(
+        dir=str(path.parent), prefix=path.name + ".", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp_name, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass  # temp file already replaced or never created
+        raise
 
 
 def ensure_reviews_dir() -> Path:
@@ -40,7 +69,7 @@ def create_review(meta: ReviewMeta) -> Path:
 def save_meta(review_dir: Path, meta: ReviewMeta) -> None:
     """Save review metadata."""
     meta_path = review_dir / "meta.json"
-    meta_path.write_text(json.dumps(meta.to_dict(), indent=2, default=str))
+    _atomic_write_text(meta_path, json.dumps(meta.to_dict(), indent=2, default=str))
 
 
 def load_meta(review_dir: Path) -> ReviewMeta:
@@ -48,7 +77,7 @@ def load_meta(review_dir: Path) -> ReviewMeta:
     meta_path = review_dir / "meta.json"
     if not meta_path.exists():
         raise FileNotFoundError(f"No meta.json in {review_dir}")
-    data = json.loads(meta_path.read_text())
+    data = json.loads(meta_path.read_text(encoding="utf-8"))
     meta = ReviewMeta()
     for k, v in data.items():
         if hasattr(meta, k):
@@ -61,7 +90,7 @@ def save_test_result(review_dir: Path, result: TestResult) -> None:
     criterion_dir = review_dir / "tests" / result.criterion_id.replace(".", "_")
     criterion_dir.mkdir(parents=True, exist_ok=True)
     result_path = criterion_dir / "result.json"
-    result_path.write_text(json.dumps(result.to_dict(), indent=2, default=str))
+    _atomic_write_text(result_path, json.dumps(result.to_dict(), indent=2, default=str))
 
 
 def load_test_result(review_dir: Path, criterion_id: str) -> dict | None:
@@ -70,7 +99,7 @@ def load_test_result(review_dir: Path, criterion_id: str) -> dict | None:
     result_path = criterion_dir / "result.json"
     if not result_path.exists():
         return None
-    return json.loads(result_path.read_text())
+    return json.loads(result_path.read_text(encoding="utf-8"))
 
 
 def load_all_test_results(review_dir: Path) -> list[dict]:
@@ -83,7 +112,7 @@ def load_all_test_results(review_dir: Path) -> list[dict]:
         if criterion_dir.is_dir():
             result_path = criterion_dir / "result.json"
             if result_path.exists():
-                results.append(json.loads(result_path.read_text()))
+                results.append(json.loads(result_path.read_text(encoding="utf-8")))
     return results
 
 
@@ -101,14 +130,16 @@ def save_ai_response(review_dir: Path, criterion_id: str, response: str) -> None
     """Save raw AI response."""
     criterion_dir = review_dir / "tests" / criterion_id.replace(".", "_")
     criterion_dir.mkdir(parents=True, exist_ok=True)
-    (criterion_dir / "ai_response.txt").write_text(response)
+    (criterion_dir / "ai_response.txt").write_text(response, encoding="utf-8")
 
 
 def save_programmatic_data(review_dir: Path, criterion_id: str, data: dict) -> None:
     """Save programmatic check data."""
     criterion_dir = review_dir / "tests" / criterion_id.replace(".", "_")
     criterion_dir.mkdir(parents=True, exist_ok=True)
-    (criterion_dir / "programmatic_data.json").write_text(json.dumps(data, indent=2, default=str))
+    (criterion_dir / "programmatic_data.json").write_text(
+        json.dumps(data, indent=2, default=str), encoding="utf-8"
+    )
 
 
 def save_user_decision(review_dir: Path, criterion_id: str, finding_id: str,
@@ -119,13 +150,13 @@ def save_user_decision(review_dir: Path, criterion_id: str, finding_id: str,
     decisions_path = criterion_dir / "user_decisions.json"
     decisions = {}
     if decisions_path.exists():
-        decisions = json.loads(decisions_path.read_text())
+        decisions = json.loads(decisions_path.read_text(encoding="utf-8"))
     decisions[finding_id] = {
         "status": status,
         "reason": reason,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    decisions_path.write_text(json.dumps(decisions, indent=2))
+    decisions_path.write_text(json.dumps(decisions, indent=2), encoding="utf-8")
 
 
 def load_user_decisions(review_dir: Path, criterion_id: str) -> dict:
@@ -134,7 +165,7 @@ def load_user_decisions(review_dir: Path, criterion_id: str) -> dict:
     decisions_path = criterion_dir / "user_decisions.json"
     if not decisions_path.exists():
         return {}
-    return json.loads(decisions_path.read_text())
+    return json.loads(decisions_path.read_text(encoding="utf-8"))
 
 
 def list_reviews() -> list[ReviewMeta]:
@@ -147,6 +178,10 @@ def list_reviews() -> list[ReviewMeta]:
                 meta = load_meta(review_dir)
                 reviews.append(meta)
             except Exception:
+                logger.warning(
+                    "list_reviews: skipping %s -- could not read %s",
+                    review_dir, review_dir / "meta.json", exc_info=True,
+                )
                 continue
     return reviews
 
@@ -157,7 +192,7 @@ def delete_review(review_id: str) -> bool:
     if not review_dir.exists():
         return False
     meta = load_meta(review_dir)
-    if meta.status in ("capturing", "testing", "generating_report", "crawling", "aggregating"):
+    if meta.status in RUNNING_STATUSES:
         return False
     shutil.rmtree(review_dir, ignore_errors=True)
     return True
@@ -172,7 +207,7 @@ def delete_all_reviews() -> tuple[int, int]:
         if review_dir.is_dir():
             try:
                 meta = load_meta(review_dir)
-                if meta.status in ("capturing", "testing", "generating_report", "crawling", "aggregating"):
+                if meta.status in RUNNING_STATUSES:
                     skipped += 1
                     continue
             except Exception:

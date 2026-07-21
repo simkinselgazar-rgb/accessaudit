@@ -46,6 +46,12 @@ from functions.keyboard_probe import widget_probe_errored
 
 logger = logging.getLogger(__name__)
 
+# Chunked visual-AI sizing — shared by run_ai_analysis (chunking trigger)
+# and _chunked_visual_analysis (chunk construction) so the trigger
+# threshold and the chunker's batch size always agree.
+VISUAL_ELEMENT_CHUNK_SIZE = 50   # elements per chunk
+VISUAL_IMAGE_BATCH_SIZE = 15     # extra images per chunk
+
 
 def _extract_readable_scripts(html: str, raw_script_content: str) -> str:
     """Extract human-readable JavaScript from the page for code AI analysis.
@@ -142,7 +148,7 @@ class BaseCheck:
     # review these are deterministically marked Not Applicable for the
     # review's scope -- a one-page evaluation has nothing to compare, and
     # asking the judge to rule on them produced ungrounded "Supports"
-    # verdicts (verified on fairfaxva.gov run 20260515_230613_ff643865).
+    # verdicts (verified on a municipal government site, run 20260515_230613_ff643865).
     requires_multipage: bool = False
 
     # Set True on success criteria whose APPLICABILITY depends on page
@@ -173,7 +179,7 @@ class BaseCheck:
         "2.5.3",   # Label in Name — visible text ⊂ accessible name
         "3.3.2",   # Labels or Instructions — form label presence
         "2.3.1",   # Three Flashes — mathematical frame analysis (when data exists)
-        # ── Promoted to definitive 2026-04-29 after a university + a community college verification ──
+        # ── Promoted to definitive 2026-04-29 after university-site + community-college-site verification ──
         # The AI repeatedly produced the SAME false-positive patterns on
         # both sites (carousel "no alternative" with prev/next visible,
         # orientation lock hallucinations, target-size flagging despite
@@ -252,7 +258,7 @@ class BaseCheck:
     # multi-source majority vote. A source returning a verdict below
     # this floor is effectively saying "I don't know" -- including it
     # as a vote is dishonest and lets low-confidence noise outvote
-    # high-confidence honest verdicts (verified on fairfaxva.gov run
+    # high-confidence honest verdicts (verified on a municipal government site, run
     # 20260514_205147_cb3b646c SC 3.2.6: Visual AI returned NA at 1.0
     # but Programmatic 0.3 + Code AI 0.75 overrode it to Supports).
     _VOTE_CONFIDENCE_FLOOR: float = 0.5
@@ -363,6 +369,10 @@ class BaseCheck:
         start = time.monotonic()
         is_fast = self.criterion_id in self.PROGRAMMATIC_DEFINITIVE
         path_label = "FAST" if is_fast else "FULL"
+        # Set by _execute_programmatic_fast_path; read by
+        # _adjust_confidence_and_flag_review so "the AI sources were
+        # skipped by design" is not penalized or review-flagged.
+        self._fast_path_taken = False
 
         logger.info(
             "━━━ SC %s (%s) — Level %s — %s PATH ━━━",
@@ -427,7 +437,7 @@ class BaseCheck:
                 result.programmatic_confidence = 1.0
                 result.ai_conformance = ConformanceLevel.NOT_APPLICABLE
                 result.ai_confidence = 1.0
-                result.tt_results = self._generate_tt_results([], capture_data)
+                result.tt_results = self._generate_na_tt_results(capture_data)
             elif (self.web_only and _is_document) or _keyword_gate_na:
                 logger.info("SC %s: NOT APPLICABLE", self.criterion_id)
                 result.conformance_level = ConformanceLevel.NOT_APPLICABLE
@@ -440,7 +450,7 @@ class BaseCheck:
                 result.programmatic_confidence = 1.0
                 result.ai_conformance = ConformanceLevel.NOT_APPLICABLE
                 result.ai_confidence = 1.0
-                result.tt_results = self._generate_tt_results([], capture_data)
+                result.tt_results = self._generate_na_tt_results(capture_data)
             else:
                 result = await self.execute(capture_data, ai_client)
         except Exception as exc:
@@ -519,7 +529,7 @@ class BaseCheck:
         # prog_conf was already SUPPORTS / NE / NA, which left
         # PARTIALLY_SUPPORTS verdicts stranded even after a HIGH finding
         # arrived. SC 1.3.1 / 2.1.1 / 2.4.4 / 2.4.7 were miscategorised
-        # this way on the prior university run. Always upgrade to the worst
+        # this way on a prior university-site run. Always upgrade to the worst
         # outcome the findings warrant; never downgrade a stricter
         # verdict (a programmatic DNS stays DNS even if the layer only
         # adds info findings).
@@ -664,7 +674,7 @@ class BaseCheck:
         # judge_inference (since the judge correctly retags ANDI findings
         # as "andi" based on issue text), which the FAST-PATH ENFORCEMENT
         # block then drops -- leaving Partial/DNS verdicts with 0 findings.
-        # Observed on a university run f8d46924 SC 1.3.1 / 1.4.4 / 2.4.3 / 2.4.4 /
+        # Observed on a university site, run f8d46924, SC 1.3.1 / 1.4.4 / 2.4.3 / 2.4.4 /
         # 2.4.7 / 2.5.3 / 4.1.1 / 4.1.2 (all 0-findings DNS verdicts).
         # The Finding dataclass default (`source = "programmatic"`) covers
         # checks that don't set source explicitly; we don't need to enforce
@@ -757,7 +767,7 @@ class BaseCheck:
                     f.source = "visual_ai"
 
                 # Drop landmark-order hallucinations BEFORE the judge sees
-                # them. Verified failure mode on A11Y Project SC 1.3.2:
+                # them. Verified failure mode on a public accessibility-resource site, SC 1.3.2:
                 # visual_ai claimed "main is placed AFTER navigation and
                 # footer in the accessibility tree" -- captured a11y tree
                 # showed main BEFORE both. The LLM had the correct data
@@ -1080,7 +1090,7 @@ class BaseCheck:
                     # result.findings. The judge had said "Supports, no
                     # findings, no rejections" but result.findings still
                     # carried 2 original input findings. Verified failure
-                    # on a university run 2026-05-09 SC 3.2.3.
+                    # on a university site, 2026-05-09, SC 3.2.3.
                     #
                     # Now: trust the judge's empty list. If they said
                     # 0 findings, the report says 0 findings.
@@ -1143,6 +1153,7 @@ class BaseCheck:
                                 severity=sev_map.get(ff.get("severity", "medium"), Severity.MEDIUM),
                                 source=ff.get("source", "judge_inference"),
                                 cited_measurements=ff.get("cited_measurements", []) or [],
+                                internal_remediation_note=ff.get("internal_remediation_note", ""),
                             ))
 
                     # Post-judge contradiction filter. The judge's
@@ -1171,7 +1182,7 @@ class BaseCheck:
                         # contradiction filter removed every finding, the
                         # failing verdict was driven entirely by findings the
                         # captured data disproves — the only consistent
-                        # verdict is Supports. Verified bug (loudoun.gov
+                        # verdict is Supports. Verified bug (a county government site,
                         # SC 1.4.5): 8 false image-of-text findings drove
                         # "Partially Supports"; all 8 are contradicted by
                         # background_images text_content.
@@ -1240,10 +1251,33 @@ class BaseCheck:
                             )
 
             except Exception as exc:
-                logger.warning(
-                    "Judge AI failed for SC %s: %s — falling back to algorithmic reconciliation",
-                    self.criterion_id, exc,
-                )
+                if judge_ran:
+                    # The judge produced output and its verdict was already
+                    # applied to `result` before the exception hit (e.g. in
+                    # the finding-conversion loop or a post-judge filter).
+                    # Algorithmic reconciliation must NOT run — it would
+                    # overwrite the judge's verdict with a half-mutated mix.
+                    # Keep the judge verdict and surface the failure.
+                    logger.warning(
+                        "Judge AI post-processing failed for SC %s AFTER the "
+                        "judge verdict was applied: %s — keeping the judge "
+                        "verdict; later post-judge steps were skipped",
+                        self.criterion_id, exc, exc_info=True,
+                    )
+                    result.needs_review = True
+                    _reasons = list(result.needs_review_reasons or [])
+                    _reasons.append(
+                        f"Judge post-processing raised {exc!r} after the "
+                        f"judge verdict was applied; later post-judge steps "
+                        f"were skipped"
+                    )
+                    result.needs_review_reasons = _reasons
+                else:
+                    logger.warning(
+                        "Judge AI failed for SC %s before producing output: "
+                        "%s — falling back to algorithmic reconciliation",
+                        self.criterion_id, exc, exc_info=True,
+                    )
 
         # -- Sanity check: verdict must match findings (judge or not) ------
         # If verdict is Supports but there are high/medium findings, the
@@ -1281,7 +1315,7 @@ class BaseCheck:
         ):
             # Inverse: failing verdict with no findings is unactionable.
             # Either the judge dropped findings without recomputing the
-            # verdict (verified failure on a university run #4 SC 2.5.1: verdict
+            # verdict (verified failure on a university-site run #4, SC 2.5.1: verdict
             # stayed Partially Supports after final_findings emptied),
             # or all findings got post-judge-filtered by the DOM
             # contradiction check. Either way, there's nothing to
@@ -1497,6 +1531,7 @@ class BaseCheck:
         """
         logger.info("SC %s: fast path — %d findings, %s (%.0f%%)",
                      self.criterion_id, len(all_findings), prog_conf.value, prog_confidence * 100)
+        self._fast_path_taken = True
 
         # Mark AI sources as not evaluated (they weren't run)
         for attr in ("ai", "code_ai", "at_sim"):
@@ -1594,7 +1629,7 @@ class BaseCheck:
                             # PROGRAMMATIC_DEFINITIVE SC a clean deterministic
                             # measurement is authoritative, and an unmeasured
                             # judge inference cannot override it. This kills the
-                            # SC 2.5.8 "0px spacing" hallucination (verified on a university
+                            # SC 2.5.8 "0px spacing" hallucination (verified on a large public university site,
                             # run 20260502_162952_de12e630: 108 targets pass,
                             # 0 fail, judge invents failures).
                             #
@@ -1602,7 +1637,7 @@ class BaseCheck:
                             # a judge_inference finding is a restatement or
                             # refinement of a real measured failure the
                             # validator merely could not selector-match — it
-                            # MUST be kept. Verified bug (loudoun.gov run
+                            # MUST be kept. Verified bug (a county government site, run
                             # 20260518): the genuine SC 1.1.1 empty-alt+title
                             # findings and 5 SC 1.4.3 contrast findings were
                             # demoted for generic selectors, then wrongly
@@ -1611,7 +1646,19 @@ class BaseCheck:
                             # The slow path never drops judge_inference findings
                             # at all — non-definitive SCs benefit from the judge
                             # spotting things the deterministic check cannot see.
-                            deterministic_clean = not all_findings
+                            #
+                            # "Clean" must ignore INFO-severity capture notices
+                            # (overlay-widget advisories, blocked-iframe notes):
+                            # those are emitted for every SC and are not
+                            # measured failures, so their presence must not
+                            # let an unmeasured judge inference survive on a
+                            # definitively-clean SC.
+                            _substantive = [
+                                f for f in all_findings
+                                if getattr(f, "severity", None)
+                                in (Severity.HIGH, Severity.MEDIUM, Severity.LOW)
+                            ]
+                            deterministic_clean = not _substantive
                             dropped_unsupported = 0
                             if deterministic_clean:
                                 kept = []
@@ -1643,10 +1690,10 @@ class BaseCheck:
                                 logger.info(
                                     "SC %s fast-path: %d finding(s) demoted to "
                                     "judge_inference but kept — deterministic check "
-                                    "produced %d finding(s), so these restate or "
-                                    "refine measured failures.",
+                                    "produced %d substantive finding(s), so these "
+                                    "restate or refine measured failures.",
                                     self.criterion_id, total_demotions,
-                                    len(all_findings),
+                                    len(_substantive),
                                 )
                                 result.confidence_reasoning = (
                                     (result.confidence_reasoning or "")
@@ -1661,7 +1708,7 @@ class BaseCheck:
                         # restore the deterministic conformance level AND
                         # the original deterministic findings.
                         #
-                        # Past failure (verified on fairfaxva.gov run
+                        # Past failure (verified on a municipal government site, run
                         # 20260514_205147_cb3b646c SC 4.1.3): the judge
                         # consolidated 3 programmatic findings into 1
                         # judge-emitted finding, the validator demoted
@@ -1721,6 +1768,7 @@ class BaseCheck:
                                     source=ff.get("source", "judge_inference"),
                                     css_selector=ff.get("css_selector", ""),
                                     cited_measurements=ff.get("cited_measurements", []) or [],
+                                    internal_remediation_note=ff.get("internal_remediation_note", ""),
                                 ))
                             elif isinstance(ff, str) and ff.startswith("Finding("):
                                 # Stringified Finding object — skip, log warning
@@ -1828,6 +1876,70 @@ class BaseCheck:
     # Dynamic confidence + needs_review
     # ------------------------------------------------------------------
 
+    def _calibrate_verdict_to_severity(self, result: TestResult) -> None:
+        """Deterministic verdict-severity calibration.
+
+        The system-wide convention is high severity → Does Not Support,
+        medium → Partially Supports; info findings are advisories whose
+        own text says "NOT a detected violation". Judges occasionally
+        over-escalate: verified on a federal-government homepage where
+        two LOW best-practice notes (redundant ARIA roles) produced
+        4.1.2 = Does Not Support, and info-only manual-check advisories
+        produced Partially Supports on criteria whose deterministic
+        evidence showed a clean pass. Enforce the floor here:
+
+        - advisory-only (all findings severity=info) → Supports
+        - Does Not Support without ANY high-severity finding → Partially
+
+        Conservative by design: never upgrades severity, never touches
+        Supports/NA/NE verdicts, and keeps every finding on the record.
+        """
+        if result.conformance_level not in (
+            ConformanceLevel.DOES_NOT_SUPPORT, ConformanceLevel.PARTIALLY_SUPPORTS,
+        ):
+            return
+        severities: set[Severity] = set()
+        for f in result.findings or []:
+            if isinstance(f.severity, Severity):
+                severities.add(f.severity)
+            else:
+                try:
+                    severities.add(Severity(str(f.severity).strip().lower()))
+                except ValueError:
+                    # Unknown severity string: count as MEDIUM (substantive)
+                    # so calibration never wrongly downgrades on bad data.
+                    severities.add(Severity.MEDIUM)
+        substantive = severities & {Severity.HIGH, Severity.MEDIUM, Severity.LOW}
+        if not substantive:
+            logger.info(
+                "SC %s: verdict calibration %s -> Supports (all %d finding(s) "
+                "are severity=info advisories, which are not violations)",
+                self.criterion_id, result.conformance_level.value, len(result.findings),
+            )
+            result.conformance_level = ConformanceLevel.SUPPORTS
+            result.confidence_reasoning = (
+                (result.confidence_reasoning or "")
+                + " | CALIBRATION: verdict raised to Supports — every finding "
+                "is an info-severity advisory (manual-check reminder), not a "
+                "detected violation."
+            )
+            return
+        if (result.conformance_level == ConformanceLevel.DOES_NOT_SUPPORT
+                and Severity.HIGH not in substantive):
+            logger.info(
+                "SC %s: verdict calibration Does Not Support -> Partially "
+                "Supports (no high-severity finding; max severity=%s)",
+                self.criterion_id,
+                "medium" if Severity.MEDIUM in substantive else "low",
+            )
+            result.conformance_level = ConformanceLevel.PARTIALLY_SUPPORTS
+            result.confidence_reasoning = (
+                (result.confidence_reasoning or "")
+                + " | CALIBRATION: Does Not Support requires at least one "
+                "high-severity finding; downgraded to Partially Supports "
+                "(findings retained)."
+            )
+
     def _adjust_confidence_and_flag_review(
         self, result: TestResult, capture_data: CaptureData,
     ) -> None:
@@ -1835,13 +1947,16 @@ class BaseCheck:
         if result.conformance_level in (ConformanceLevel.NOT_APPLICABLE, ConformanceLevel.NOT_EVALUATED):
             return
 
+        self._calibrate_verdict_to_severity(result)
+
         reasons: list[str] = []
         conf = result.confidence
 
         # Capture gap penalty
-        if self._check_capture_completeness(capture_data):
+        capture_gaps = self._check_capture_completeness(capture_data)
+        if capture_gaps:
             conf *= 0.6
-            reasons.append(f"Incomplete capture: {self._check_capture_completeness(capture_data)}")
+            reasons.append(f"Incomplete capture: {capture_gaps}")
 
         # Source disagreement penalty
         prog_c = result.programmatic_conformance
@@ -1857,7 +1972,9 @@ class BaseCheck:
             result.programmatic_conformance, result.ai_conformance,
             result.code_ai_conformance, result.at_sim_conformance,
         ] if c not in (ConformanceLevel.NOT_EVALUATED, ConformanceLevel.NOT_APPLICABLE))
-        if evaluated <= 1 and self.criterion_id not in self.PROGRAMMATIC_DEFINITIVE:
+        if (evaluated <= 1
+                and self.criterion_id not in self.PROGRAMMATIC_DEFINITIVE
+                and not getattr(self, "_fast_path_taken", False)):
             conf *= 0.9
             reasons.append(f"Only {evaluated} source(s) had a verdict")
 
@@ -1866,7 +1983,7 @@ class BaseCheck:
         # them returned NOT_TESTED, the verdict rests on partial
         # evidence. Cap the confidence proportional to coverage so the
         # auditor sees the gap rather than a high-confidence verdict
-        # backed by a single sub-test. Verified on fairfaxva.gov run
+        # backed by a single sub-test. Verified on a municipal government site, run
         # 20260514_205147_cb3b646c SC CAV: 1 of 4 sub-tests tested, 3
         # NOT_TESTED, consolidator published confidence=0.8 -- too high.
         try:
@@ -1915,8 +2032,13 @@ class BaseCheck:
                     reasons.append("Supports with 0 findings but relevant content exists")
                     break
 
-        # Flag: all AI sources NOT_EVALUATED
-        if (self.criterion_id not in self.PROGRAMMATIC_DEFINITIVE
+        # Flag: all AI sources NOT_EVALUATED. Exempt any result that
+        # took a programmatic fast path (PROGRAMMATIC_DEFINITIVE always;
+        # DETERMINISTIC_WITH_ESCALATION at high confidence) — those
+        # paths skip the AI sources BY DESIGN, so "no AI verdict" is
+        # expected there, not a reason for human review.
+        if (not getattr(self, "_fast_path_taken", False)
+            and self.criterion_id not in self.PROGRAMMATIC_DEFINITIVE
             and result.ai_conformance == ConformanceLevel.NOT_EVALUATED
             and result.code_ai_conformance == ConformanceLevel.NOT_EVALUATED
             and result.at_sim_conformance == ConformanceLevel.NOT_EVALUATED):
@@ -2068,9 +2190,7 @@ class BaseCheck:
         vendors = sorted({o.get("vendor", "unknown") for o in overlays})
         vendor_list = ", ".join(vendors)
         sources = [o.get("src", "") for o in overlays if o.get("src")]
-        src_summary = "; ".join(sources[:4])
-        if len(sources) > 4:
-            src_summary += f"; +{len(sources) - 4} more"
+        src_summary = "; ".join(sources)
 
         return [Finding(
             id=_make_finding_id(),
@@ -2574,7 +2694,9 @@ class BaseCheck:
                 in_fieldset = ff.get("in_fieldset", False)
                 sel = ff.get("selector", "")
 
-                label_desc = label or aria_label or f"placeholder=\"{placeholder}\"" if placeholder else "(NO LABEL)"
+                label_desc = label or aria_label or (
+                    f'placeholder="{placeholder}"' if placeholder else "(NO LABEL)"
+                )
                 group_label = (ff.get("group_label") or "").strip()
                 group_str = f' group="{group_label}"' if group_label else ""
                 flags = []
@@ -2782,7 +2904,7 @@ class BaseCheck:
                 # Without this the judge wrongly demands captions or
                 # audio descriptions for a silent video, and rejects a
                 # valid scene-by-scene text description because it has
-                # "no dialogue" (verified on a university SC 1.2.1 / 1.2.8).
+                # "no dialogue" (verified on a university site, SC 1.2.1 / 1.2.8).
                 is_silent = bool(muted) or page_audio_type in (
                     "silence", "silent", "none"
                 )
@@ -2848,7 +2970,7 @@ class BaseCheck:
                             or el.get("aria_label") or ""
                         ).strip()
                         sel2 = el.get("selector") or el.get("href") or "?"
-                        entry = f'{kind} "{label[:60]}" @ {sel2}'
+                        entry = f'{kind} "{label}" @ {sel2}'
                         if entry not in alt_candidates:
                             alt_candidates.append(entry)
             block = f"MEDIA ({len(media)}):\n" + "\n".join(media_lines)
@@ -2998,7 +3120,7 @@ class BaseCheck:
             # rendered pixels (which the deterministic check cannot do).
             # Past behaviour reported these as ``passes=False`` and the
             # judge treated them as confirmed failures, producing
-            # phantom "1.23:1" findings against a university's hero text. We now
+            # phantom "1.23:1" findings against a university site's hero text. We now
             # explicitly mark these as UNCERTAIN so the judge knows the
             # ratio is informational only and must NOT be cited as
             # evidence of an SC 1.4.3 failure without visual
@@ -3237,11 +3359,30 @@ class BaseCheck:
                     f"issues={t.get('issues') or []} "
                     f"sel={t.get('selector','?')}"
                 )
+                sample_rows = t.get("sample_rows") or []
+                for ri, cells in enumerate(sample_rows):
+                    if isinstance(cells, list) and cells:
+                        t_lines.append(
+                            f"        row {ri}: {cells}"
+                        )
             parts.append(
                 f"ANDI TABLES AUDIT ({len(t_lines)} tables — "
                 f"deterministic data-vs-layout classification + "
                 f"scope/headers validation, reject any finding "
-                f"contradicting a state recorded here):\n"
+                f"contradicting a state recorded here). "
+                f"IMPORTANT — classification 'ambiguous' means the "
+                f"deterministic classifier could NOT decide data-vs-"
+                f"layout, and issues=[] on an ambiguous table does NOT "
+                f"mean the table passed: nothing was asserted either "
+                f"way. For each ambiguous table YOU must classify it "
+                f"from its content (see its cells in the RELEVANT "
+                f"ELEMENTS / captured HTML and the screenshot). If it "
+                f"presents data relationships (label row/column + "
+                f"value cells, e.g. pricing, schedules, statistics) "
+                f"then th=0 means required header markup is missing — "
+                f"emit the SC 1.3.1 finding yourself (source "
+                f"judge_inference). If it is purely visual layout, do "
+                f"not flag it:\n"
                 + "\n".join(t_lines)
             )
 
@@ -3288,7 +3429,7 @@ class BaseCheck:
             # the same selector, the element DOES have an accessible name
             # and ANDI's flag is unreliable. Surface this inline so the
             # judge sees both signals on the same line, not just ANDI's.
-            # Verified bug (a university SC 4.1.2: ANDI flagged
+            # Verified bug (a university site, SC 4.1.2: ANDI flagged
             # .video-control--play-pause and .modal as no_name=True; axe
             # button-name PASSED both; the prompt surfaced only ANDI's
             # wrong flag and the judge followed it).
@@ -3534,7 +3675,7 @@ class BaseCheck:
         # (web_capture.py) of every element whose computed `position` is
         # fixed/sticky/absolute, with selector + position + rect. The judge
         # was inventing `position: fixed` claims and laundering them under
-        # source=htmlcs (verified on fairfaxva.gov run
+        # source=htmlcs (verified on a municipal government site, run
         # 20260514_205147_cb3b646c SC 1.4.10). This block is the ground
         # truth; the claim validator rejects position assertions absent
         # from it.
@@ -3589,7 +3730,7 @@ class BaseCheck:
         # opposite from a screenshot alone -- usually because the
         # screenshot caught a CSS :hover state the explorer-mode probe
         # didn't trigger. The judge then took visual_ai's word over its
-        # own deterministic data (verified on fairfaxva.gov run
+        # own deterministic data (verified on a municipal government site, run
         # 20260514_205147_cb3b646c SC 1.4.13). For SC 1.4.13 we tell
         # the judge to reject hover-content failure findings against
         # any selector marked reveals=False, since dismissibility /
@@ -3602,9 +3743,14 @@ class BaseCheck:
                 if not isinstance(entry, dict):
                     continue
                 sel = entry.get("selector", "?")
-                has_content = entry.get("revealed_content", False) or entry.get("reveals", False)
-                dismissible = entry.get("dismissible")
-                persistent = entry.get("persistent")
+                has_content = bool(
+                    entry.get("revealed_content") or entry.get("reveals")
+                )
+                # dismissible/persistent are only present when a probe
+                # actually measured them; "unknown" keeps the judge from
+                # reading an unmeasured dimension as a False measurement.
+                dismissible = entry.get("dismissible", "unknown")
+                persistent = entry.get("persistent", "unknown")
                 hc_lines.append(
                     f"    {sel}: reveals={has_content} "
                     f"dismissible={dismissible} persistent={persistent}"
@@ -3618,7 +3764,9 @@ class BaseCheck:
                 f"Reject any visual_ai or judge_inference finding claiming "
                 f"a 1.4.13 failure (popup not dismissible, etc.) against a "
                 f"selector marked reveals=False here; the deterministic "
-                f"measurement is authoritative.\n"
+                f"measurement is authoritative. dismissible=unknown / "
+                f"persistent=unknown means that dimension was NOT measured "
+                f"-- do not treat it as a pass or a fail.\n"
                 + "\n".join(hc_lines)
             )
 
@@ -3734,7 +3882,19 @@ class BaseCheck:
                     "    not_focusable_at_all: []  -- no inert "
                     "interactive elements"
                 )
-            parts.append("TAB COVERAGE:\n" + "\n".join(tc_lines))
+            parts.append(
+                "TAB COVERAGE (deterministic Playwright measurement -- "
+                "AUTHORITATIVE for keyboard reachability. The counts and "
+                "selector lists here are the ONLY valid basis for any "
+                "'N elements not reachable by keyboard' claim. REJECT any "
+                "finding -- including from the widget probe or visual AI -- "
+                "that asserts unreachable-element counts contradicting "
+                "these lists. A widget that opens with Enter/Space but "
+                "ignores Arrow keys is NOT an SC 2.1.1 failure: APG arrow "
+                "patterns are recommendations; SC 2.1.1 requires only that "
+                "functionality be operable through SOME keyboard "
+                "interface.):\n" + "\n".join(tc_lines)
+            )
 
         # 31. Form errors (captured during form submission)
         form_errors = getattr(capture_data, "form_errors", None) or []
@@ -3743,14 +3903,24 @@ class BaseCheck:
             for err in form_errors:
                 if not isinstance(err, dict):
                     continue
-                sel = err.get("selector", "?")
-                has_text = err.get("has_text_description", False)
-                identifies = err.get("identifies_field", False)
-                progr = err.get("programmatic_association", False)
-                aria_live = err.get("has_aria_live", False) or err.get("has_role_alert", False)
+                sel = err.get("selector") or err.get("form_selector") or "?"
+
+                # A missing key means the capture didn't measure that
+                # property — render "unknown", never a fabricated False.
+                def _measured(key: str) -> str:
+                    return "unknown" if key not in err else str(bool(err[key]))
+
+                if "has_aria_live" in err or "has_role_alert" in err:
+                    live = str(bool(
+                        err.get("has_aria_live") or err.get("has_role_alert"),
+                    ))
+                else:
+                    live = "unknown"
                 fe_lines.append(
-                    f"    {sel}: text={has_text} identifies_field={identifies} "
-                    f"programmatic_association={progr} live_region={aria_live}"
+                    f"    {sel}: text={_measured('has_text_description')} "
+                    f"identifies_field={_measured('identifies_field')} "
+                    f"programmatic_association={_measured('programmatic_association')} "
+                    f"live_region={live}"
                 )
             parts.append(
                 f"FORM ERRORS ({len(fe_lines)}):\n" + "\n".join(fe_lines)
@@ -3839,7 +4009,15 @@ class BaseCheck:
                         "failure. Do NOT emit a keyboard finding from this entry"
                     )
                 elif any_resp is False:
-                    status_parts.append("NO KEYS RESPONDED — keyboard inaccessible")
+                    status_parts.append(
+                        "no APG pattern keys responded (Arrow/Home/End). "
+                        "NOTE: this alone is NOT an SC 2.1.1 failure — "
+                        "check the KEYBOARD ROUNDTRIP PROBE for whether "
+                        "Enter/Space/Tab operate the widget; APG arrow "
+                        "patterns are recommendations, and heuristic "
+                        "widget-type labels (especially [AI-DISCOVERED] "
+                        "ones) are often wrong about which keys apply"
+                    )
                 elif any_resp is True:
                     status_parts.append("keys responded")
                 if all_items is False and items_count > 1:
@@ -3958,8 +4136,8 @@ class BaseCheck:
         ("is this a money / legal / data-changing page") is a meaning
         determination and stays with the AI, made from these facts plus
         the attached screenshots. Prior failure: the judge marked SC
-        3.3.6 "Does Not Support" for a site-search box on the
-        fairfaxva.gov run 20260515_230613_ff643865 because no
+        3.3.6 "Does Not Support" for a site-search box on a
+        municipal government site, run 20260515_230613_ff643865, because no
         applicability evidence or criteria were in its prompt.
         """
         lines = ["[TRANSACTION SCOPE EVIDENCE for SC 3.3.4 / 3.3.6]"]
@@ -4186,7 +4364,7 @@ class BaseCheck:
         SC 2.2.2 (Pause, Stop, Hide) is met when the page provides any
         visible single-pointer mechanism to pause/stop/hide moving
         content — that mechanism is typically a separate <button>
-        next to the moving content (a university's #pauseHeroVid for the hero
+        next to the moving content (a university site's #pauseHeroVid for the hero
         video and #play-pause-toggle for the carousel), NOT
         a native <video controls> bar. The audio_detection probe
         (has_audio_pause_button) only checks native controls; it
@@ -4213,7 +4391,7 @@ class BaseCheck:
         # Scan every collection that can hold an interactive control —
         # the pause/play button is often a custom <button> that the
         # narrow nontext_contrast list misses. Verified bug
-        # (a university SC 2.2.2): a real "Play Video / Pause Video"
+        # (a university site, SC 2.2.2): a real "Play Video / Pause Video"
         # button existed but, being absent from nontext_contrast, was
         # never surfaced, so the judge concluded "no pause mechanism".
         _inv = getattr(capture_data, "element_inventory", None) or []
@@ -4387,7 +4565,7 @@ class BaseCheck:
             if not isinstance(result, dict):
                 continue
             elem_type = result.get("type", "")
-            if relevant_types and elem_type not in relevant_types:
+            if relevant_types and elem_type and elem_type not in relevant_types:
                 continue
             selector = result.get("selector", "?")
             response = result.get("interaction_response", "none")
@@ -4540,7 +4718,7 @@ class BaseCheck:
             if not isinstance(result, dict):
                 continue
             elem_type = result.get("type", "")
-            if relevant_types and elem_type not in relevant_types:
+            if relevant_types and elem_type and elem_type not in relevant_types:
                 continue
             # Add screenshots from this exploration
             for ss in result.get("screenshots", []):
@@ -4896,7 +5074,6 @@ class BaseCheck:
         # Estimate prompt tokens (~4 chars per token)
         prompt_tokens = (len(system_prompt) + len(user_prompt)) // 4
         image_paths = base_images + (extra or [])
-        IMAGE_BATCH = 20
         # Token budget: leave room for tool schema (~2K) + response (~8K)
         # Models: Qwen3.5-35B=128K, Qwen3-VL=32K, Gemma4=128K, Gemini=1M
         # Use 100K as default — fits all text models comfortably.
@@ -4905,7 +5082,7 @@ class BaseCheck:
 
         needs_chunking = (
             prompt_tokens > MAX_PROMPT_TOKENS
-            or (extra and len(extra) > IMAGE_BATCH)
+            or (extra and len(extra) > VISUAL_IMAGE_BATCH_SIZE)
         )
 
         if needs_chunking:
@@ -5025,7 +5202,7 @@ class BaseCheck:
              the SC's own pass/fail rules, producing the final per-SC
              findings.
 
-        Big win vs. the prior design: a university's ~100 code chunks are read once,
+        Big win vs. the prior design: a university site's ~100 code chunks are read once,
         not 50+ times, and the per-SC call is a short judgment on a
         pre-extracted pattern list rather than a full-source re-analysis.
         """
@@ -5351,22 +5528,19 @@ class BaseCheck:
         import asyncio as _asyncio
         from functions.prompt import build_user_prompt
 
-        ELEMENT_CHUNK_SIZE = 50  # elements per chunk
-        IMAGE_BATCH_SIZE = 15   # extra images per chunk
-
         # Split elements into chunks
         element_chunks = []
         if elements:
-            for i in range(0, len(elements), ELEMENT_CHUNK_SIZE):
-                element_chunks.append(elements[i:i + ELEMENT_CHUNK_SIZE])
+            for i in range(0, len(elements), VISUAL_ELEMENT_CHUNK_SIZE):
+                element_chunks.append(elements[i:i + VISUAL_ELEMENT_CHUNK_SIZE])
         else:
             element_chunks = [[]]
 
         # Split extra images into batches
         image_batches = []
         if extra_images:
-            for i in range(0, len(extra_images), IMAGE_BATCH_SIZE):
-                image_batches.append(extra_images[i:i + IMAGE_BATCH_SIZE])
+            for i in range(0, len(extra_images), VISUAL_IMAGE_BATCH_SIZE):
+                image_batches.append(extra_images[i:i + VISUAL_IMAGE_BATCH_SIZE])
 
         # Determine total chunks (max of element chunks and image batches)
         total_chunks = max(len(element_chunks), len(image_batches), 1)
@@ -5405,13 +5579,26 @@ class BaseCheck:
                 programmatic_data=programmatic_data,
                 elements=chunk_elements,
             )
-            chunk_prompt = (
-                f"[CHUNK {chunk_idx + 1}/{total_chunks}] "
-                f"Analyzing elements {chunk_idx * ELEMENT_CHUNK_SIZE + 1}-"
-                f"{min((chunk_idx + 1) * ELEMENT_CHUNK_SIZE, len(elements))} "
-                f"of {len(elements)} total.\n\n"
-                + chunk_prompt
-            )
+            if chunk_elements:
+                chunk_header = (
+                    f"[CHUNK {chunk_idx + 1}/{total_chunks}] "
+                    f"Analyzing elements {chunk_idx * VISUAL_ELEMENT_CHUNK_SIZE + 1}-"
+                    f"{min((chunk_idx + 1) * VISUAL_ELEMENT_CHUNK_SIZE, len(elements))} "
+                    f"of {len(elements)} total.\n\n"
+                )
+            elif elements:
+                chunk_header = (
+                    f"[CHUNK {chunk_idx + 1}/{total_chunks}] "
+                    f"Analyzing a batch of {len(chunk_extra)} additional "
+                    f"screenshots (all {len(elements)} elements were covered "
+                    f"in earlier chunks).\n\n"
+                )
+            else:
+                chunk_header = (
+                    f"[CHUNK {chunk_idx + 1}/{total_chunks}] "
+                    f"Analyzing a batch of {len(chunk_extra)} screenshots.\n\n"
+                )
+            chunk_prompt = chunk_header + chunk_prompt
 
             chunk_images = base_images + chunk_extra
 
@@ -5443,25 +5630,26 @@ class BaseCheck:
             if last_exc is not None or chunk_raw is None:
                 raise RuntimeError(
                     f"SC {self.criterion_id} chunk {chunk_idx + 1}/{total_chunks} "
-                    f"({len(chunk_extra)} elements) failed after 3 attempts: "
-                    f"{last_exc}. Refusing to drop element batch -- no gaps allowed."
+                    f"({len(chunk_elements)} elements, {len(chunk_extra)} images) "
+                    f"failed after 3 attempts: {last_exc}. "
+                    f"Refusing to drop the batch -- no gaps allowed."
                 )
 
             insuff = chunk_raw.get("insufficient_evidence_reason")
             conflict = chunk_raw.get("conflicting_information")
             if insuff:
                 logger.warning(
-                    "SC %s CHUNK-%d CODE-AI: INSUFFICIENT EVIDENCE — %s",
+                    "SC %s CHUNK-%d VISUAL-AI: INSUFFICIENT EVIDENCE — %s",
                     self.criterion_id, chunk_idx + 1, insuff,
                 )
             if conflict:
                 logger.warning(
-                    "SC %s CHUNK-%d CODE-AI: CONFLICTING INFORMATION — %s",
+                    "SC %s CHUNK-%d VISUAL-AI: CONFLICTING INFORMATION — %s",
                     self.criterion_id, chunk_idx + 1, conflict,
                 )
             if (insuff or conflict) and capture_data.review_dir:
                 self._save_evidence_issue(
-                    capture_data, f"code_ai_chunk{chunk_idx + 1}",
+                    capture_data, f"visual_ai_chunk{chunk_idx + 1}",
                     system_prompt, chunk_prompt,
                     chunk_raw, insuff, conflict,
                 )
@@ -5502,142 +5690,6 @@ class BaseCheck:
             "findings": all_findings,
             "summary": f"Analyzed in {total_chunks} chunks: {'; '.join(chunk_summaries)}",
         }
-
-    # ------------------------------------------------------------------
-    # Chunked AI analysis for large image sets (legacy)
-    # ------------------------------------------------------------------
-
-    async def _chunked_ai_analysis(
-        self,
-        ai_client: Any,
-        system_prompt: str,
-        user_prompt: str,
-        base_images: list[str],
-        extra_images: list[str],
-        video_path: str | None,
-        batch_size: int,
-    ) -> dict:
-        """Split a large set of images into batches, analyze each, then
-        consolidate.
-
-        Each batch gets the base images + a subset of extra images.
-        The AI produces partial findings for each batch.  A final
-        consolidation call merges the batch summaries into one verdict.
-        """
-        batches = [
-            extra_images[i : i + batch_size]
-            for i in range(0, len(extra_images), batch_size)
-        ]
-        total_batches = len(batches)
-
-        logger.info(
-            "SC %s: splitting %d images into %d batches of ~%d",
-            self.criterion_id, len(extra_images), total_batches, batch_size,
-        )
-
-        batch_summaries: list[str] = []
-        all_findings: list[dict] = []
-        conformance_levels: list[str] = []
-
-        for idx, batch in enumerate(batches, 1):
-            # Pause between batches to let model free memory
-            if idx > 1:
-                import asyncio as _asyncio
-                await _asyncio.sleep(3)
-
-            start_num = (idx - 1) * batch_size + 1
-            end_num = min(idx * batch_size, len(extra_images))
-            # Use "pages" for document checks, "images" for web checks
-            item_label = "pages" if self.criterion_id.startswith("DOC-") else "images"
-            batch_prompt = (
-                f"{user_prompt}\n\n"
-                f"[BATCH {idx}/{total_batches}] "
-                f"Analyzing {item_label} {start_num}-{end_num} "
-                f"of {len(extra_images)} total. "
-                f"When reporting findings, specify which page number "
-                f"the issue is on (page {start_num} through {end_num}). "
-                f"Report findings for THIS batch only."
-            )
-
-            image_paths = base_images + batch
-            try:
-                raw = await ai_client.analyze(
-                    system_prompt=system_prompt,
-                    user_prompt=batch_prompt,
-                    image_paths=image_paths,
-                    video_path=video_path if idx == 1 else None,
-                )
-                summary = raw.get("summary", "")
-                batch_summaries.append(
-                    f"Batch {idx}/{total_batches}: {summary}"
-                )
-                for f in raw.get("findings", []):
-                    if isinstance(f, Finding):
-                        all_findings.append(f.to_dict())
-                    elif isinstance(f, dict):
-                        all_findings.append(f)
-                    else:
-                        all_findings.append({"issue": str(f)})
-                cl = raw.get("conformance_level", "Not Evaluated")
-                if hasattr(cl, "value"):
-                    cl = cl.value
-                conformance_levels.append(str(cl))
-            except Exception as exc:
-                logger.warning(
-                    "SC %s batch %d/%d failed: %s",
-                    self.criterion_id, idx, total_batches, exc,
-                )
-
-        # --- Consolidation call ---
-        consolidation_prompt = (
-            f"{user_prompt}\n\n"
-            f"[CONSOLIDATION] You reviewed {len(extra_images)} items "
-            f"across {total_batches} batches. Here are the batch "
-            f"summaries:\n\n"
-            + "\n".join(batch_summaries)
-            + f"\n\nBatch verdicts: {', '.join(conformance_levels)}\n"
-            f"Total findings so far: {len(all_findings)}\n\n"
-            f"Now provide your FINAL overall assessment for SC "
-            f"{self.criterion_id}, considering ALL batches together. "
-            f"Include any additional findings or override earlier ones "
-            f"if needed."
-        )
-
-        try:
-            final = await ai_client.analyze(
-                system_prompt=system_prompt,
-                user_prompt=consolidation_prompt,
-                image_paths=base_images if base_images else None,
-            )
-            # Merge: keep all batch findings + any new consolidation findings
-            for f in final.get("findings", []):
-                if isinstance(f, Finding):
-                    all_findings.append(f.to_dict())
-                elif isinstance(f, dict):
-                    all_findings.append(f)
-            final["findings"] = all_findings
-            return final
-        except Exception as exc:
-            logger.warning(
-                "SC %s consolidation failed: %s", self.criterion_id, exc,
-            )
-            # Fall back to worst batch result
-            return {
-                "conformance_level": (
-                    "Does Not Support" if "Does Not Support"
-                    in conformance_levels
-                    else "Partially Supports" if "Partially Supports"
-                    in conformance_levels
-                    else "Not Evaluated"
-                ),
-                "confidence": 0.6,
-                "confidence_reasoning": (
-                    f"Consolidation failed; using worst batch result "
-                    f"from {total_batches} batches."
-                ),
-                "findings": all_findings,
-                "summary": " | ".join(batch_summaries),
-            }
 
     # ------------------------------------------------------------------
     # Reconciliation
@@ -5740,7 +5792,7 @@ class BaseCheck:
         # so we exclude it from the vote. Without this floor a
         # 30%-confidence "Supports" from one source could outvote a
         # 100%-confidence "Not Applicable" from another (verified on
-        # fairfaxva.gov run 20260514_205147_cb3b646c SC 3.2.6: Visual AI
+        # a municipal government site, run 20260514_205147_cb3b646c SC 3.2.6: Visual AI
         # correctly returned NA with confidence 1.0 on a single-page
         # review of a cross-page criterion, but Programmatic 0.3 +
         # Code AI 0.75 majority-voted to "Supports"). Sources below the
@@ -6090,7 +6142,7 @@ class BaseCheck:
 
         - SC 4.1.2 / 1.3.1 / 3.3.2: "form control has no accessible name"
           findings against form_fields that DO have label/aria-label/
-          aria-labelledby/title (observed on a university's search radios).
+          aria-labelledby/title (observed on a university site's search radios).
         - "Element X is not in the DOM": code-AI hallucinations of
           selectors that don't appear in the captured HTML (#szdebugarea
           on a university site). The captured DOM is the ground truth.
@@ -6153,7 +6205,7 @@ class BaseCheck:
         # clip/sr-only label spans; axe's link-name/button-name/image-alt
         # rules honour them. A 'no accessible name' finding contradicted by
         # an axe name-rule pass (or a page-clean axe name rule) is a false
-        # positive (verified on a university 2026-05-28: ANDI flagged 4 named
+        # positive (verified on a university site, 2026-05-28: ANDI flagged 4 named
         # nav/infographic links no-name; axe link-name = 67 pass / 0 violation).
         from functions.axe_extract import (
             accessible_name_corroboration, axe_confirms_named,
@@ -6171,7 +6223,7 @@ class BaseCheck:
 
         # Link accessible-name -> set of destination hrefs. Used to apply the
         # WCAG H30 exception: links sharing the same name AND the same
-        # destination need no unique differentiation (verified on a university
+        # destination need no unique differentiation (verified on a university site,
         # 2026-05-28: two 'Learn more about the ceremony' links both point to
         # the same article -- a 2.4.9 false positive -- whereas two 'Learn
         # more about this research' links go to two different articles and ARE
@@ -6452,7 +6504,7 @@ class BaseCheck:
 
             # Rule 5: drop findings claiming an element uses fixed or
             # sticky positioning when the deterministic full-page
-            # computed-style scan found none. Verified bug (loudoun.gov
+            # computed-style scan found none. Verified bug (a county government site,
             # SC 1.4.10): 12 findings claimed "position: fixed" on
             # elements the scan measured as statically positioned —
             # stale HTML_CodeSniffer warnings that survived into the
@@ -6477,7 +6529,7 @@ class BaseCheck:
 
             # Rule 6: drop findings claiming the page has no level-1
             # heading when the captured headings include one. Verified
-            # bug (loudoun.gov SC 1.3.1): the judge emitted a "page
+            # bug (a county government site, SC 1.3.1): the judge emitted a "page
             # lacks an <h1>" finding contradicting both axe
             # (page-has-heading-one passes) and capture_data.headings,
             # which lists a level-1 heading.
@@ -6506,7 +6558,7 @@ class BaseCheck:
             # element displays RENDERED HTML text, not an image of text,
             # so it cannot be a 1.4.5 failure (this is exactly the
             # CRITICAL SC 1.4.5 RULE the judge prompt already states).
-            # Verified bug (loudoun.gov SC 1.4.5): 8 nav buttons with
+            # Verified bug (a county government site, SC 1.4.5): 8 nav buttons with
             # real HTML text over a decorative photo were flagged as
             # images of text — the judge applied the rejection rule
             # inconsistently across batches.
@@ -6529,7 +6581,7 @@ class BaseCheck:
             # A focus leak or "not keyboard reachable" finding on a
             # display:none / inert / zero-rect element describes a
             # problem that does not exist. Scoped to the SCs where this
-            # false-positive class occurs (verified on a university:
+            # false-positive class occurs (verified on a university site:
             # #modal-hero-video-caption flagged under 2.1.1/2.4.3/2.4.7).
             if (sel and sel in browser_handled and self.criterion_id in (
                 "2.1.1", "2.1.2", "2.1.3", "2.4.3", "2.4.7", "2.4.11",
@@ -6577,7 +6629,7 @@ class BaseCheck:
             # registered without a keydown equivalent") on a keyboard SC. We
             # capture no event-listener data, so the claim is ungrounded --
             # only code-AI over script_content could support it, and those
-            # carry source=code_ai, not judge_inference. Verified on a university
+            # carry source=code_ai, not judge_inference. Verified on a university site,
             # 2026-05-28: a fabricated "mousedown without keydown" FP under
             # 2.1.1/2.1.3 (the page's script_content in fact has keydown).
             if (self.criterion_id in ("2.1.1", "2.1.2", "2.1.3", "2.1.4")
@@ -6608,8 +6660,8 @@ class BaseCheck:
             # graphics) that are part of a logo or brand name have NO contrast
             # requirement (WCAG 1.4.3/1.4.6 incidental exception; 1.4.11
             # logo exemption). Drop contrast findings on logo/brand elements
-            # (verified on a university 2026-05-28: visual_ai hallucinated 1.60:1 on
-            # the maize-on-navy university brand mark in
+            # (verified on a university site, 2026-05-28: visual_ai hallucinated 1.60:1 on
+            # the school's brand-color logo mark in
             # #zone-branding > h1.logo; actual ~9:1 and exempt regardless).
             if self.criterion_id in ("1.4.3", "1.4.6", "1.4.11"):
                 _le = (
@@ -6628,7 +6680,7 @@ class BaseCheck:
             # share the same accessible name AND the same destination need no
             # unique differentiation. Drop an "ambiguous / non-unique link
             # text" finding when every link carrying that name points to ONE
-            # destination (verified on a university 2026-05-28: two 'Learn more
+            # destination (verified on a university site, 2026-05-28: two 'Learn more
             # about the ceremony' links -> same article; a real ambiguity
             # ('this research' -> 2 different articles) still survives because
             # it maps to >1 href).
@@ -6658,7 +6710,7 @@ class BaseCheck:
             # finding on a DOM element that is display:none / visibility:
             # hidden / hidden. Such an element is not rendered, not
             # interactive, and not in the accessibility tree (verified
-            # a university 2026-05-28: a display:none CrazyEgg tracking iframe was
+            # on a university site, 2026-05-28: a display:none CrazyEgg tracking iframe was
             # flagged as an interactive control lacking a role/name).
             if (self.criterion_id in ("4.1.2", "2.1.1", "1.3.1", "2.4.3", "2.4.7")
                     and element_is_display_hidden(getattr(capture_data, "html", "") or "", sel)):
@@ -6682,7 +6734,7 @@ class BaseCheck:
             # interactive elements; only focusable_but_skipped entries
             # are genuinely unreachable. A finding claiming otherwise for
             # an element not on that list is fabricated (verified
-            # a university SC 2.1.1: a "47 elements unreachable" finding
+            # on a university site, SC 2.1.1: a "47 elements unreachable" finding
             # vs a measured 98.6% coverage / 1 skipped element).
             if (self.criterion_id in ("2.1.1", "2.4.3")
                     and coverage_pct is not None and coverage_pct >= 90.0):
@@ -6712,7 +6764,7 @@ class BaseCheck:
             # clearly has focusable elements, or got stuck on a bot-challenge).
             # The low coverage reflects the capture, not a keyboard barrier, so
             # a "0% coverage / not keyboard accessible / N unreachable" finding
-            # is a capture artifact (verified on a university 2026-05-29: a Cloudflare-
+            # is a capture artifact (verified on a university site, 2026-05-29: a Cloudflare-
             # truncated walk produced a bogus "reached 0 of 69" 2.1.1 finding).
             if (self.criterion_id in ("2.1.1", "2.1.2", "2.1.3", "2.4.3", "2.4.7")
                     and not _walk_reliability["reliable"]):
@@ -6739,11 +6791,15 @@ class BaseCheck:
             # criteria can only fail when an author-placed fixed/sticky
             # element can overlap focused content. When the computed-
             # style scan found zero fixed/sticky elements, no obscuring
-            # is possible (verified on a university: 2.4.11/2.4.12
+            # is possible (verified on a university site: 2.4.11/2.4.12
             # "Partially Supports" rested on a misclassified missing-
             # focus-indicator finding, which belongs to SC 2.4.7).
+            # INFO-severity findings are kept: they are universal capture
+            # notices (overlay-widget advisory, blocked-iframe notes),
+            # not obscured-focus failure claims.
             if (self.criterion_id in ("2.4.11", "2.4.12")
-                    and no_fixed_or_sticky):
+                    and no_fixed_or_sticky
+                    and f.severity not in (Severity.INFO, "info")):
                 logger.info(
                     "SC %s: dropping finding -- no fixed/sticky element "
                     "exists on the page, so focus cannot be obscured",
@@ -6775,7 +6831,7 @@ class BaseCheck:
             # Rule 12: SC 2.5.3 — Label in Name applies only to labels
             # presented VISUALLY. A finding on a screen-reader-only
             # element (sr-only / screen-reader-text / visually-hidden) is
-            # a category error (verified on a university SC 2.5.3).
+            # a category error (verified on a university site, SC 2.5.3).
             if self.criterion_id == "2.5.3" and sel:
                 _sl = sel.lower()
                 if any(c in _sl for c in (
@@ -6791,7 +6847,7 @@ class BaseCheck:
 
             # Rule 13: SC 2.4.1 — drop "non-functional skip link"
             # findings on links the deterministic probe shows DO activate
-            # via the keyboard (verified on a university: working skip links
+            # via the keyboard (verified on a university site: working skip links
             # called "non-functional" because click_activates was false
             # with a TimeoutError, even though keyboard_activates is True
             # — which is what 2.4.1 actually requires).
@@ -6815,7 +6871,7 @@ class BaseCheck:
             # Rule 14: SC 2.4.7 — drop "no visible focus indicator"
             # findings on elements the focus_contrast probe MEASURED with
             # a visible indicator and >=3:1 contrast (verified
-            # a university: a finding flagged nav-li-3 as having no focus
+            # on a university site: a finding flagged nav-li-3 as having no focus
             # indicator, but focus_contrast measured has_change=True and
             # contrast_ratio=13.65).
             if (self.criterion_id == "2.4.7"
@@ -6839,7 +6895,7 @@ class BaseCheck:
             # the modal_interactions probe captured NO auto-open. The
             # judge sometimes infers an auto-modal from hidden-modal
             # textContent leaking into VISIBLE PAGE TEXT (verified
-            # a university: the only modal in the DOM is class="hidden"
+            # on a university site: the only modal in the DOM is class="hidden"
             # / tab_reachable:false and opens only on user click).
             if self.criterion_id == "2.2.4" and not has_auto_modal:
                 _automodal = (
@@ -7430,6 +7486,20 @@ class BaseCheck:
                 result=TTResult.FAIL if has_failures else TTResult.PASS,
             ))
         return results
+
+    def _generate_na_tt_results(
+        self, capture_data: CaptureData,
+    ) -> list[TTSubTestResult]:
+        """TT sub-test results for a Not Applicable criterion.
+
+        Delegates to the (possibly subclass-overridden) _generate_tt_results
+        to get the declared sub-tests, then marks every one DNA — a
+        criterion that does not apply has no sub-test that can PASS.
+        """
+        tt = self._generate_tt_results([], capture_data)
+        for t in tt:
+            t.result = TTResult.DNA
+        return tt
 
 
 

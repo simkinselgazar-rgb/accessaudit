@@ -274,7 +274,14 @@
              data-contact-name="{{ review.contact_name | default('', true) }}"
              data-contact-email="{{ review.contact_email | default('', true) }}"
              data-notes="{{ review.notes | default('', true) }}"
-             data-review-type="{{ review.review_type | default('single', true) }}">
+             data-review-type="{{ review.review_type | default('single', true) }}"
+             data-page-rationale="{{ review.page_rationale | default('', true) }}"
+             data-multi-urls="{{ review.user_context.multi_urls | join('\n') if review.user_context and review.user_context.multi_urls else '' }}"
+             data-ctx-page-purpose="{{ review.user_context.page_purpose | default('', true) if review.user_context else '' }}"
+             data-ctx-time-limits="{{ review.user_context.time_limits | default('', true) if review.user_context else '' }}"
+             data-ctx-alt-version-url="{{ review.user_context.alt_version_url | default('', true) if review.user_context else '' }}"
+             data-ctx-expected-behaviors="{{ review.user_context.expected_behaviors | default('', true) if review.user_context else '' }}"
+             data-ctx-additional-notes="{{ review.user_context.additional_notes | default('', true) if review.user_context else '' }}">
           <div class="source">
             {% if review.product_name %}
               <strong>{{ review.product_name }}</strong> &mdash;
@@ -306,7 +313,10 @@
           {% endif %}
           {% if review.status == 'error' and review.error %}
           <div class="review-error" role="alert" style="font-size:.8rem;color:#c62828;margin:.3rem 0;padding:.3rem .5rem;background:#ffebee;border-radius:4px;">
-            {{ review.error[:120] }}{% if review.error|length > 120 %}...{% endif %}
+            <details>
+              <summary style="cursor:pointer;">Error (click for full details)</summary>
+              <div style="margin-top:.3rem;white-space:pre-wrap;word-break:break-word;">{{ review.error }}</div>
+            </details>
           </div>
           {% endif %}
           <div class="actions">
@@ -349,99 +359,57 @@
 
   <script src="/static/app.js"></script>
   <script>
-    // Auto-fill from ?rerun= query parameter
-    (function() {
-      {% if rerun and rerun.source_url %}
-      var r = {{ rerun | tojson }};
+    // Shared form-restore used by both the ?rerun= prefill and the per-card
+    // Rerun button. `d` is a normalized flat object of previous settings.
+    function applyRerunData(d) {
       var fields = {
-        'url-input': r.source_url || '',
-        'product-name': r.product_name || '',
-        'product-description': r.product_description || '',
-        'contact-name': r.contact_name || '',
-        'contact-email': r.contact_email || '',
-        'vpat-notes': r.notes || '',
-      };
-      for (var id in fields) {
-        var el = document.getElementById(id);
-        if (el && fields[id]) el.value = fields[id];
-      }
-      var selects = {
-        'wcag-version': r.wcag_version || '2.2',
-        'report-format': r.report_format || '508',
-        'coverage-level': r.coverage_level || 'AA',
-      };
-      for (var id in selects) {
-        var el = document.getElementById(id);
-        if (el) el.value = selects[id];
-      }
-      var reviewType = r.review_type || 'single';
-      var radio = document.querySelector('input[name="review_type"][value="' + reviewType + '"]');
-      if (radio) radio.checked = true;
-
-      // Open sections that have data
-      if (r.product_name || r.product_description || r.notes) {
-        var t = document.querySelector('[aria-controls="client-content"]');
-        if (t && t.getAttribute('aria-expanded') === 'false') t.click();
-      }
-      if (r.contact_name || r.contact_email) {
-        var t = document.querySelector('[aria-controls="reviewer-content"]');
-        if (t && t.getAttribute('aria-expanded') === 'false') t.click();
-      }
-      // Scroll to form
-      document.getElementById('review-form').scrollIntoView({ behavior: 'smooth' });
-      {% endif %}
-    })();
-
-    function rerunReview(card) {
-      if (!card) return;
-      var d = card.dataset;
-
-      // Fill URL
-      var urlInput = document.getElementById('url-input');
-      if (urlInput && d.url) urlInput.value = d.url;
-
-      // Set dropdowns
-      var selects = {
-        'wcag-version': d.wcagVersion,
-        'report-format': d.reportFormat,
-        'coverage-level': d.coverageLevel,
-      };
-      for (var id in selects) {
-        var el = document.getElementById(id);
-        if (el && selects[id]) el.value = selects[id];
-      }
-
-      // Set review type radio
-      var reviewType = d.reviewType || 'single';
-      var radio = document.querySelector('input[name="review_type"][value="' + reviewType + '"]');
-      if (radio) radio.checked = true;
-
-      // Fill text fields (open the collapsible sections first)
-      var fields = {
+        'url-input': d.url,
+        'multi-urls': d.multiUrls,
+        'page-rationale': d.pageRationale,
         'product-name': d.productName,
         'product-description': d.productDescription,
         'contact-name': d.contactName,
         'contact-email': d.contactEmail,
         'vpat-notes': d.notes,
+        'ctx-purpose': d.ctxPagePurpose,
+        'ctx-time-limits': d.ctxTimeLimits,
+        'ctx-alt-url': d.ctxAltVersionUrl,
+        'ctx-behaviors': d.ctxExpectedBehaviors,
+        'ctx-notes': d.ctxAdditionalNotes,
       };
       for (var id in fields) {
         var el = document.getElementById(id);
         if (el && fields[id]) el.value = fields[id];
       }
 
+      var selects = {
+        'wcag-version': d.wcagVersion,
+        'report-format': d.reportFormat,
+        'coverage-level': d.coverageLevel,
+      };
+      for (var sid in selects) {
+        var sel = document.getElementById(sid);
+        if (sel && selects[sid]) sel.value = selects[sid];
+      }
+
+      // Set the review-type radio and dispatch change so the type-dependent
+      // input groups (multi-URL textarea, rationale, file upload) update.
+      var reviewType = d.reviewType || 'single';
+      var radio = document.querySelector('input[name="review_type"][value="' + reviewType + '"]');
+      if (radio) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change'));
+      }
+
       // Open the collapsible sections that have data
-      if (d.productName || d.productDescription || d.notes) {
-        var clientToggle = document.querySelector('[aria-controls="client-content"]');
-        if (clientToggle && clientToggle.getAttribute('aria-expanded') === 'false') {
-          clientToggle.click();
-        }
+      function openSection(controlsId) {
+        var t = document.querySelector('[aria-controls="' + controlsId + '"]');
+        if (t && t.getAttribute('aria-expanded') === 'false') t.click();
       }
-      if (d.contactName || d.contactEmail) {
-        var reviewerToggle = document.querySelector('[aria-controls="reviewer-content"]');
-        if (reviewerToggle && reviewerToggle.getAttribute('aria-expanded') === 'false') {
-          reviewerToggle.click();
-        }
-      }
+      if (d.productName || d.productDescription || d.notes) openSection('client-content');
+      if (d.contactName || d.contactEmail) openSection('reviewer-content');
+      if (d.ctxPagePurpose || d.ctxTimeLimits || d.ctxAltVersionUrl ||
+          d.ctxExpectedBehaviors || d.ctxAdditionalNotes) openSection('context-content');
 
       // Scroll to form
       var form = document.getElementById('review-form');
@@ -454,6 +422,38 @@
         btn.style.background = '#C5922E';
         setTimeout(function() { btn.style.background = ''; }, 1500);
       }
+    }
+
+    // Auto-fill from ?rerun= query parameter
+    (function() {
+      {% if rerun and rerun.source_url %}
+      var r = {{ rerun | tojson }};
+      var ctx = r.user_context || {};
+      applyRerunData({
+        url: r.source_url || '',
+        multiUrls: Array.isArray(ctx.multi_urls) ? ctx.multi_urls.join('\n') : '',
+        pageRationale: r.page_rationale || '',
+        productName: r.product_name || '',
+        productDescription: r.product_description || '',
+        contactName: r.contact_name || '',
+        contactEmail: r.contact_email || '',
+        notes: r.notes || '',
+        ctxPagePurpose: ctx.page_purpose || '',
+        ctxTimeLimits: ctx.time_limits || '',
+        ctxAltVersionUrl: ctx.alt_version_url || '',
+        ctxExpectedBehaviors: ctx.expected_behaviors || '',
+        ctxAdditionalNotes: ctx.additional_notes || '',
+        wcagVersion: r.wcag_version || '2.2',
+        reportFormat: r.report_format || '508',
+        coverageLevel: r.coverage_level || 'AA',
+        reviewType: r.review_type || 'single',
+      });
+      {% endif %}
+    })();
+
+    function rerunReview(card) {
+      if (!card) return;
+      applyRerunData(card.dataset);
     }
   </script>
 </body>

@@ -42,7 +42,7 @@
     "Putting critical navigation instructions in a cell far from A1 that screen reader users would never find naturally"
   ],
   "examples": {
-    "pass": "Cell A1 on the first sheet reads 'FY2025 Departmental Budget — City of Richlands'. A screen reader user opening the file immediately hears the document's identity and purpose. Each subsequent sheet has A1 containing the sheet's topic (e.g., 'Public Works Budget', 'Parks and Recreation Budget').",
+    "pass": "Cell A1 on the first sheet reads 'FY2025 Departmental Budget — City of Springfield'. A screen reader user opening the file immediately hears the document's identity and purpose. Each subsequent sheet has A1 containing the sheet's topic (e.g., 'Public Works Budget', 'Parks and Recreation Budget').",
     "fail": "Cell A1 on the first sheet is empty. The actual title 'Annual Report Data' is in a merged cell at C3. A screen reader user opening the file hears silence at A1 and has no indication of where to navigate or what the spreadsheet contains.",
     "partial": "The first sheet's A1 contains a descriptive title, but three other sheets in the workbook have empty A1 cells with content starting at various positions."
   }

@@ -470,7 +470,7 @@ function handleProgressMessage(msg) {
       break;
 
     case 'phase':
-      updatePhase(msg.phase, msg.total_pages);
+      updatePhase(msg.phase, msg.total_pages, msg.message);
       break;
 
     case 'crawl_progress':
@@ -630,7 +630,7 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
-function updatePhase(phase, totalPages) {
+function updatePhase(phase, totalPages, detailMessage) {
   var badge = document.getElementById('phase-badge');
   var messageEl = document.getElementById('phase-message');
   var section = document.querySelector('.progress-section');
@@ -646,6 +646,23 @@ function updatePhase(phase, totalPages) {
       text = 'Running accessibility tests across ' + totalPages + ' pages...';
     }
     messageEl.textContent = text;
+
+    // Backend-supplied detail (capture-step telemetry, resume notices,
+    // "Testing N linked documents...") — shown under the canned title.
+    var detailEl = document.getElementById('phase-detail');
+    if (detailMessage) {
+      if (!detailEl) {
+        detailEl = document.createElement('div');
+        detailEl.id = 'phase-detail';
+        detailEl.style.fontSize = '.82rem';
+        detailEl.style.color = '#616161';
+        detailEl.style.marginTop = '.25rem';
+        messageEl.parentNode.insertBefore(detailEl, messageEl.nextSibling);
+      }
+      detailEl.textContent = detailMessage;
+    } else if (detailEl) {
+      detailEl.textContent = '';
+    }
   }
 
   if (section) {
@@ -671,7 +688,8 @@ function handleSitePageStart(msg) {
   var msgEl = document.getElementById('site-page-message');
   if (el && msgEl) {
     el.style.display = 'block';
-    msgEl.textContent = 'Testing page ' + msg.page_number + ' of ' + msg.total_pages + ': ' + msg.page_url;
+    var pageNumber = msg.page_number ?? msg.page_num;
+    msgEl.textContent = 'Testing page ' + pageNumber + ' of ' + msg.total_pages + ': ' + msg.page_url;
   }
 }
 
@@ -679,8 +697,10 @@ function handleSitePageComplete(msg) {
   var el = document.getElementById('site-page-info');
   var msgEl = document.getElementById('site-page-message');
   if (el && msgEl) {
-    msgEl.textContent = 'Completed page ' + msg.page_number + ' of ' + msg.total_pages +
-                        ' (' + (msg.criteria_tested || 0) + ' criteria tested)';
+    var pageNumber = msg.page_number ?? msg.page_num;
+    var criteriaTested = msg.criteria_tested ?? msg.results_count;
+    msgEl.textContent = 'Completed page ' + pageNumber + ' of ' + msg.total_pages +
+                        ' (' + (criteriaTested || 0) + ' criteria tested)';
   }
 }
 
@@ -692,7 +712,8 @@ function handleSitePageError(msg) {
     el.style.background = '#ffebee';
     el.style.borderColor = '#ef9a9a';
     el.style.color = '#c62828';
-    msgEl.textContent = 'Error on page ' + msg.page_number + ' of ' + msg.total_pages +
+    var pageNumber = msg.page_number ?? msg.page_num;
+    msgEl.textContent = 'Error on page ' + pageNumber + ' of ' + msg.total_pages +
                         ': ' + (msg.error || 'Unknown error');
   }
 }
@@ -784,10 +805,44 @@ function handleComplete(msg) {
   setTextContent('sum-na', summary.not_applicable || 0);
   setTextContent('sum-ne', summary.not_evaluated || 0);
 
+  renderPerPageBreakdown(msg);
+
   var completionEl = document.getElementById('completion-summary');
   if (completionEl) {
     completionEl.style.display = 'block';
   }
+}
+
+function renderPerPageBreakdown(msg) {
+  // Multi-page / site-crawl completions carry pages_tested and
+  // per_page_summary ([{url, supports, partially_supports,
+  // does_not_support, not_applicable, not_evaluated, total_findings}]).
+  var container = document.getElementById('per-page-breakdown');
+  if (!container) return;
+  var perPage = msg.per_page_summary;
+  if (!Array.isArray(perPage) || perPage.length === 0) return;
+
+  var html = '<h4 style="margin:.75rem 0 .35rem;">Per-page results';
+  if (msg.pages_tested) html += ' (' + msg.pages_tested + ' pages tested)';
+  html += '</h4>';
+  html += '<div style="overflow-x:auto;"><table class="results-table" style="font-size:.82rem;">';
+  html += '<thead><tr><th scope="col">Page</th><th scope="col">S</th><th scope="col">PS</th>' +
+          '<th scope="col">DNS</th><th scope="col">N/A</th><th scope="col">NE</th>' +
+          '<th scope="col">Findings</th></tr></thead><tbody>';
+  perPage.forEach(function(p) {
+    html += '<tr>' +
+      '<td style="word-break:break-all;">' + escapeHtml(p.url || '') + '</td>' +
+      '<td>' + (p.supports || 0) + '</td>' +
+      '<td>' + (p.partially_supports || 0) + '</td>' +
+      '<td>' + (p.does_not_support || 0) + '</td>' +
+      '<td>' + (p.not_applicable || 0) + '</td>' +
+      '<td>' + (p.not_evaluated || 0) + '</td>' +
+      '<td>' + (p.total_findings || 0) + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+  container.style.display = 'block';
 }
 
 function handleError(msg) {
@@ -830,7 +885,10 @@ function filterFindings() {
     var sevMatch = !sev || card.classList.contains('severity-' + sev);
     var srcBadge = card.querySelector('.source-badge');
     var srcText = srcBadge ? (srcBadge.textContent || '').trim() : '';
-    var srcMatch = !src || srcText === src;
+    // Sources can be comma-joined ("axe, htmlcs") — match if any tag equals
+    // the selected filter value.
+    var srcTags = srcText.split(',').map(function(t) { return t.trim().toLowerCase(); });
+    var srcMatch = !src || srcTags.indexOf(src.toLowerCase()) !== -1;
     var textMatch = !qLower || (card.textContent || '').toLowerCase().indexOf(qLower) !== -1;
     var show = sevMatch && srcMatch && textMatch;
     card.style.display = show ? '' : 'none';
@@ -847,10 +905,18 @@ function setDecision(reviewId, criterionId, findingId, status, btn) {
   var url = '/api/review/' + reviewId + '/test/' + encodeURIComponent(criterionId) +
             '/finding/' + findingId + '/decision';
 
+  var reason = '';
+  if (status === 'accepted' || status === 'rejected') {
+    var input = window.prompt(
+      'Optional reason for marking this finding as ' + status + ' (leave blank to skip):', '');
+    if (input === null) return; // user cancelled — don't change the decision
+    reason = input.trim();
+  }
+
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: status, reason: '' })
+    body: JSON.stringify({ status: status, reason: reason })
   })
     .then(function(r) {
       if (!r.ok) throw new Error('Decision update failed');
@@ -880,6 +946,20 @@ function setDecision(reviewId, criterionId, findingId, status, btn) {
         badge.className = 'decision-badge ' + status;
         badge.textContent = status;
         header.appendChild(badge);
+      }
+
+      // Update the displayed decision reason
+      var reasonEl = card.querySelector('.decision-reason');
+      if (reason && status !== 'undecided') {
+        if (!reasonEl) {
+          reasonEl = document.createElement('div');
+          reasonEl.className = 'finding-detail mt-1 decision-reason';
+          var btnRow = card.querySelector('.decision-buttons');
+          card.insertBefore(reasonEl, btnRow);
+        }
+        reasonEl.innerHTML = '<strong>Decision Reason:</strong> ' + escapeHtml(reason);
+      } else if (reasonEl) {
+        reasonEl.remove();
       }
     })
     .catch(function(err) {

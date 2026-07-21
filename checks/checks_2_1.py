@@ -791,7 +791,7 @@ class Check_2_1_2(BaseCheck):
                 # that contradicts the capture's own verdict. Otherwise
                 # record an INFO advisory: a missing exit advisement is a
                 # minor enhancement, never a 2.1.2 fail. Verified bug
-                # (loudoun.gov SC 2.1.2): a trap entry whose description
+                # (a county-government site's SC 2.1.2 run): a trap entry whose description
                 # said "Passes 2.1.2" was emitted as a hard finding.
                 if "passes 2.1.2" in description.lower():
                     continue

@@ -114,7 +114,7 @@ def _build_selector(tag: str, attrs: dict[str, str]) -> str:
         skip empty ids the same way to avoid emitting a selector
         like ``div#`` that no querySelector would accept.
 
-    Verified crash on Fairfax City site 20260512_103712 -- empty
+    Verified crash on a municipal-government site run 20260512_103712 -- empty
     class attributes raised IndexError and silently killed the
     whole ARIA validation pass for the page, leaving aria_issues
     empty for downstream judge calls.

@@ -9,6 +9,7 @@ multiple calls, then results are merged.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -17,37 +18,11 @@ from typing import Any
 
 from playwright.async_api import Page
 
-from capture.v2.dom_chunker import chunk_dom, extract_css_summary, extract_js_event_summary, DOMChunks
-from capture.v2.element_inventory import ElementInventory, InventoryElement, map_inventory_to_capture_data
+from capture.v2.dom_chunker import chunk_dom, extract_css_summary, extract_js_event_summary
+from capture.v2.element_inventory import ElementInventory, InventoryElement, _elem_to_dict, map_inventory_to_capture_data
 from functions.element_labeler import LABELER_JS_BUNDLE
 
 logger = logging.getLogger(__name__)
-
-# Token threshold for switching to multi-call mode
-_SINGLE_CALL_TOKEN_LIMIT = 80_000
-
-
-def _parse_native_tool_call(content: str) -> dict | None:
-    """Parse native tool call format from content text.
-
-    Models via vLLM return tool calls in native format:
-        <tool_call>
-        <function=report_element_inventory>
-        <parameter=page_summary>...</parameter>
-        <parameter=elements>[...JSON...]</parameter>
-        </function>
-        </tool_call>
-
-    Handles incomplete responses (truncated at token limit).
-    """
-    from functions.parser import parse_native_tool_call
-    return parse_native_tool_call(content)
-
-
-def _clean_provider_tokens(text: str) -> str:
-    """Import from shared location."""
-    from functions.parser import clean_tool_call_args
-    return clean_tool_call_args(text)
 
 
 def _assign_exploration_priority(elem: dict) -> None:
@@ -245,6 +220,9 @@ async def _extract_elements_deterministic(page: Page) -> list[dict]:
                     aria: getAria(el), role: el.getAttribute('role') || '',
                     visible: isVisible(el), interactive: true, id: el.id || '',
                     context: context,
+                    // Cross-page nav consistency (SC 3.2.3): the
+                    // structural-summary writer filters links on in_nav.
+                    in_nav: !!el.closest('nav,[role="navigation"]'),
                     has_image: !!el.querySelector('img,svg,[role="img"]'),
                     image_alt: (el.querySelector('img') || {}).alt || '',
                 });
@@ -274,10 +252,16 @@ async def _extract_elements_deterministic(page: Page) -> list[dict]:
                 }
                 if (!label) label = el.getAttribute('aria-label') || '';
                 if (!label) {
+                    // aria-labelledby is a space-separated ID list; the
+                    // accname is the referents' texts joined in order.
                     const labelledby = el.getAttribute('aria-labelledby');
                     if (labelledby) {
-                        const lblEl = document.getElementById(labelledby);
-                        if (lblEl) label = textOf(lblEl);
+                        label = labelledby.trim().split(/\\s+/)
+                            .map(id => document.getElementById(id))
+                            .filter(Boolean)
+                            .map(lblEl => textOf(lblEl))
+                            .filter(t => t)
+                            .join(' ');
                     }
                 }
 
@@ -306,7 +290,10 @@ async def _extract_elements_deterministic(page: Page) -> list[dict]:
                 results.push({
                     type: 'image', selector: getSelector(el), tag: tag,
                     text: '', src: el.getAttribute('src') || el.getAttribute('data-src') || '',
-                    alt: el.getAttribute('alt') || '',
+                    // null when the attribute is absent (SC 1.1.1 violation
+                    // candidate); '' only when explicitly alt="" (decorative).
+                    alt: el.getAttribute('alt'),
+                    has_alt_attr: el.hasAttribute('alt'),
                     aria: getAria(el), role: el.getAttribute('role') || '',
                     visible: isVisible(el), interactive: false, id: el.id || '',
                     title: el.getAttribute('title') || '',
@@ -750,14 +737,22 @@ async def run_phase1(
     # Step 1: Extract raw data from the page
     logger.info("PHASE 1: Extracting DOM, CSS, and JS event handlers...")
 
-    html = await page.content()
-    capture_data.html = html
-    logger.info("PHASE 1: DOM extracted (%d chars)", len(html))
+    # Invariant: dom.html holds the shadow-pierced DOM serialized by
+    # Phase D (capture/v2/orchestrator.py); do not overwrite it with
+    # page.content(), which cannot see inside shadow roots. Only fall
+    # back to page.content() when no earlier phase captured the HTML.
+    html = getattr(capture_data, "html", "") or ""
+    if html:
+        logger.info("PHASE 1: Reusing Phase D DOM (%d chars, shadow-pierced)", len(html))
+    else:
+        html = await page.content()
+        capture_data.html = html
+        logger.info("PHASE 1: DOM extracted (%d chars)", len(html))
 
-    # Save DOM to disk
     dom_path = os.path.join(captures_dir, "dom.html")
-    with open(dom_path, "w", encoding="utf-8") as f:
-        f.write(html)
+    if not os.path.exists(dom_path):
+        with open(dom_path, "w", encoding="utf-8") as f:
+            f.write(html)
     capture_data.dom_path = dom_path
 
     # Extract CSS
@@ -865,6 +860,8 @@ async def run_phase1(
             ai_additions, ai_removals, ai_priorities = await _audit_section(
                 ai_client, section.html, section.name,
                 existing_selectors, screenshot_path, captures_dir,
+                css_summary=chunks.css_summary,
+                js_summary=chunks.js_event_summary,
             )
 
             # Add new elements. AI additions arrive as fully-formed
@@ -1027,10 +1024,16 @@ async def run_phase1(
             no_priority_count,
         )
 
-    # Step 7: Map to CaptureData legacy fields
-    map_inventory_to_capture_data(inventory, capture_data)
+    # Step 7: Map to CaptureData legacy fields. Run in a worker thread:
+    # the mapper does blocking network I/O (YouTube caption metadata via
+    # httpx.get) and CPU-bound bs4 parsing — inline it would stall the
+    # event loop and every WebSocket progress message with it.
+    await asyncio.to_thread(map_inventory_to_capture_data, inventory, capture_data)
 
-    # Step 7: Save inventory to disk for debugging
+    # Step 7: Save inventory to disk. This file is read back for machine
+    # reconstruction (capture/v2/state.py resume path and app/orchestrators.py
+    # document-link discovery), so it must carry the FULL element dicts —
+    # stripped "log" dicts here silently lost alt/href/label on resume.
     inventory_path = os.path.join(captures_dir, "element_inventory.json")
     with open(inventory_path, "w", encoding="utf-8") as f:
         json.dump({
@@ -1038,7 +1041,7 @@ async def run_phase1(
             "page_type": inventory.page_type,
             "element_count": len(inventory.elements),
             "estimated_interaction_count": inventory.estimated_interaction_count,
-            "elements": [_elem_to_log_dict(e) for e in inventory.elements],
+            "elements": [_elem_to_dict(e) for e in inventory.elements],
         }, f, indent=2, default=str)
 
     elapsed = time.monotonic() - phase_start
@@ -1048,34 +1051,6 @@ async def run_phase1(
     return inventory
 
 
-# Tool for AI to signal it's done discovering elements
-_DONE_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "inventory_complete",
-        "description": (
-            "Call this when you have reported ALL elements on the page. "
-            "Do NOT call this until every heading, link, image, form field, "
-            "button, landmark, table, list, iframe, and interactive element "
-            "has been reported via report_element_inventory."
-        ),
-        "parameters": {
-            "type": "object",
-            "required": ["page_summary", "page_type", "total_elements_reported"],
-            "properties": {
-                "page_summary": {"type": "string"},
-                "page_type": {
-                    "type": "string",
-                    "enum": ["content", "form-heavy", "application", "media-rich",
-                             "navigation-hub", "dashboard", "landing", "other"],
-                },
-                "total_elements_reported": {"type": "integer"},
-            },
-        },
-    },
-}
-
-
 async def _audit_section(
     ai_client,
     section_html: str,
@@ -1083,18 +1058,42 @@ async def _audit_section(
     existing_selectors: set[str],
     screenshot_path: str,
     captures_dir: str,
+    css_summary: str = "",
+    js_summary: str = "",
 ) -> tuple[list[InventoryElement], list[str], list[dict]]:
     """Single AI call to audit one DOM section.
 
-    The AI receives the section HTML + a summary of what deterministic
-    extraction already found.  It can ADD missed elements, REMOVE wrong
-    ones, and UPDATE exploration priorities on existing elements.
+    The AI receives the section HTML, a summary of what deterministic
+    extraction already found, plus the page-wide CSS and JS event-handler
+    summaries (interactivity evidence the section HTML alone can't show).
+    It can ADD missed elements, REMOVE wrong ones, and UPDATE exploration
+    priorities on existing elements.
 
     Returns (additions, removals, priority_updates).
     """
-    from functions.llm import LLMClient
-
     det_summary = f"{len(existing_selectors)} elements already found programmatically."
+
+    evidence_blocks = ""
+    if js_summary:
+        evidence_blocks += (
+            f"═══════════════════════════════════════════════════════\n"
+            f"  PAGE JS EVENT HANDLERS (interactivity evidence)\n"
+            f"═══════════════════════════════════════════════════════\n\n"
+            f"Elements carrying inline handlers / interactivity-implying\n"
+            f"attributes (onclick, tabindex, aria-haspopup, ...). Use this\n"
+            f"to spot custom controls whose markup alone looks static.\n\n"
+            f"{js_summary}\n\n"
+        )
+    if css_summary:
+        evidence_blocks += (
+            f"═══════════════════════════════════════════════════════\n"
+            f"  PAGE CSS SUMMARY (accessibility-relevant rules)\n"
+            f"═══════════════════════════════════════════════════════\n\n"
+            f"Rules affecting visibility, focus indication, and hover\n"
+            f"behavior. Use this to identify hidden dynamic content and\n"
+            f"elements styled as interactive controls.\n\n"
+            f"{css_summary}\n\n"
+        )
 
     user_prompt = (
         f"═══════════════════════════════════════════════════════\n"
@@ -1110,6 +1109,7 @@ async def _audit_section(
         f"Also set exploration_priority for ANY element that changes\n"
         f"state on interaction (high), might change (medium), or is static (low).\n\n"
         f"If the code caught everything, return an EMPTY elements array.\n\n"
+        f"{evidence_blocks}"
         f"═══════════════════════════════════════════════════════\n"
         f"  SECTION HTML\n"
         f"═══════════════════════════════════════════════════════\n\n"
@@ -1193,20 +1193,3 @@ def _resolve_llm(ai_client):
 # Dead code removed: _run_inventory_loop, _single_call_analysis,
 # _multi_call_analysis, _call_inventory_ai — replaced by deterministic
 # extraction + single-call AI audit per section.
-
-
-
-def _elem_to_log_dict(e: InventoryElement) -> dict:
-    """Convert element to a compact dict for logging."""
-    d = {"type": e.type, "selector": e.selector, "tag": e.tag, "visible": e.visible}
-    if e.text:
-        d["text"] = e.text
-    if e.role:
-        d["role"] = e.role
-    if e.rect:
-        d["rect"] = e.rect
-    if e.exploration_priority != "low":
-        d["priority"] = e.exploration_priority
-    if e.exploration_actions:
-        d["actions"] = e.exploration_actions
-    return d

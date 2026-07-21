@@ -277,7 +277,15 @@ JUDGE_TOOL = {
                         "Partially Supports",
                         "Does Not Support",
                         "Not Applicable",
+                        "Not Evaluated",
                     ],
+                    "description": (
+                        "Use 'Not Evaluated' ONLY when the evidence is "
+                        "insufficient to judge at all (capture failure, "
+                        "missing screenshots, unreadable data) -- never "
+                        "for a borderline call you could still make from "
+                        "the evidence provided."
+                    ),
                 },
                 "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                 "reasoning": {
@@ -300,6 +308,7 @@ JUDGE_TOOL = {
                             "impact",
                             "recommendation",
                             "severity",
+                            "source",
                             "cited_measurements",
                         ],
                         "properties": {
@@ -356,19 +365,17 @@ JUDGE_TOOL = {
                             },
                             "source": {
                                 "type": "string",
-                                "enum": [
-                                    "programmatic",
-                                    "axe",
-                                    "andi",
-                                    "htmlcs",
-                                    "ibm_eac",
-                                    "visual_ai",
-                                    "code_ai",
-                                    "at_sim",
-                                    "judge_inference",
-                                ],
+                                "pattern": (
+                                    "^(programmatic|axe|andi|htmlcs|ibm_eac|visual_ai|"
+                                    "code_ai|at_sim|judge_inference)"
+                                    "(,\\s*(programmatic|axe|andi|htmlcs|ibm_eac|"
+                                    "visual_ai|code_ai|at_sim|judge_inference))*$"
+                                ),
                                 "description": (
                                     "ATTRIBUTION INTEGRITY (load-bearing for verdict trust):\n"
+                                    "One source tag, or a comma-separated list when one output "
+                                    "finding merges corroborating inputs from multiple sources "
+                                    "(e.g. 'axe, htmlcs, ibm_eac').\n"
                                     "Use the EXACT source tag from the input finding you are "
                                     "synthesizing/rewording. Do NOT relabel.\n"
                                     "- 'programmatic': came from a deterministic check\n"

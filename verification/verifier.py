@@ -190,7 +190,10 @@ async def verify_result(result: TestResult, ai_client, capture_data=None) -> Tes
                     if ver_sev < orig_sev:
                         result.conformance_level = verifier_level
                 except ValueError:
-                    pass
+                    logger.warning(
+                        "Verifier returned invalid conformance_level %r for %s; keeping original",
+                        verifier_level_str, result.criterion_id,
+                    )
 
             result.confidence = min(result.confidence, 0.6)
 

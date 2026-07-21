@@ -14,7 +14,6 @@ Checks then receive the text description instead of the raw video, which:
 from __future__ import annotations
 
 import asyncio
-import base64
 import json
 import logging
 import os
@@ -134,6 +133,77 @@ VIDEO_QUESTIONS: dict[str, dict[str, Any]] = {
         ),
         "serves_criteria": ["2.1.2", "2.4.3", "2.4.7"],
     },
+    "TAB_WALKTHROUGH": {
+        "description": "Segment recording of tabbing through the page's interactive elements",
+        "questions": (
+            "Watch this keyboard tab walkthrough segment and describe:\n\n"
+            "1. FOCUS INDICATORS: As focus moves from element to element, "
+            "is there a clearly visible indicator (outline, highlight, "
+            "border, background change) on EACH focused element? Describe "
+            "its appearance. Name any element that receives focus WITHOUT "
+            "a visible indicator.\n\n"
+            "2. TAB ORDER: Does focus move in a logical reading order? "
+            "Note any jumps to unexpected locations.\n\n"
+            "3. TRAPS: Does focus ever get stuck or cycle between the "
+            "same few elements?\n\n"
+            "Be specific — name the actual elements you see."
+        ),
+        "serves_criteria": ["2.1.1", "2.1.2", "2.4.3", "2.4.7", "2.4.11"],
+    },
+    "ACCORDION_INTERACTION": {
+        "description": "Accordion expand/collapse interaction recording",
+        "questions": (
+            "Watch this accordion interaction and describe:\n\n"
+            "1. Does the accordion content visibly expand when activated "
+            "and collapse when activated again?\n"
+            "2. Is the expanded/collapsed state visually obvious (icon "
+            "rotation, +/- indicator, highlight)?\n"
+            "3. Is a visible focus indicator present on the accordion "
+            "header while it is operated?\n"
+            "4. Is there any unexpected motion, animation, or scrolling "
+            "during expand/collapse that could disorient users?\n"
+            "5. Does activating a header cause any unexpected context "
+            "change (navigation, focus jump)?"
+        ),
+        "serves_criteria": ["2.1.1", "2.4.7", "4.1.2", "3.2.1", "3.2.2"],
+    },
+    "CAROUSEL_INTERACTION": {
+        "description": "Carousel/slider interaction recording",
+        "questions": (
+            "Watch this carousel/slider interaction and describe:\n\n"
+            "1. AUTO-ADVANCE: Does the carousel advance automatically "
+            "without user action? Roughly how often?\n"
+            "2. CONTROLS: Are there visible pause, stop, or hide controls "
+            "for the auto-advancing content? Are previous/next controls "
+            "visible and do they respond to keyboard activation?\n"
+            "3. MOTION: Describe the slide transition — is the animation "
+            "rapid, flashing, or otherwise potentially disorienting?\n"
+            "4. FOCUS: Is a visible focus indicator present on carousel "
+            "controls while they are operated?\n"
+            "5. Does the visible slide indicator (dots/thumbnails) update "
+            "to reflect the current slide?"
+        ),
+        "serves_criteria": ["2.2.2", "2.1.1", "2.4.7", "2.3.1", "4.1.2"],
+    },
+    "CUSTOM": {
+        "description": "Custom interaction recording",
+        "questions": (
+            "Watch this recording of an interaction with a web page and "
+            "describe every accessibility-relevant event you observe:\n\n"
+            "1. What interaction is being performed, and does the page "
+            "respond as a user would expect?\n"
+            "2. Are visible focus indicators present on any element that "
+            "receives keyboard focus?\n"
+            "3. Does any content appear, disappear, move, animate, or "
+            "flash? Are controls provided to pause or stop it?\n"
+            "4. Do any error messages, status messages, or context "
+            "changes (navigation, focus jumps, new windows) occur?\n"
+            "5. Is anything shown on hover/focus that disappears before "
+            "it can be read?\n\n"
+            "Be specific — name the actual elements and events you see."
+        ),
+        "serves_criteria": ["2.1.1", "2.4.7", "2.2.2", "3.2.1", "3.2.2", "4.1.2"],
+    },
     "MEDIA_PLAYBACK": {
         "description": "Media playback recording",
         "questions": (
@@ -165,6 +235,8 @@ async def describe_all_videos(
     and stores the text description in capture_data.video_descriptions.
 
     This is called from app.py between capture and testing phases.
+    ``ai_client`` is accepted for call-site compatibility only — video
+    model routing is config-driven inside ``_describe_one_clip``.
     """
     descriptions: dict[str, str] = {}
     start = time.time()
@@ -200,16 +272,24 @@ async def describe_all_videos(
         if not video_path or not seg.get("completed"):
             continue
         questions_config = VIDEO_QUESTIONS.get(seg_type)
-        if questions_config:
-            key = f"segment_{seg_type}_{os.path.basename(video_path)}"
-            seg_context = (
-                _format_tab_walk_context(capture_data)
-                if seg_type == "TAB_WALKTHROUGH"
-                else ""
+        if not questions_config:
+            # Unknown segment type: fall back to the generic CUSTOM
+            # questions rather than silently dropping the recording.
+            logger.warning(
+                "Video describer: no question set for segment type %r "
+                "(%s) — using generic CUSTOM questions",
+                seg_type, video_path,
             )
-            videos_to_describe.append((
-                key, video_path, questions_config["questions"], seg_context,
-            ))
+            questions_config = VIDEO_QUESTIONS["CUSTOM"]
+        key = f"segment_{seg_type}_{os.path.basename(video_path)}"
+        seg_context = (
+            _format_tab_walk_context(capture_data)
+            if seg_type == "TAB_WALKTHROUGH"
+            else ""
+        )
+        videos_to_describe.append((
+            key, video_path, questions_config["questions"], seg_context,
+        ))
 
     if not videos_to_describe:
         logger.info("Video describer: no videos to process")
@@ -242,7 +322,7 @@ async def describe_all_videos(
 
         try:
             description = await _describe_single_video(
-                ai_client, video_path, questions, ground_truth,
+                video_path, questions, ground_truth,
             )
             if description:
                 descriptions[video_key] = description
@@ -421,7 +501,7 @@ async def _describe_one_clip(
     """Send a single video file to the configured video model and return prose.
 
     Routing priority (ALL local first, cloud as last-resort):
-      1. Gemma 4 E4B at ``AI_EXPLORER_*`` (port 11804) -- handles both
+      1. The fast multimodal model at ``AI_EXPLORER_*`` -- handles both
          video frames AND audio locally. Verified on 2026-04-22 that
          the mlx-vlm server processes audio tracks.
       2. Cloud ``AI_VIDEO_*`` if configured (Gemini Flash etc.).
@@ -439,7 +519,7 @@ async def _describe_one_clip(
     # the audio track) -- but only when it is NOT the plain text endpoint. A
     # text-only explorer (e.g. deepseek on OpenRouter) cannot process video
     # and would 401/error (mirrors functions/llm.py:_select_model; verified
-    # the audio_probe variant of this bug on a university run, 2026-05-28). Otherwise use
+    # the audio_probe variant of this bug on a university site 2026-05-28). Otherwise use
     # the dedicated cloud video model, then vision as a last resort.
     if (AI_EXPLORER_URL and AI_EXPLORER_MODEL
             and AI_EXPLORER_URL.rstrip("/") != (AI_API_BASE_URL or "").rstrip("/")):
@@ -516,7 +596,6 @@ def _format_tab_walk_context(capture_data: CaptureData) -> str:
 
 
 async def _describe_single_video(
-    ai_client: Any,
     video_path: str,
     questions: str,
     ground_truth: str = "",

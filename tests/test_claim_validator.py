@@ -5,7 +5,7 @@ against the page's deterministic capture. There is no prose parsing and no
 hard-coded threshold list -- the judge tool schema requires the structured
 field, and each SC check module declares its own measurement sources.
 
-Failure modes this pins (verified on the fairfaxva.gov runs):
+Failure modes this pins (verified on municipal-government-site runs):
   - SC 1.4.3: judge cited a text-contrast ratio for an element ANDI never
     measured -- the number was borrowed from a focus-indicator ratio.
   - SC 1.4.11: judge cited UI-component ratios absent from nontext_contrast.

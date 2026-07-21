@@ -44,6 +44,12 @@ def validate_public_url(url: str, *, allow_schemes: frozenset[str] = _ALLOWED_SC
       cloud instance metadata endpoints like 169.254.169.254).
     - Empty or malformed URLs.
 
+    When the operator sets ``allow_private_urls`` (settings.json) or
+    ``WCAG_ALLOW_PRIVATE_URLS=true``, the private/loopback IP block is
+    skipped so intranet apps, staging servers, and tailnet-hosted pages
+    can be audited. Scheme validation still applies. Only enable this
+    on a trusted, single-operator deployment — it re-opens SSRF.
+
     Returns the normalized URL string. Raises UnsafeURLError on refusal.
 
     This is a best-effort protection. Full SSRF hardening also requires
@@ -65,6 +71,10 @@ def validate_public_url(url: str, *, allow_schemes: frozenset[str] = _ALLOWED_SC
     host = (parsed.hostname or "").strip()
     if not host:
         raise UnsafeURLError("URL has no host component")
+
+    from config import ALLOW_PRIVATE_URLS
+    if ALLOW_PRIVATE_URLS:
+        return url.strip()
 
     # Direct IP literal
     try:

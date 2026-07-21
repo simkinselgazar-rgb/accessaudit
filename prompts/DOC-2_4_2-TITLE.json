@@ -33,7 +33,7 @@
     "Forgetting to update the title after using Save As to create a new document from an existing one"
   ],
   "examples": {
-    "pass": "A PDF's document properties show the title 'City of Richlands 2025 Annual Budget Report', which accurately describes the content",
+    "pass": "A PDF's document properties show the title 'City of Springfield 2025 Annual Budget Report', which accurately describes the content",
     "fail": "A PDF's document properties show the title 'scan_20240315_final.pdf' which is just the filename and does not describe the content",
     "partial": "The document has a title set in properties but it reads 'Draft' which is vague and does not adequately describe the document's purpose or content"
   }

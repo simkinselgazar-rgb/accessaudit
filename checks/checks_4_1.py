@@ -107,7 +107,7 @@ class Check_4_1_1(BaseCheck):
                 # validator's selector match needs the input to use the
                 # same form, otherwise it demotes the legitimate finding
                 # to judge_inference -> FAST-PATH ENFORCEMENT drops it
-                # (observed on a university run f8765656).
+                # (observed on a university-site run f8765656).
                 findings.append(Finding(
                     id=_make_finding_id(),
                     element=f"[id=\"{id_val}\"]",
@@ -564,7 +564,7 @@ class Check_4_1_2(BaseCheck):
                     continue
                 # Detect prose-as-value: when most/all ref tokens look
                 # like words from a sentence rather than ID strings.
-                # Observed on a university's homepage where aria-describedby was
+                # Observed on a university site's homepage where aria-describedby was
                 # set to "We use cookies to improve your experience and
                 # our services." -- the splitter then produced 19+
                 # findings for "We", "use", "cookies", etc. Emit ONE
@@ -993,9 +993,9 @@ class Check_4_1_3(BaseCheck):
         # HTML keyword scan ("saved" / "updated" / "error message" etc.)
         # cannot distinguish a real status message from ordinary page text
         # and produced verdict-flipping false positives (verified
-        # a university run 2026-05-28: an "action confirmation detected" finding
+        # a university site 2026-05-28: an "action confirmation detected" finding
         # matched static news copy on a page with NO status mechanism;
-        # an earlier university run: `loading="eager"` matched "loading"). We do
+        # earlier, on another university site: `loading="eager"` matched "loading"). We do
         # NOT infer status messages from a static snapshot. Grounded signals
         # only: real captured form errors (below) and live-region presence.
         # When the page has a form but no live region anywhere, emit a single

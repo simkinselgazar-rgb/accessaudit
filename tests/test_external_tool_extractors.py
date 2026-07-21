@@ -324,18 +324,31 @@ def test_source_tags_are_recognized_by_validator():
     assert "ibm_eac" in NON_JUDGE_SOURCE_TAGS
 
 
-def test_source_tags_in_judge_tool_schema_enum():
-    """The JUDGE_TOOL.source enum gates what the model is *allowed* to
-    emit. If htmlcs / ibm_eac aren't in the enum, the model can't
-    legally tag a finding with them -- forcing the validator to demote.
+def test_source_tags_in_judge_tool_schema():
+    """The JUDGE_TOOL.source pattern gates what the model is *allowed*
+    to emit: any single allowed tag, or a comma-separated list of them
+    (the judge prompt instructs multi-source merges like
+    'axe, htmlcs, ibm_eac', and validate_source_attribution parses
+    comma-joined tags). htmlcs / ibm_eac must be legal tags, single
+    and merged; unknown tags must be rejected.
     """
+    import re
     from functions.tools import JUDGE_TOOL
-    enum = (
+    source_schema = (
         JUDGE_TOOL["function"]["parameters"]["properties"]
-        ["final_findings"]["items"]["properties"]["source"]["enum"]
+        ["final_findings"]["items"]["properties"]["source"]
     )
-    assert "htmlcs" in enum
-    assert "ibm_eac" in enum
+    pattern = re.compile(source_schema["pattern"])
+    for tag in ("programmatic", "axe", "andi", "htmlcs", "ibm_eac",
+                "visual_ai", "code_ai", "at_sim", "judge_inference"):
+        assert pattern.fullmatch(tag), f"single tag rejected: {tag}"
+    assert pattern.fullmatch("axe, htmlcs, ibm_eac")
+    assert pattern.fullmatch("programmatic, visual_ai, code_ai")
+    assert not pattern.fullmatch("made_up_source")
+    assert not pattern.fullmatch("axe, made_up_source")
+    # source is load-bearing — the model must not be allowed to omit it
+    assert "source" in JUDGE_TOOL["function"]["parameters"]["properties"][
+        "final_findings"]["items"]["required"]
 
 
 # ── Runner ─────────────────────────────────────────────────────────────

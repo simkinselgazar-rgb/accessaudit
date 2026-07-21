@@ -99,6 +99,10 @@
         </div>
         <div class="export-links mb-2">
           <a href="/review/{{ meta.review_id }}/captures">View Captures</a>
+          <a href="/review/{{ meta.review_id }}/download/evidence.zip"
+             style="background:#e8f5e9;color:#1b5e20;border-color:#a5d6a7;">Download All Evidence (ZIP)</a>
+          <a href="/review/{{ meta.review_id }}/report/json" target="_blank"
+             style="background:#e3f2fd;color:#1565c0;border-color:#90caf9;">Export JSON</a>
           <a href="/?rerun={{ meta.review_id }}"
              style="background:#fffde7;color:#C5922E;border-color:#C5922E;">Rerun with Same Settings</a>
         </div>
@@ -198,6 +202,10 @@
             <tr>
               <td>
                 <strong>{{ r.criterion_id }}</strong>
+                {% if r.needs_review %}
+                <span style="color:#b26a00;font-weight:600;cursor:help;" role="img" aria-label="Needs human review"
+                      title="Needs human review{% if r.needs_review_reasons %}: {{ r.needs_review_reasons | join('; ') }}{% endif %}">&#9888;</span>
+                {% endif %}
                 <br>
                 <span style="font-size:.82rem;color:#616161;">{{ r.criterion_name }}</span>
               </td>
@@ -212,6 +220,45 @@
               <td>{{ r.findings | length if r.findings else 0 }}</td>
               <td>
                 <a href="/review/{{ meta.review_id }}/test/{{ r.criterion_id }}">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Linked documents tested (PDFs, DOCX, etc. discovered on the page) -->
+    {% if linked_documents is defined and linked_documents %}
+    <section class="card" aria-labelledby="linked-docs-heading">
+      <h3 id="linked-docs-heading" class="card-title">
+        Linked Documents Tested
+        ({{ documents_tested if documents_tested is defined and documents_tested else linked_documents | length }})
+      </h3>
+      <div style="overflow-x:auto;">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th scope="col">Document</th>
+              <th scope="col">Criteria Tested</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in linked_documents %}
+            <tr>
+              <td style="word-break:break-all;">
+                {% set doc_url = doc.url or doc.source_url or '' %}
+                {% if doc_url %}
+                <a href="{{ doc_url }}" target="_blank" rel="noopener">{{ doc_url }}</a>
+                {% else %}
+                {{ doc.name or 'document' }}
+                {% endif %}
+              </td>
+              <td>
+                {% if doc.criteria_count is defined %}{{ doc.criteria_count }}
+                {% elif doc.criteria_tested is defined %}{{ doc.criteria_tested }}
+                {% else %}{{ doc.results | length if doc.results else 0 }}{% endif %}
               </td>
             </tr>
             {% endfor %}

@@ -193,12 +193,20 @@ async def transcribe_audio(audio_path: str) -> list[CaptionSegment]:
       audio host.
     - ``"local"``: faster-whisper HTTP at
       ``{WHISPER_API_URL}/transcribe`` returning
-      ``{"segments": [...], "full_text": "..."}``. The 11803 fleet
-      (large-v3-turbo) exposes this shape.
+      ``{"segments": [...], "full_text": "..."}`` (the shape exposed
+      by common self-hosted faster-whisper servers).
     - ``"auto"`` (default for backward compatibility): tries the
       local shape first, then falls back to the OpenAI-compatible
       shape on 404 or empty body.
     """
+    if not WHISPER_API_URL:
+        logger.warning(
+            "WHISPER_API_URL is not configured -- audio transcription "
+            "skipped (caption verification will rely on non-audio "
+            "evidence). Set whisper_api_url in settings.json to enable."
+        )
+        return []
+
     audio_bytes = Path(audio_path).read_bytes()
     fmt = (WHISPER_FORMAT or "auto").lower()
 

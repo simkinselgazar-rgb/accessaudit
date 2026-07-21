@@ -160,7 +160,9 @@ async def crawl_site(
         progress_callback: async callback(discovered, message)
 
     Returns:
-        List of ALL discovered page URLs (may exceed max_pages).
+        ``{"pages": [...], "documents": [...]}`` with ALL discovered
+        URLs (the pages list may exceed max_pages; the AI page
+        selector narrows it afterwards).
     """
     # Discover up to this many pages total (well beyond max_pages)
     _DISCOVERY_CEILING = 500

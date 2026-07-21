@@ -184,9 +184,18 @@
           <label for="vision-url">Local Vision API URL</label>
           <input type="url" id="vision-url" name="ai_vision_api_url"
                  value="{{ settings.ai_vision_api_url }}"
-                 placeholder="http://localhost:11802/v1"
+                 placeholder="http://localhost:8000/v1"
                  aria-describedby="vision-url-help">
           <small id="vision-url-help" class="text-muted">Port running the local VL model (not used unless you explicitly override routing).</small>
+        </div>
+
+        <div class="form-group">
+          <label for="vision-api-key">Vision API Key</label>
+          <input type="password" id="vision-api-key" name="ai_vision_api_key"
+                 value="{{ settings.get('ai_vision_api_key_masked', '') }}"
+                 placeholder="Leave blank to reuse the primary API key"
+                 aria-describedby="vision-api-key-help">
+          <small id="vision-api-key-help" class="text-muted">Only needed if the vision endpoint requires a separate key.</small>
         </div>
 
         <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
@@ -208,7 +217,7 @@
           <label for="explorer-url">Explorer API URL</label>
           <input type="url" id="explorer-url" name="ai_explorer_url"
                  value="{{ settings.get('ai_explorer_url', '') }}"
-                 placeholder="http://localhost:11804/v1"
+                 placeholder="http://localhost:8000/v1"
                  aria-describedby="explorer-url-help">
           <small id="explorer-url-help" class="text-muted">Leave empty to use the primary API URL. For local vLLM, set to the E4B port.</small>
         </div>
@@ -232,9 +241,18 @@
           <label for="local-judge-url">Image Analysis / Local Judge API URL</label>
           <input type="url" id="local-judge-url" name="ai_local_judge_url"
                  value="{{ settings.get('ai_local_judge_url', '') }}"
-                 placeholder="http://localhost:11805/v1"
+                 placeholder="http://localhost:8000/v1"
                  aria-describedby="local-judge-url-help">
           <small id="local-judge-url-help" class="text-muted">Leave empty to use the primary API URL. For local vLLM, set to the 26B port.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="local-judge-api-key">Image Analysis / Local Judge API Key</label>
+          <input type="password" id="local-judge-api-key" name="ai_local_judge_api_key"
+                 value="{{ settings.get('ai_local_judge_api_key_masked', '') }}"
+                 placeholder="Leave blank to reuse the primary API key"
+                 aria-describedby="local-judge-api-key-help">
+          <small id="local-judge-api-key-help" class="text-muted">Only needed if the image-analysis endpoint requires a separate key.</small>
         </div>
 
         <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
@@ -300,9 +318,27 @@
           <label for="fallback-url">Fallback API URL</label>
           <input type="url" id="fallback-url" name="ai_fallback_url"
                  value="{{ settings.get('ai_fallback_url', '') }}"
-                 placeholder="http://localhost:11801/v1"
+                 placeholder="http://localhost:8000/v1"
                  aria-describedby="fallback-url-help">
           <small id="fallback-url-help" class="text-muted">Leave empty to reuse the primary API URL.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="fallback-vision-model">Fallback Vision Model</label>
+          <input type="text" id="fallback-vision-model" name="ai_fallback_vision_model"
+                 value="{{ settings.get('ai_fallback_vision_model', '') }}"
+                 placeholder="Leave empty to disable the vision fallback path"
+                 aria-describedby="fallback-vision-model-help">
+          <small id="fallback-vision-model-help" class="text-muted">Vision-capable model used when an image-bearing call fails on the primary image path.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="fallback-vision-url">Fallback Vision API URL</label>
+          <input type="url" id="fallback-vision-url" name="ai_fallback_vision_url"
+                 value="{{ settings.get('ai_fallback_vision_url', '') }}"
+                 placeholder="http://localhost:8000/v1"
+                 aria-describedby="fallback-vision-url-help">
+          <small id="fallback-vision-url-help" class="text-muted">OpenAI-compatible endpoint for the fallback vision model.</small>
         </div>
 
         <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
@@ -353,6 +389,197 @@
                  placeholder="Auto-fills from saved keys"
                  aria-describedby="judge-api-key-help">
           <small id="judge-api-key-help" class="text-muted">Uses saved key for the judge provider. Only needed if different from primary.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Final Reviewer (Pro holistic pass)</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">
+          After all criteria complete, the final reviewer re-reads the whole ACR
+          for consistency, calibration, citations, and tone. Leave fields empty
+          to reuse the Judge model/endpoint/key.
+        </p>
+
+        <div class="form-group">
+          <label for="reviewer-model">Final Reviewer Model</label>
+          <input type="text" id="reviewer-model" name="ai_reviewer_model"
+                 value="{{ settings.get('ai_reviewer_model', '') }}"
+                 placeholder="gemini-2.5-pro (or leave empty for the judge model)"
+                 aria-describedby="reviewer-model-help">
+          <small id="reviewer-model-help" class="text-muted">Strong text model recommended — it reviews the entire report in context.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="reviewer-api-url">Final Reviewer API URL</label>
+          <input type="url" id="reviewer-api-url" name="ai_reviewer_api_url"
+                 value="{{ settings.get('ai_reviewer_api_url', '') }}"
+                 placeholder="Leave empty to reuse the Judge API URL"
+                 aria-describedby="reviewer-api-url-help">
+          <small id="reviewer-api-url-help" class="text-muted">OpenAI-compatible endpoint for the final reviewer.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="reviewer-api-key">Final Reviewer API Key</label>
+          <input type="password" id="reviewer-api-key" name="ai_reviewer_api_key"
+                 value="{{ settings.get('ai_reviewer_api_key_masked', '') }}"
+                 placeholder="Leave blank to reuse the Judge API key"
+                 aria-describedby="reviewer-api-key-help">
+          <small id="reviewer-api-key-help" class="text-muted">Only needed if the reviewer endpoint requires a separate key.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Embeddings</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">
+          Used for semantic matching (finding deduplication, evidence lookup).
+          Works with self-hosted Ollama or any OpenAI-compatible embeddings
+          endpoint (including Gemini's <code>/v1beta/openai/embeddings</code>).
+        </p>
+
+        <div class="form-group">
+          <label for="embeddings-url">Embeddings API URL</label>
+          <input type="url" id="embeddings-url" name="embeddings_api_url"
+                 value="{{ settings.get('embeddings_api_url', '') }}"
+                 placeholder="http://localhost:11434/api/embeddings"
+                 aria-describedby="embeddings-url-help">
+          <small id="embeddings-url-help" class="text-muted">Ollama endpoint or an OpenAI-compatible /embeddings endpoint.</small>
+        </div>
+
+        <div class="options-row">
+          <div class="form-group">
+            <label for="embeddings-model">Embeddings Model</label>
+            <input type="text" id="embeddings-model" name="embeddings_model"
+                   value="{{ settings.get('embeddings_model', '') }}"
+                   placeholder="nomic-embed-text or gemini-embedding-001">
+          </div>
+          <div class="form-group">
+            <label for="embeddings-dim">Embedding Dimensions</label>
+            <input type="number" id="embeddings-dim" name="embeddings_dim"
+                   value="{{ settings.get('embeddings_dim', '') }}"
+                   min="1" max="16384" placeholder="768"
+                   aria-describedby="embeddings-dim-help">
+            <small id="embeddings-dim-help" class="text-muted">Must match the model's output size (e.g. 768, 3072).</small>
+          </div>
+          <div class="form-group">
+            <label for="embeddings-format">Payload Format</label>
+            <select id="embeddings-format" name="embeddings_format">
+              <option value="ollama" {% if settings.get('embeddings_format', 'ollama') == 'ollama' %}selected{% endif %}>Ollama ({"model","prompt"})</option>
+              <option value="openai" {% if settings.get('embeddings_format') == 'openai' %}selected{% endif %}>OpenAI ({"model","input"})</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="embeddings-api-key">Embeddings API Key</label>
+          <input type="password" id="embeddings-api-key" name="embeddings_api_key"
+                 value="{{ settings.get('embeddings_api_key_masked', '') }}"
+                 placeholder="Leave blank to reuse the primary API key"
+                 aria-describedby="embeddings-api-key-help">
+          <small id="embeddings-api-key-help" class="text-muted">Falls back to the primary API key when empty.</small>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Audio Transcription (Whisper)</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">
+          Used for caption verification (SC 1.2.x): audio is extracted from
+          captured video and transcribed, then compared against the page's captions.
+        </p>
+
+        <div class="options-row">
+          <div class="form-group">
+            <label for="whisper-url">Whisper API URL</label>
+            <input type="url" id="whisper-url" name="whisper_api_url"
+                   value="{{ settings.get('whisper_api_url', '') }}"
+                   placeholder="http://localhost:8000/v1"
+                   aria-describedby="whisper-url-help">
+            <small id="whisper-url-help" class="text-muted">Base URL of the transcription service (local faster-whisper, OpenAI-compatible host, or Gemini v1beta base).</small>
+          </div>
+          <div class="form-group">
+            <label for="whisper-format">Transcription Backend</label>
+            <select id="whisper-format" name="whisper_format">
+              <option value="auto" {% if settings.get('whisper_format', 'auto') == 'auto' %}selected{% endif %}>Auto (try local, then OpenAI shape)</option>
+              <option value="local" {% if settings.get('whisper_format') == 'local' %}selected{% endif %}>Local faster-whisper</option>
+              <option value="openai" {% if settings.get('whisper_format') == 'openai' %}selected{% endif %}>OpenAI-compatible /audio/transcriptions</option>
+              <option value="gemini" {% if settings.get('whisper_format') == 'gemini' %}selected{% endif %}>Gemini native multimodal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="options-row">
+          <div class="form-group">
+            <label for="whisper-gemini-model">Gemini Transcription Model</label>
+            <input type="text" id="whisper-gemini-model" name="whisper_gemini_model"
+                   value="{{ settings.get('whisper_gemini_model', '') }}"
+                   placeholder="gemini-2.5-flash"
+                   aria-describedby="whisper-gemini-model-help">
+            <small id="whisper-gemini-model-help" class="text-muted">Only used when the backend is "Gemini native multimodal".</small>
+          </div>
+          <div class="form-group">
+            <label for="whisper-api-key">Whisper API Key</label>
+            <input type="password" id="whisper-api-key" name="whisper_api_key"
+                   value="{{ settings.get('whisper_api_key_masked', '') }}"
+                   placeholder="Leave blank to reuse the primary API key"
+                   aria-describedby="whisper-api-key-help">
+            <small id="whisper-api-key-help" class="text-muted">Falls back to the primary API key when empty.</small>
+          </div>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Image Encoding</h3>
+        <p style="font-size:.82rem;color:#616161;margin-bottom:12px;">
+          Controls how screenshots are downscaled and batched before being sent
+          to vision models. Raise for stronger models / lower for tight local memory.
+        </p>
+
+        <div class="options-row">
+          <div class="form-group">
+            <label for="image-max-dim">Max Image Dimension (px)</label>
+            <input type="number" id="image-max-dim" name="ai_image_max_dim"
+                   value="{{ settings.get('ai_image_max_dim', 1280) }}"
+                   min="256" max="8192"
+                   aria-describedby="image-max-dim-help">
+            <small id="image-max-dim-help" class="text-muted">Longest side after downscaling. Raise for stronger models / lower for tight local memory.</small>
+          </div>
+          <div class="form-group">
+            <label for="image-quality">JPEG Quality (1-100)</label>
+            <input type="number" id="image-quality" name="ai_image_quality"
+                   value="{{ settings.get('ai_image_quality', 85) }}"
+                   min="1" max="100"
+                   aria-describedby="image-quality-help">
+            <small id="image-quality-help" class="text-muted">Higher preserves fine text detail; lower shrinks payloads.</small>
+          </div>
+          <div class="form-group">
+            <label for="max-images">Max Images per Call</label>
+            <input type="number" id="max-images" name="ai_max_images"
+                   value="{{ settings.get('ai_max_images', 10) }}"
+                   min="1" max="100"
+                   aria-describedby="max-images-help">
+            <small id="max-images-help" class="text-muted">Raise for stronger models / lower for tight local memory.</small>
+          </div>
+        </div>
+
+        <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+
+        <h3 style="margin:0 0 16px;">Capture Pipeline</h3>
+
+        <div class="form-group">
+          <label for="capture-pipeline">Pipeline Version</label>
+          <select id="capture-pipeline" name="capture_pipeline" aria-describedby="capture-pipeline-help">
+            <option value="v2" {% if settings.get('capture_pipeline', 'v2') == 'v2' %}selected{% endif %}>v2 (default — phased capture with AI inventory audit)</option>
+            <option value="v1" {% if settings.get('capture_pipeline') == 'v1' %}selected{% endif %}>v1 (legacy single-pass capture)</option>
+          </select>
+          <small id="capture-pipeline-help" class="text-muted">v2 is the current phased pipeline. v1 is kept as a legacy fallback.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="allow-private-urls">Allow Private / Intranet URLs</label>
+          <select id="allow-private-urls" name="allow_private_urls" aria-describedby="allow-private-urls-help">
+            <option value="" {% if not settings.get('allow_private_urls') %}selected{% endif %}>No (default — block private/loopback addresses)</option>
+            <option value="true" {% if settings.get('allow_private_urls') in ('true', '1', 'yes', True) %}selected{% endif %}>Yes (audit intranet / staging / tailnet pages)</option>
+          </select>
+          <small id="allow-private-urls-help" class="text-muted">Enabling this re-opens SSRF — only use on a trusted single-operator deployment. Restart required.</small>
         </div>
 
         <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
@@ -413,69 +640,13 @@
     <!-- Current Status -->
     <section class="card" style="margin-top:16px;">
       <h3 class="card-title">Current Connection Status</h3>
+      <p style="font-size:.82rem;color:#616161;margin-bottom:8px;">
+        "Test Connection" runs a server-side deep probe of every configured AI
+        service (text, judge, vision, video, embeddings, whisper) — including
+        any local model fleet endpoints — so results are not blocked by
+        browser CORS restrictions.
+      </p>
       <div id="connection-status">Loading...</div>
-    </section>
-
-    <!-- Local Model Fleet -->
-    <section class="card" style="margin-top:16px;">
-      <h3 class="card-title">Local Model Fleet</h3>
-      <p style="font-size:.82rem;color:#616161;margin-bottom:8px;">Models running on your local machine. Phase 2 and audio detection use the fast E4B model automatically.</p>
-      <div id="fleet-status">Checking...</div>
-      <script>
-      (function() {
-        var fleet = [
-          {port: 11801, name: 'Qwen3.5-35B', role: 'Primary / Code AI', caps: 'Text, Images'},
-          {port: 11802, name: 'Qwen3-VL-32B', role: 'Video Analysis', caps: 'Text, Images, Video'},
-          {port: 11803, name: 'Whisper', role: 'Caption Verification', caps: 'Audio to Text'},
-          {port: 11804, name: 'Gemma 4 E4B', role: 'Phase 2 Explorer / Audio', caps: 'Text, Images, Video, Audio'},
-          {port: 11805, name: 'Gemma 4 26B', role: 'Local Judge', caps: 'Text, Images'},
-        ];
-        var th = 'style="text-align:left;padding:6px 8px;border-bottom:2px solid #ddd;font-size:.8rem;"';
-        var html = '<table style="width:100%;font-size:.85rem;border-collapse:collapse;"><thead><tr>';
-        html += '<th ' + th + '>Port</th><th ' + th + '>Model</th><th ' + th + '>Role</th><th ' + th + '>Capabilities</th><th ' + th + '>Status</th><th ' + th + '>Model ID</th>';
-        html += '</tr></thead><tbody>';
-        fleet.forEach(function(m) {
-          var td = 'style="padding:5px 8px;border-bottom:1px solid #eee;"';
-          html += '<tr>';
-          html += '<td ' + td + '>' + m.port + '</td>';
-          html += '<td ' + td + '><strong>' + m.name + '</strong></td>';
-          html += '<td ' + td + '>' + m.role + '</td>';
-          html += '<td ' + td + ' style="padding:5px 8px;border-bottom:1px solid #eee;font-size:.78rem;">' + m.caps + '</td>';
-          html += '<td ' + td + ' id="fleet-status-' + m.port + '">...</td>';
-          html += '<td ' + td + ' id="fleet-model-' + m.port + '" style="padding:5px 8px;border-bottom:1px solid #eee;font-size:.75rem;color:#888;max-width:200px;overflow:hidden;text-overflow:ellipsis;">...</td>';
-          html += '</tr>';
-        });
-        html += '</tbody></table>';
-        document.getElementById('fleet-status').innerHTML = html;
-
-        fleet.forEach(function(m) {
-          // Health check
-          fetch('http://localhost:' + m.port + '/health')
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-              var el = document.getElementById('fleet-status-' + m.port);
-              el.innerHTML = '<span style="color:#2e7d32;font-weight:600;">Online</span>';
-              if (d.queue_depth > 0) el.innerHTML += ' <span style="color:#f57f17;">(busy: ' + d.queue_depth + ')</span>';
-            })
-            .catch(function() {
-              document.getElementById('fleet-status-' + m.port).innerHTML = '<span style="color:#c62828;font-weight:600;">Offline</span>';
-            });
-
-          // Model ID check
-          fetch('http://localhost:' + m.port + '/v1/models')
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-              if (d.data && d.data[0]) {
-                var id = d.data[0].id;
-                var short = id.split('/').pop();
-                document.getElementById('fleet-model-' + m.port).textContent = short;
-                document.getElementById('fleet-model-' + m.port).title = id;
-              }
-            })
-            .catch(function() {});
-        });
-      })();
-      </script>
     </section>
 
   </main>
@@ -491,16 +662,16 @@
     // Provider configs with model suggestions and per-provider API key storage
     var providers = {
       vllm: {
-        url: 'http://localhost:11801/v1',
+        url: 'http://localhost:8000/v1',
         model: 'Qwen/Qwen3-32B',
         visionModel: 'Qwen/Qwen2.5-VL-32B-Instruct',
-        visionUrl: 'http://localhost:11802/v1',
+        visionUrl: 'http://localhost:8000/v1',
         judgeModel: 'google/gemma-3-27b-it',
-        judgeUrl: 'http://localhost:11805/v1',
+        judgeUrl: 'http://localhost:8000/v1',
         explorerModel: 'google/gemma-3n-E4B-it',
-        explorerUrl: 'http://localhost:11804/v1',
+        explorerUrl: 'http://localhost:8000/v1',
         imageModel: 'google/gemma-3-27b-it',
-        imageUrl: 'http://localhost:11805/v1',
+        imageUrl: 'http://localhost:8000/v1',
         models: [
           'Qwen/Qwen3-32B',
           'google/gemma-3-27b-it',
@@ -712,29 +883,64 @@
       });
     });
 
-    // Test connection
+    function escapeHtml(s) {
+      if (s == null) return '';
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Deep test: server-side probe of every configured AI service.
     function testConnection() {
       var status = document.getElementById('connection-status');
-      status.textContent = 'Testing...';
-      fetch('/api/health')
+      status.textContent = 'Testing all configured services (this can take a few seconds)...';
+      fetch('/api/health?deep=true')
         .then(function(r) { return r.json(); })
         .then(function(d) {
-          var html = '<ul style="list-style:none;padding:0;">';
-          html += '<li>Status: <strong>' + d.status + '</strong></li>';
-          if (d.text_model !== undefined) html += '<li>Text Model: ' + (d.text_model ? 'Connected' : 'Not connected') + '</li>';
-          if (d.vision_model !== undefined) html += '<li>Vision Model: ' + (d.vision_model ? 'Connected' : 'Not connected') + '</li>';
-          if (d.backend) html += '<li>Backend: ' + d.backend + '</li>';
-          if (d.model) html += '<li>Model: ' + d.model + '</li>';
+          var allOk = d.all_ok === true;
+          var html = '<div style="margin-bottom:6px;">Overall: <strong style="color:' +
+                     (allOk ? '#2e7d32' : '#c62828') + ';">' +
+                     (allOk ? 'ALL SERVICES OK' : 'SOME SERVICES FAILED') +
+                     '</strong> (server status: ' + escapeHtml(d.status) + ')</div>';
+          html += '<ul style="list-style:none;padding:0;margin:0;">';
+          var services = d.services || {};
+          var names = Object.keys(services);
+          if (names.length === 0) {
+            html += '<li style="color:#c62828;">No service details returned by the deep health check.</li>';
+          }
+          names.forEach(function(name) {
+            var svc = services[name] || {};
+            var ok = svc.ok === true;
+            html += '<li style="padding:2px 0;">' +
+              '<span style="font-weight:600;color:' + (ok ? '#2e7d32' : '#c62828') + ';">' +
+              (ok ? 'OK' : 'FAILED') + '</span> &mdash; ' + escapeHtml(name);
+            if (svc.detail) html += ': <span style="color:#616161;">' + escapeHtml(svc.detail) + '</span>';
+            html += '</li>';
+          });
           html += '</ul>';
           status.innerHTML = html;
         })
         .catch(function(err) {
-          status.innerHTML = '<span style="color:red;">Connection failed: ' + err + '</span>';
+          status.innerHTML = '<span style="color:red;">Connection failed: ' + escapeHtml(err) + '</span>';
         });
     }
 
-    // Auto-test on load
-    testConnection();
+    // Quick shallow check on load (the deep probe is on-demand via the button)
+    (function() {
+      var status = document.getElementById('connection-status');
+      fetch('/api/health')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          status.innerHTML = 'Server: <strong>' + escapeHtml(d.status) + '</strong> &middot; ' +
+            'Primary AI API: <strong style="color:' +
+            (d.ai_api === 'connected' ? '#2e7d32' : '#c62828') + ';">' +
+            escapeHtml(d.ai_api) + '</strong>. ' +
+            'Click "Test Connection" for a full probe of every configured service.';
+        })
+        .catch(function(err) {
+          status.innerHTML = '<span style="color:red;">Connection failed: ' + escapeHtml(err) + '</span>';
+        });
+    })();
   </script>
 </body>
 </html>

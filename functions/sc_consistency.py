@@ -8,7 +8,7 @@ stricter one too.
 
 The per-SC judge evaluates each criterion in isolation and has no view of
 sibling verdicts, so it occasionally produces an impossible pair (verified
-on the fairfaxva.gov run 20260515_230613_ff643865: SC 2.1.3 "Keyboard, No
+on a municipal-government-site run 20260515_230613_ff643865: SC 2.1.3 "Keyboard, No
 Exception" came back Supports while SC 2.1.1 "Keyboard" came back Does Not
 Support -- 2.1.3 is a superset of 2.1.1 and cannot pass when 2.1.1 fails).
 

@@ -6,6 +6,7 @@ load-bearing documents:
 | Document | What it is |
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | The full system spec (26 sections, ~2,200 lines). Pipeline, LLM gateway, parser, capture phases, check registry, judge, reports, and the non-negotiable rules. Read this first when onboarding or before non-trivial changes. |
+| [`../CLAUDE.md`](../CLAUDE.md) | Working rules for every code change. Loaded automatically by Claude Code; humans should read it too. Overrides anything in `ARCHITECTURE.md` if they conflict. |
 
 ## Where to start
 
@@ -13,6 +14,8 @@ load-bearing documents:
   directory layout, the `functions/` folder, LLM gateway, parser). That is
   enough to navigate the codebase. Sections 9–14 cover the runtime pipeline
   in depth when you need it.
+- **Making a code change?** Read `../CLAUDE.md` end-to-end. It is short
+  and every rule has bitten us at least once.
 - **Debugging a check or judge call?** Section 23 in `ARCHITECTURE.md`
   ("Error Handling & Debugging") plus the saved transcripts under
   `<review>/llm_transcripts/` are the entry points.

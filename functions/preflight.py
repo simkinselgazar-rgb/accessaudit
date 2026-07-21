@@ -46,18 +46,30 @@ async def _check_embeddings() -> dict:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
 
 
-def _check_vision_config() -> dict:
+async def _check_vision_config() -> dict:
     """Vision/video calls are too costly to probe live on every health hit;
-    verify the endpoint + key are configured and not pointing at a known-dead
-    local fleet."""
+    verify the endpoint is configured, and that a key exists when the
+    endpoint is a cloud provider. Private/tailnet/local endpoints need no
+    key -- for those, do a cheap ``/models`` reachability probe instead."""
     from config import AI_VISION_API_URL, AI_VISION_API_KEY, AI_API_KEY
+    from functions.llm import _is_cloud_url
     url = (AI_VISION_API_URL or "").strip()
     key = (AI_VISION_API_KEY or AI_API_KEY or "").strip()
     if not url:
         return {"ok": False, "detail": "AI_VISION_API_URL unset"}
-    if not key:
-        return {"ok": False, "detail": "no vision API key (AI_VISION_API_KEY/AI_API_KEY)"}
-    return {"ok": True, "detail": url}
+    if _is_cloud_url(url):
+        if not key:
+            return {"ok": False, "detail": "cloud vision endpoint but no API key (AI_VISION_API_KEY/AI_API_KEY)"}
+        return {"ok": True, "detail": url}
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10)) as client:
+            resp = await client.get(f"{url.rstrip('/')}/models")
+        if resp.status_code < 500:
+            return {"ok": True, "detail": f"{url} reachable (no key required)"}
+        return {"ok": False, "detail": f"{url}/models returned HTTP {resp.status_code}"}
+    except Exception as exc:
+        return {"ok": False, "detail": f"{url} unreachable: {type(exc).__name__}: {exc}"}
 
 
 def _check_whisper_config() -> dict:
@@ -80,7 +92,7 @@ async def preflight_ai_services(*, probe_embeddings: bool = True) -> dict:
     """
     services = {
         "text_llm": await _check_text_llm(),
-        "vision": _check_vision_config(),
+        "vision": await _check_vision_config(),
         "whisper": _check_whisper_config(),
     }
     services["embeddings"] = (

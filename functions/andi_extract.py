@@ -95,7 +95,7 @@ def extract_andi_contrast_findings(capture_data: CaptureData, criterion_id: str)
 
         # Skip visually-hidden text (icon-only links with sr-only
         # labels rendered in the same colour as their background, the
-        # standard "Example University on Bluesky" / "Skip to
+        # standard "University Name on Bluesky" / "Skip to
         # main content" pattern). When fg and bg are bit-identical
         # the user literally cannot see the text — it's intentionally
         # invisible for screen-reader-only consumption — so 1.4.3 /
@@ -141,7 +141,7 @@ def extract_andi_contrast_findings(capture_data: CaptureData, criterion_id: str)
             # ("Computed ratio: 1.23:1") and the fast-path judge in
             # VPAT-synthesis mode re-quoted that number in HIGH-severity
             # output findings, treating the unreliable fallback ratio as
-            # ground truth (verified on a university 2026-05-09 SC 1.4.3 where
+            # ground truth (verified on a university-site 2026-05-09 SC 1.4.3 run where
             # 3 HIGH findings citing 1.23:1 emerged from INFO-only
             # input). Removing the number from the prose physically
             # prevents that pattern: if the model never sees the
@@ -895,10 +895,16 @@ def extract_andi_graphics_findings(capture_data: CaptureData, criterion_id: str)
         text_overlay = bool(g.get("has_text_overlay"))
         overlay_text = g.get("text_overlay_text", "")
         # Full src for real URLs (the tail-truncation used to clip filenames
-        # off long query-string URLs); compact descriptor for inline data URIs
-        # so a multi-MB base64 image doesn't bloat the judge prompt.
+        # off long query-string URLs). For inline data URIs, keep the header
+        # (mime type + encoding) and note the payload size — a fidelity-
+        # preserving summary, not a truncation: the base64 payload carries
+        # no signal for the judge and would bloat the prompt by megabytes.
         if src.startswith("data:"):
-            short_src = src[:60] + f"...(inline data URI, {len(src)} chars)"
+            header, sep, payload = src.partition(",")
+            if sep:
+                short_src = f"{header},[{len(payload)} chars]"
+            else:
+                short_src = f"data:[inline data URI, {len(src)} chars]"
         else:
             short_src = src
 
@@ -1298,7 +1304,9 @@ def extract_andi_hidden_findings(capture_data: CaptureData, criterion_id: str) -
             # and off-screen + focusable are still flagged below at
             # their original severities — those are real focus
             # leaks the browser does not block.
-            if opacity_off or off_screen or aria_hidden_violation:
+            # aria_hidden_violation is impossible here — the branch
+            # above always `continue`s when it is set.
+            if opacity_off or off_screen:
                 # Combined with another real-leak signal — fall
                 # through to be reported at the higher severity
                 # below.

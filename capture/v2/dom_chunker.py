@@ -190,12 +190,3 @@ def extract_js_event_summary(page_evaluate_result: list[dict]) -> str:
             lines.append(f"  <{tag}> {selector}: {', '.join(events)}")
 
     return "\n".join(lines)
-
-
-def split_html_safely(html: str, max_chunk_size: int = 40_000) -> list[str]:
-    """Backward-compat wrapper. Use ``functions.chunker._split_at_tag_boundary``
-    or ``chunk_html_by_landmarks`` directly in new code.
-    """
-    from functions.chunker import _split_at_tag_boundary
-
-    return _split_at_tag_boundary(html, max_chunk_size)

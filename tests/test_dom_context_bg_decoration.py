@@ -77,7 +77,7 @@ def _build_context(criterion_id: str, bg_images: list[dict]) -> str:
 
 
 def test_radio_dot_svg_bg_marked_ui_decoration():
-    """The exact university radio-button pattern that produced false positives."""
+    """The exact university-site radio-button pattern that produced false positives."""
     bg = [{
         "selector": "#edit-location-inperson",
         "tag": "input",
@@ -132,7 +132,7 @@ def test_real_hero_bg_image_not_marked_ui_decoration():
     bg = [{
         "selector": "div.hero",
         "tag": "div",
-        "backgroundImage": "url(\"https://www.example.edu/photos/hero-banner.jpg\")",
+        "backgroundImage": "url(\"https://www.example-university.edu/photos/hero-banner.jpg\")",
         "role": "",
         "ariaLabel": "",
         "text_content": "",

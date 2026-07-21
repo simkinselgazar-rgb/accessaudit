@@ -71,6 +71,9 @@ class Finding:
     # the claim validator's verdict (which values were verified vs.
     # demoted) stays inspectable in the saved report.
     cited_measurements: list = field(default_factory=list)
+    # Internal-only technical remediation guide (exact code fixes).
+    # Shown in internal exports; stripped from client-mode reports.
+    internal_remediation_note: str = ""
 
     def to_dict(self) -> dict:
         d = {
@@ -94,6 +97,8 @@ class Finding:
             d["location"] = self.location
         if self.cited_measurements:
             d["cited_measurements"] = self.cited_measurements
+        if self.internal_remediation_note:
+            d["internal_remediation_note"] = self.internal_remediation_note
         return d
 
 
@@ -236,8 +241,15 @@ class TestResult:
                 impact=str(f.get("impact", "")),
                 recommendation=str(f.get("recommendation", "")),
                 severity=sev,
-                source=str(f.get("source", "")),
+                source=str(f.get("source", "") or "programmatic"),
                 css_selector=str(f.get("css_selector", "")),
+                screenshot_path=str(f.get("screenshot_path", "")),
+                evidence=str(f.get("evidence", "")),
+                decision=str(f.get("decision", "undecided") or "undecided"),
+                decision_reason=str(f.get("decision_reason", "")),
+                location=str(f.get("location", "")),
+                cited_measurements=list(f.get("cited_measurements", []) or []),
+                internal_remediation_note=str(f.get("internal_remediation_note", "")),
             )
 
         def _to_tt(t):
@@ -357,9 +369,11 @@ class CaptureData:
     # background-image hit along the way), classifies large vs normal
     # text per WCAG 1.4.3, and records the contrast ratio. SVG <text>
     # nodes use fill/stroke rather than color/background-color. Each
-    # entry: {selector, text, fg_color, bg_color, bg_image_present,
-    # bg_walk_depth, font_size_px, font_weight, is_large_text, ratio,
-    # required_ratio, passes, is_svg_text, rect, method}.
+    # entry: {selector, tag, text, fg_color_raw, bg_color_raw (CSS
+    # strings — what checks/base.py reads), fg_color, bg_color (parsed
+    # [R, G, B] or None), bg_walk_depth, bg_image_present, bg_image_via,
+    # bg_reached_root, font_size_px, font_weight, is_large_text,
+    # is_svg_text, rect, ratio, required_ratio, passes, method}.
     andi_contrast_results: list[dict] = field(default_factory=list)
     # ANDI-style language audit (sANDI). Validates the document lang,
     # every element with an explicit `lang` attribute, BCP 47 validity
@@ -391,7 +405,8 @@ class CaptureData:
     # aria_label, aria_labelledby_resolved, role, decorative,
     # in_link_or_button, ancestor_has_other_text,
     # ancestor_link_or_button_has_name, svg_title, svg_desc,
-    # svg_role, name_source, accessible_name, rect, text_overlay}.
+    # svg_role, name_source, accessible_name, rect,
+    # has_text_overlay, text_overlay_text}.
     andi_graphics_results: list[dict] = field(default_factory=list)
     # ANDI-style tables audit (tANDI). Per-table classification (data
     # vs layout), caption/summary presence, scope/headers validation,
@@ -418,10 +433,11 @@ class CaptureData:
     # fallback), and if anything changed the probe verifies Escape
     # dismissibility, Tab-stays-inside trap behaviour, focus-returns-
     # to-trigger after dismiss, and Shift+Tab exits cleanly. Each
-    # entry: {selector, tag, role, text, opens_on_enter,
-    # opens_on_space, opened_target_selector, tab_stays_inside,
-    # escape_closes, focus_returns_to_trigger, shift_tab_exits,
-    # before_screenshot, after_screenshot, errors}.
+    # entry: {selector, tag, role, text, accessible_name,
+    # aria_controls, aria_haspopup, aria_expanded_before, rect,
+    # opens_on_enter, opens_on_space, opened_target_selector,
+    # tab_stays_inside, tab_steps_inside, escape_closes,
+    # focus_returns_to_trigger, shift_tab_exits_cleanly, errors}.
     # Feeds SC 2.1.1 (operable), SC 2.1.2 (no trap), SC 2.4.3 (focus
     # order resumes), and SC 1.4.13 (content on hover/focus dismiss-
     # ible by Escape).
@@ -450,7 +466,8 @@ class CaptureData:
     #   {
     #     "results": [
     #       {"ruleId": str, "value": [level, judgment],
-    #        "path": {"dom": str, "aria": str},
+    #        "path_dom": str, "path_aria": str,   # flattened from the
+    #        # engine's path.dom / path.aria by _capture_ibm_eac
     #        "message": str, "snippet": str,
     #        "category": str, "help": str},
     #       ...
@@ -523,6 +540,12 @@ class CaptureData:
     # (skip link must be early in tab order -- standard practice is
     # first tab stop).
     skip_link_first_tabstop: dict = field(default_factory=dict)
+    # Metadata from _skip_link_verification: how many skip-link
+    # candidates were found vs actually probed (plus which selectors,
+    # and whether the run aborted on an unresponsive browser bridge).
+    # A found/probed gap tells an auditor the SC 2.4.1 evidence is
+    # partial rather than "page has no more skip links".
+    skip_link_meta: dict = field(default_factory=dict)
     transcript_buttons: list[dict] = field(default_factory=list)
     transcript_verifications: list[dict] = field(default_factory=list)
     focus_contrast: list[dict] = field(default_factory=list)

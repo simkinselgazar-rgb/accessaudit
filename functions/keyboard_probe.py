@@ -8,7 +8,7 @@ it does, the entry still carries ``any_key_responded: false`` — but that
 keys". Treating a crashed probe as a measured failure fabricates a
 keyboard-inaccessible verdict.
 
-Verified bug (loudoun.gov run 20260518_190643_88c447ff): all 8 native
+Verified bug (county-government-site run 20260518_190643_88c447ff): all 8 native
 widget-keyboard probes errored — every ``key_results`` entry was
 ``{"error": true}`` with an empty ``keys_tested`` — yet SC 2.1.1 / 2.1.2
 / 2.1.3 reported the widgets keyboard-inaccessible. The behavior-verified
