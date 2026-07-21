@@ -542,6 +542,35 @@ def apply_mutations(review_dir: Path | str, report: dict[str, Any]) -> dict[str,
             data = json.loads(sc_path.read_text(encoding="utf-8"))
             if _stringify(data.get("conformance_level")) == suggested:
                 continue  # already correct
+            # Severity floor: a reviewer recalibration toward a WORSE
+            # verdict must be supported by the findings' actual
+            # severities (the reviewer has been observed misreading
+            # info-severity manual-check advisories as "medium" and
+            # raising a clean Supports to Partially). Same rule as
+            # checks.base._calibrate_verdict_to_severity: info-only ->
+            # never worse than Supports; Does Not Support requires at
+            # least one high.
+            _order = {"Supports": 0, "Partially Supports": 1, "Does Not Support": 2}
+            current = _stringify(data.get("conformance_level"))
+            if _order.get(suggested, -1) > _order.get(current, -1):
+                sevs = {
+                    str(f.get("severity", "")).strip().lower()
+                    for f in (data.get("findings") or [])
+                }
+                substantive = sevs & {"high", "medium", "low"}
+                floor_violated = (
+                    (not substantive and suggested in ("Partially Supports", "Does Not Support"))
+                    or (suggested == "Does Not Support" and "high" not in substantive)
+                )
+                if floor_violated:
+                    logger.info(
+                        "FINAL REVIEWER: rejecting recalibration of SC %s "
+                        "%s -> %s -- finding severities %s do not support "
+                        "the harsher verdict",
+                        sc, current, suggested, sorted(sevs) or "[]",
+                    )
+                    counts["skipped"] += 1
+                    continue
             data["conformance_level"] = suggested
             data.setdefault("reviewer_notes", []).append({
                 "type": "recalibration",
